@@ -88,7 +88,7 @@ The default UI includes `sending`, `failed`, retry, and assistant loading states
 
 ## Headless
 
-`ConversationClient` handles message sending, failure handling, retry, and persistence without depending on React. Use `ChatParticipantPresence`, `ChatTypingIndicator`, and `ChatReadReceipt` to model presence, typing, and read state by participant.
+`ConversationClient` handles message sending, failure handling, retry, and persistence without depending on React. Use `applyEvent` to apply presence, typing, and read events from realtime adapters, and use `ChatParticipantPresence`, `ChatTypingIndicator`, and `ChatReadReceipt` to model state by participant.
 
 ## Backend Contract
 

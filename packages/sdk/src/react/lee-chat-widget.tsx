@@ -39,6 +39,23 @@ export function LeeChatWidget({
   const leeChat = useLeeChat()
   const { config, chat } = leeChat
   const latestMessageAnchorRef = useRef<HTMLDivElement>(null)
+  const hasOnlineParticipant = leeChat.participantState.presences.some(
+    (presence) => {
+      return (
+        presence.participantId !== config.participant.id &&
+        presence.status === 'online'
+      )
+    },
+  )
+  const hasTypingParticipant = leeChat.participantState.typingIndicators.some(
+    (typingIndicator) => {
+      return (
+        typingIndicator.conversationId === config.conversation.id &&
+        typingIndicator.participantId !== config.participant.id &&
+        typingIndicator.isTyping
+      )
+    },
+  )
 
   useEffect(() => {
     const rootStyle = document.documentElement.style
@@ -176,6 +193,16 @@ export function LeeChatWidget({
               <div>
                 <h2>{config.texts.title}</h2>
                 <p>{config.texts.subtitle}</p>
+                {hasOnlineParticipant ? (
+                  <small
+                    className={mergeClassNames(
+                      'lee-chat-participant-status',
+                      config.className?.participantStatus,
+                    )}
+                  >
+                    {config.texts.participantOnline}
+                  </small>
+                ) : null}
               </div>
               <Popover.Close asChild>
                 <button
@@ -212,6 +239,17 @@ export function LeeChatWidget({
                   ? renderAssistantLoading()
                   : renderDefaultAssistantLoading()
                 : null}
+              {hasTypingParticipant ? (
+                <p
+                  className={mergeClassNames(
+                    'lee-chat-typing-indicator',
+                    config.className?.typingIndicator,
+                  )}
+                  role="status"
+                >
+                  {config.texts.participantTyping}
+                </p>
+              ) : null}
               <div
                 aria-hidden="true"
                 className="lee-chat-scroll-anchor"

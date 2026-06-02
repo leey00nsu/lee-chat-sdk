@@ -359,4 +359,34 @@ describe('vanilla initLeeChat', () => {
     })
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
+
+  it('participant presence와 typing 상태를 표시한다', async () => {
+    const instance = initLeeChat({
+      appId: 'vanilla-app',
+      endpoint: '/api/chat',
+      fetchImplementation: fetchMock,
+      initialOpen: true,
+    })
+
+    instance.applyEvent({
+      type: 'participant.presence_changed',
+      presence: {
+        participantId: 'vanilla-app-assistant',
+        status: 'online',
+        updatedAt: '2026-06-01T00:00:00.000Z',
+      },
+    })
+    instance.applyEvent({
+      type: 'participant.typing_changed',
+      typingIndicator: {
+        conversationId: 'vanilla-app:conversation',
+        participantId: 'vanilla-app-assistant',
+        isTyping: true,
+        updatedAt: '2026-06-01T00:01:00.000Z',
+      },
+    })
+
+    expect(document.body.textContent).toContain('Online')
+    expect(document.body.textContent).toContain('Participant is typing...')
+  })
 })

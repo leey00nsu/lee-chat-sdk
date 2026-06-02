@@ -6,6 +6,8 @@ import {
   type BuildConversationAssistantMessageParams,
   type BuildConversationRequestParams,
   type BuiltConversationAssistantMessage,
+  type ConversationClientEvent,
+  type ConversationParticipantState,
 } from '../client/conversation-client'
 import { createChatMessageId } from '../lib/create-chat-message-id'
 import type { ChatMessage } from '../model/chat-message'
@@ -37,11 +39,13 @@ export interface UseChatControllerParams<
 
 export interface UseChatControllerResult<TMessageMetadata = unknown> {
   messages: Array<ChatMessage<TMessageMetadata>>
+  participantState: ConversationParticipantState
   inputValue: string
   isSubmitting: boolean
   setInputValue: (nextInputValue: string) => void
   submitMessage: (contentOverride?: string) => Promise<void>
   retryMessage: (messageId: string) => Promise<void>
+  applyEvent: (event: ConversationClientEvent) => void
   clearMessages: () => void
 }
 
@@ -67,6 +71,12 @@ export function useChatController<
   const [messages, setMessages] = useState<Array<ChatMessage<TMessageMetadata>>>(
     () => persistence?.read() ?? [],
   )
+  const [participantState, setParticipantState] =
+    useState<ConversationParticipantState>(() => ({
+      presences: [],
+      typingIndicators: [],
+      readReceipts: [],
+    }))
   const clientRef = useRef<
     ConversationClient<TRequest, TResponse, TMessageMetadata> | undefined
   >(undefined)
@@ -85,6 +95,7 @@ export function useChatController<
       buildAssistantMessage,
       persistence,
       onMessagesChange: setMessages,
+      onParticipantStateChange: setParticipantState,
       createMessageId,
       getCurrentDate,
     })
@@ -134,13 +145,25 @@ export function useChatController<
     setMessages(clientRef.current?.clearMessages() ?? [])
   }
 
+  function applyEvent(event: ConversationClientEvent): void {
+    setParticipantState(
+      clientRef.current?.applyEvent(event) ?? {
+        presences: [],
+        typingIndicators: [],
+        readReceipts: [],
+      },
+    )
+  }
+
   return {
     messages,
+    participantState,
     inputValue,
     isSubmitting,
     setInputValue: updateInputValue,
     submitMessage,
     retryMessage,
+    applyEvent,
     clearMessages,
   }
 

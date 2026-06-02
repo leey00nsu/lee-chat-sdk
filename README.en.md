@@ -321,10 +321,20 @@ import {
   openLeeChat,
 } from 'lee-chat-sdk/vanilla'
 
-initLeeChat({
+const leeChat = initLeeChat({
   appId: 'landing-page',
   endpoint: '/api/chat',
   initialOpen: true,
+})
+
+leeChat.applyEvent({
+  type: 'participant.typing_changed',
+  typingIndicator: {
+    conversationId: 'landing-page:conversation',
+    participantId: 'landing-page-assistant',
+    isTyping: true,
+    updatedAt: new Date().toISOString(),
+  },
 })
 
 openLeeChat()
@@ -351,6 +361,7 @@ if (container instanceof HTMLElement) {
 Use the headless controller and primitives when you need deeper customization.
 
 - `ConversationClient`: framework-agnostic core client for message sending, failure handling, retry, and persistence.
+- `ConversationClient.applyEvent`: applies presence, typing, and read events from transports or realtime adapters to core state.
 - `useChatController`: manages input state, submission state, messages, transport calls, and persistence.
 - `ChatTransport`: adapter interface for HTTP, mock, WebSocket, SSE, or any custom transport.
 - `HttpChatTransport`: default HTTP POST transport.

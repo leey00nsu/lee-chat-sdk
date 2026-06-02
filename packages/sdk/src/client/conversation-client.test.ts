@@ -3,6 +3,11 @@ import { ConversationClient } from './conversation-client'
 import type { ChatTransport } from '../transport/chat-transport'
 import { MemoryChatPersistence } from '../persistence/memory-chat-persistence'
 import type { ChatMessage } from '../model/chat-message'
+import type {
+  ChatParticipantPresence,
+  ChatReadReceipt,
+  ChatTypingIndicator,
+} from '../model/chat-participant-state'
 
 interface TestRequest {
   content: string
@@ -163,5 +168,83 @@ describe('ConversationClient', () => {
         status: 'sent',
       }),
     ])
+  })
+
+  it('participant state event를 적용하고 변경 콜백에 알린다', () => {
+    const stateChanges: Array<{
+      presences: ChatParticipantPresence[]
+      typingIndicators: ChatTypingIndicator[]
+      readReceipts: ChatReadReceipt[]
+    }> = []
+    const client = new ConversationClient<TestRequest, TestResponse>({
+      conversationId: 'conversation',
+      senderId: 'participant-user',
+      assistantSenderId: 'participant-assistant',
+      transport: createSuccessfulTransport(),
+      buildRequest: ({ content, conversationId }) => ({
+        content,
+        conversationId,
+      }),
+      buildAssistantMessage: ({ response }) => ({
+        content: response.content,
+      }),
+      onParticipantStateChange: (state) => {
+        stateChanges.push(state)
+      },
+    })
+
+    client.applyEvent({
+      type: 'participant.presence_changed',
+      presence: {
+        participantId: 'participant-assistant',
+        status: 'online',
+        updatedAt: '2026-06-01T00:00:00.000Z',
+      },
+    })
+    client.applyEvent({
+      type: 'participant.typing_changed',
+      typingIndicator: {
+        conversationId: 'conversation',
+        participantId: 'participant-assistant',
+        isTyping: true,
+        updatedAt: '2026-06-01T00:01:00.000Z',
+      },
+    })
+    client.applyEvent({
+      type: 'message.read',
+      readReceipt: {
+        conversationId: 'conversation',
+        messageId: 'message',
+        participantId: 'participant-assistant',
+        readAt: '2026-06-01T00:02:00.000Z',
+      },
+    })
+
+    expect(client.getParticipantState()).toEqual({
+      presences: [
+        {
+          participantId: 'participant-assistant',
+          status: 'online',
+          updatedAt: '2026-06-01T00:00:00.000Z',
+        },
+      ],
+      typingIndicators: [
+        {
+          conversationId: 'conversation',
+          participantId: 'participant-assistant',
+          isTyping: true,
+          updatedAt: '2026-06-01T00:01:00.000Z',
+        },
+      ],
+      readReceipts: [
+        {
+          conversationId: 'conversation',
+          messageId: 'message',
+          participantId: 'participant-assistant',
+          readAt: '2026-06-01T00:02:00.000Z',
+        },
+      ],
+    })
+    expect(stateChanges).toHaveLength(3)
   })
 })

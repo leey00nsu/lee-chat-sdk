@@ -3,8 +3,10 @@ export type {
   BuildConversationAssistantMessageParams,
   BuildConversationRequestParams,
   BuiltConversationAssistantMessage,
+  ConversationClientEvent,
   ConversationClientMutationResult,
   ConversationClientParams,
+  ConversationParticipantState,
 } from './client/conversation-client'
 export { useChatController } from './controller/use-chat-controller'
 export type {

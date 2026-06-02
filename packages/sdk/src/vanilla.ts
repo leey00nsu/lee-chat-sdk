@@ -7,4 +7,6 @@ export {
 export type {
   InitLeeChatConfig,
   LeeChatInstance,
+  LeeChatVanillaEvent,
+  LeeChatVanillaParticipantState,
 } from './vanilla/init-lee-chat'

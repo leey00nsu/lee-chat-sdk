@@ -4,6 +4,11 @@ import {
   type ChatMessage,
   type ChatMessagePart,
 } from '../model/chat-message'
+import type {
+  ChatParticipantPresence,
+  ChatReadReceipt,
+  ChatTypingIndicator,
+} from '../model/chat-participant-state'
 import type { ChatPersistence } from '../persistence/chat-persistence'
 import type { ChatTransport } from '../transport/chat-transport'
 
@@ -49,6 +54,7 @@ export interface ConversationClientParams<
   ) => BuiltConversationAssistantMessage<TMessageMetadata>
   persistence?: ChatPersistence<ChatMessage<TMessageMetadata>>
   onMessagesChange?: (messages: Array<ChatMessage<TMessageMetadata>>) => void
+  onParticipantStateChange?: (state: ConversationParticipantState) => void
   createMessageId?: () => string
   getCurrentDate?: () => Date
 }
@@ -56,6 +62,26 @@ export interface ConversationClientParams<
 export interface ConversationClientMutationResult<TMessageMetadata = unknown> {
   messages: Array<ChatMessage<TMessageMetadata>>
 }
+
+export interface ConversationParticipantState {
+  presences: ChatParticipantPresence[]
+  typingIndicators: ChatTypingIndicator[]
+  readReceipts: ChatReadReceipt[]
+}
+
+export type ConversationClientEvent =
+  | {
+      type: 'participant.presence_changed'
+      presence: ChatParticipantPresence
+    }
+  | {
+      type: 'participant.typing_changed'
+      typingIndicator: ChatTypingIndicator
+    }
+  | {
+      type: 'message.read'
+      readReceipt: ChatReadReceipt
+    }
 
 function replaceMessage<TMessageMetadata>(
   messages: Array<ChatMessage<TMessageMetadata>>,
@@ -76,6 +102,7 @@ export class ConversationClient<
   TMessageMetadata = unknown,
 > {
   private messages: Array<ChatMessage<TMessageMetadata>>
+  private participantState: ConversationParticipantState
   private readonly conversationId: string
   private readonly senderId: string
   private readonly assistantSenderId: string
@@ -93,6 +120,9 @@ export class ConversationClient<
   private readonly onMessagesChange?: (
     messages: Array<ChatMessage<TMessageMetadata>>,
   ) => void
+  private readonly onParticipantStateChange?: (
+    state: ConversationParticipantState,
+  ) => void
   private readonly createMessageId: () => string
   private readonly getCurrentDate: () => Date
 
@@ -105,6 +135,7 @@ export class ConversationClient<
     buildAssistantMessage,
     persistence,
     onMessagesChange,
+    onParticipantStateChange,
     createMessageId = createChatMessageId,
     getCurrentDate = () => new Date(),
   }: ConversationClientParams<TRequest, TResponse, TMessageMetadata>) {
@@ -116,13 +147,59 @@ export class ConversationClient<
     this.buildAssistantMessage = buildAssistantMessage
     this.persistence = persistence
     this.onMessagesChange = onMessagesChange
+    this.onParticipantStateChange = onParticipantStateChange
     this.createMessageId = createMessageId
     this.getCurrentDate = getCurrentDate
     this.messages = persistence?.read() ?? []
+    this.participantState = {
+      presences: [],
+      typingIndicators: [],
+      readReceipts: [],
+    }
   }
 
   getMessages(): Array<ChatMessage<TMessageMetadata>> {
     return this.messages
+  }
+
+  getParticipantState(): ConversationParticipantState {
+    return this.participantState
+  }
+
+  applyEvent(event: ConversationClientEvent): ConversationParticipantState {
+    if (event.type === 'participant.presence_changed') {
+      this.updateParticipantState({
+        ...this.participantState,
+        presences: replaceParticipantPresence(
+          this.participantState.presences,
+          event.presence,
+        ),
+      })
+
+      return this.participantState
+    }
+
+    if (event.type === 'participant.typing_changed') {
+      this.updateParticipantState({
+        ...this.participantState,
+        typingIndicators: replaceTypingIndicator(
+          this.participantState.typingIndicators,
+          event.typingIndicator,
+        ),
+      })
+
+      return this.participantState
+    }
+
+    this.updateParticipantState({
+      ...this.participantState,
+      readReceipts: replaceReadReceipt(
+        this.participantState.readReceipts,
+        event.readReceipt,
+      ),
+    })
+
+    return this.participantState
   }
 
   clearMessages(): Array<ChatMessage<TMessageMetadata>> {
@@ -254,4 +331,49 @@ export class ConversationClient<
     this.persistence?.write(this.messages)
     this.onMessagesChange?.(this.messages)
   }
+
+  private updateParticipantState(state: ConversationParticipantState): void {
+    this.participantState = state
+    this.onParticipantStateChange?.(this.participantState)
+  }
+}
+
+function replaceParticipantPresence(
+  presences: ChatParticipantPresence[],
+  nextPresence: ChatParticipantPresence,
+): ChatParticipantPresence[] {
+  const otherPresences = presences.filter((presence) => {
+    return presence.participantId !== nextPresence.participantId
+  })
+
+  return [...otherPresences, nextPresence]
+}
+
+function replaceTypingIndicator(
+  indicators: ChatTypingIndicator[],
+  nextIndicator: ChatTypingIndicator,
+): ChatTypingIndicator[] {
+  const otherIndicators = indicators.filter((indicator) => {
+    return !(
+      indicator.conversationId === nextIndicator.conversationId &&
+      indicator.participantId === nextIndicator.participantId
+    )
+  })
+
+  return [...otherIndicators, nextIndicator]
+}
+
+function replaceReadReceipt(
+  readReceipts: ChatReadReceipt[],
+  nextReadReceipt: ChatReadReceipt,
+): ChatReadReceipt[] {
+  const otherReadReceipts = readReceipts.filter((readReceipt) => {
+    return !(
+      readReceipt.conversationId === nextReadReceipt.conversationId &&
+      readReceipt.messageId === nextReadReceipt.messageId &&
+      readReceipt.participantId === nextReadReceipt.participantId
+    )
+  })
+
+  return [...otherReadReceipts, nextReadReceipt]
 }

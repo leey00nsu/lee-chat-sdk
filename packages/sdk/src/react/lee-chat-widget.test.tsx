@@ -9,6 +9,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { LeeChatProvider } from './lee-chat-provider'
 import { LeeChatWidget } from './lee-chat-widget'
 import { getChatMessageText } from '../model/chat-message'
+import { useLeeChat } from './use-lee-chat'
 
 const fetchMock = vi.fn()
 const scrollIntoViewMock = vi.fn()
@@ -23,6 +24,37 @@ function createPendingResponse() {
     responsePromise,
     resolveResponse,
   }
+}
+
+function ApplyParticipantStateEvents() {
+  const leeChat = useLeeChat()
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        leeChat.applyEvent({
+          type: 'participant.presence_changed',
+          presence: {
+            participantId: 'app-assistant',
+            status: 'online',
+            updatedAt: '2026-06-01T00:00:00.000Z',
+          },
+        })
+        leeChat.applyEvent({
+          type: 'participant.typing_changed',
+          typingIndicator: {
+            conversationId: 'app:conversation',
+            participantId: 'app-assistant',
+            isTyping: true,
+            updatedAt: '2026-06-01T00:01:00.000Z',
+          },
+        })
+      }}
+    >
+      Apply participant state
+    </button>
+  )
 }
 
 afterEach(() => {
@@ -351,6 +383,29 @@ describe('LeeChatWidget', () => {
       expect(screen.getByTestId('custom-assistant').textContent).toContain(
         'Custom response',
       )
+    })
+  })
+
+  it('participant presence와 typing 상태를 표시한다', async () => {
+    render(
+      <LeeChatProvider
+        config={{
+          appId: 'app',
+          endpoint: '/api/chat',
+          initialOpen: true,
+        }}
+        fetchImplementation={fetchMock}
+      >
+        <ApplyParticipantStateEvents />
+        <LeeChatWidget />
+      </LeeChatProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Apply participant state' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Online')).toBeTruthy()
+      expect(screen.getByText('Participant is typing...')).toBeTruthy()
     })
   })
 })

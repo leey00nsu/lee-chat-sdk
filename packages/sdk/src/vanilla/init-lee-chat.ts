@@ -1,6 +1,11 @@
 import { resolveLeeChatConfig, type LeeChatConfig } from '../config/lee-chat-config'
 import { createChatMessageId } from '../lib/create-chat-message-id'
 import { createTextMessageParts, getChatMessageText, type ChatMessage } from '../model/chat-message'
+import type {
+  ChatParticipantPresence,
+  ChatReadReceipt,
+  ChatTypingIndicator,
+} from '../model/chat-participant-state'
 import {
   buildLeeChatRequest,
   parseLeeChatResponse,
@@ -16,8 +21,29 @@ export interface InitLeeChatConfig extends LeeChatConfig {
 export interface LeeChatInstance {
   open(): void
   close(): void
+  applyEvent(event: LeeChatVanillaEvent): void
   destroy(): void
 }
+
+export interface LeeChatVanillaParticipantState {
+  presences: ChatParticipantPresence[]
+  typingIndicators: ChatTypingIndicator[]
+  readReceipts: ChatReadReceipt[]
+}
+
+export type LeeChatVanillaEvent =
+  | {
+      type: 'participant.presence_changed'
+      presence: ChatParticipantPresence
+    }
+  | {
+      type: 'participant.typing_changed'
+      typingIndicator: ChatTypingIndicator
+    }
+  | {
+      type: 'message.read'
+      readReceipt: ChatReadReceipt
+    }
 
 const LEE_CHAT_CONTAINER_ATTRIBUTE = 'data-lee-chat-container'
 const LEE_CHAT_STORAGE_VERSION = '1'
@@ -28,6 +54,8 @@ const LEE_CHAT_SCROLL_ANCHOR_CLASS_NAME = 'lee-chat-scroll-anchor'
 const LEE_CHAT_MESSAGE_STATUS_CLASS_NAME = 'lee-chat-message-status'
 const LEE_CHAT_RETRY_CLASS_NAME = 'lee-chat-retry'
 const LEE_CHAT_ASSISTANT_LOADING_CLASS_NAME = 'lee-chat-assistant-loading'
+const LEE_CHAT_PARTICIPANT_STATUS_CLASS_NAME = 'lee-chat-participant-status'
+const LEE_CHAT_TYPING_INDICATOR_CLASS_NAME = 'lee-chat-typing-indicator'
 const LEE_CHAT_CLOSE_LABEL = 'Close chat'
 const LEE_CHAT_INPUT_LABEL = 'Message'
 const LEE_CHAT_CONTENT_TYPE_HEADER = 'Content-Type'
@@ -43,6 +71,11 @@ let activeConfig: InitLeeChatConfig | null = null
 let activeIsOpen = false
 let activeIsSubmitting = false
 let activeMessages: ChatMessage<Record<string, unknown>>[] = []
+let activeParticipantState: LeeChatVanillaParticipantState = {
+  presences: [],
+  typingIndicators: [],
+  readReceipts: [],
+}
 
 function mergeClassNames(...classNames: Array<string | undefined>): string {
   return classNames.filter(Boolean).join(' ')
@@ -124,6 +157,29 @@ function applyTheme(config: LeeChatConfig): void {
   rootStyle.setProperty('--lee-chat-radius', resolvedConfig.theme.radius)
 }
 
+function hasOnlineParticipant(config: LeeChatConfig): boolean {
+  const resolvedConfig = resolveLeeChatConfig(config)
+
+  return activeParticipantState.presences.some((presence) => {
+    return (
+      presence.participantId !== resolvedConfig.participant.id &&
+      presence.status === 'online'
+    )
+  })
+}
+
+function hasTypingParticipant(config: LeeChatConfig): boolean {
+  const resolvedConfig = resolveLeeChatConfig(config)
+
+  return activeParticipantState.typingIndicators.some((typingIndicator) => {
+    return (
+      typingIndicator.conversationId === resolvedConfig.conversation.id &&
+      typingIndicator.participantId !== resolvedConfig.participant.id &&
+      typingIndicator.isTyping
+    )
+  })
+}
+
 function renderMessage(message: ChatMessage<Record<string, unknown>>): HTMLElement {
   const article = createElementWithClassName(
     'article',
@@ -190,6 +246,7 @@ function renderMessageList(config: LeeChatConfig): HTMLElement {
     ),
   )
   const list = document.createElement('ol')
+  let typingIndicator: HTMLElement | null = null
 
   activeMessages.forEach((message) => {
     const item = document.createElement('li')
@@ -218,13 +275,32 @@ function renderMessageList(config: LeeChatConfig): HTMLElement {
     list.append(loadingItem)
   }
 
+  if (hasTypingParticipant(config)) {
+    typingIndicator = createElementWithClassName(
+      'p',
+      mergeClassNames(
+        LEE_CHAT_TYPING_INDICATOR_CLASS_NAME,
+        resolvedConfig.className?.typingIndicator,
+      ),
+    )
+
+    typingIndicator.setAttribute('role', 'status')
+    typingIndicator.textContent = resolvedConfig.texts.participantTyping
+  }
+
   const scrollAnchor = createElementWithClassName(
     'div',
     LEE_CHAT_SCROLL_ANCHOR_CLASS_NAME,
   )
   scrollAnchor.setAttribute('aria-hidden', 'true')
 
-  wrapper.append(list, scrollAnchor)
+  wrapper.append(list)
+
+  if (typingIndicator) {
+    wrapper.append(typingIndicator)
+  }
+
+  wrapper.append(scrollAnchor)
 
   return wrapper
 }
@@ -318,6 +394,20 @@ function renderPanel(config: LeeChatConfig): HTMLElement {
   closeButton.addEventListener('click', closeLeeChat)
 
   headingWrapper.append(title, subtitle)
+
+  if (hasOnlineParticipant(config)) {
+    const participantStatus = createElementWithClassName(
+      'small',
+      mergeClassNames(
+        LEE_CHAT_PARTICIPANT_STATUS_CLASS_NAME,
+        resolvedConfig.className?.participantStatus,
+      ),
+    )
+
+    participantStatus.textContent = resolvedConfig.texts.participantOnline
+    headingWrapper.append(participantStatus)
+  }
+
   header.append(headingWrapper, closeButton)
   panel.append(header, renderMessageList(config), renderComposer(config))
 
@@ -511,6 +601,41 @@ async function sendMessageToEndpoint({
   }
 }
 
+function applyLeeChatEvent(event: LeeChatVanillaEvent): void {
+  if (event.type === 'participant.presence_changed') {
+    activeParticipantState = {
+      ...activeParticipantState,
+      presences: replaceParticipantPresence(
+        activeParticipantState.presences,
+        event.presence,
+      ),
+    }
+    renderActiveWidget()
+    return
+  }
+
+  if (event.type === 'participant.typing_changed') {
+    activeParticipantState = {
+      ...activeParticipantState,
+      typingIndicators: replaceTypingIndicator(
+        activeParticipantState.typingIndicators,
+        event.typingIndicator,
+      ),
+    }
+    renderActiveWidget()
+    return
+  }
+
+  activeParticipantState = {
+    ...activeParticipantState,
+    readReceipts: replaceReadReceipt(
+      activeParticipantState.readReceipts,
+      event.readReceipt,
+    ),
+  }
+  renderActiveWidget()
+}
+
 export function initLeeChat(config: InitLeeChatConfig): LeeChatInstance {
   destroyLeeChat()
 
@@ -528,6 +653,7 @@ export function initLeeChat(config: InitLeeChatConfig): LeeChatInstance {
   return {
     open: openLeeChat,
     close: closeLeeChat,
+    applyEvent: applyLeeChatEvent,
     destroy: destroyLeeChat,
   }
 }
@@ -552,6 +678,11 @@ export function destroyLeeChat(): void {
   activeIsOpen = false
   activeIsSubmitting = false
   activeMessages = []
+  activeParticipantState = {
+    presences: [],
+    typingIndicators: [],
+    readReceipts: [],
+  }
 }
 
 function replaceMessage(
@@ -565,4 +696,44 @@ function replaceMessage(
 
     return nextMessage
   })
+}
+
+function replaceParticipantPresence(
+  presences: ChatParticipantPresence[],
+  nextPresence: ChatParticipantPresence,
+): ChatParticipantPresence[] {
+  const otherPresences = presences.filter((presence) => {
+    return presence.participantId !== nextPresence.participantId
+  })
+
+  return [...otherPresences, nextPresence]
+}
+
+function replaceTypingIndicator(
+  indicators: ChatTypingIndicator[],
+  nextIndicator: ChatTypingIndicator,
+): ChatTypingIndicator[] {
+  const otherIndicators = indicators.filter((indicator) => {
+    return !(
+      indicator.conversationId === nextIndicator.conversationId &&
+      indicator.participantId === nextIndicator.participantId
+    )
+  })
+
+  return [...otherIndicators, nextIndicator]
+}
+
+function replaceReadReceipt(
+  readReceipts: ChatReadReceipt[],
+  nextReadReceipt: ChatReadReceipt,
+): ChatReadReceipt[] {
+  const otherReadReceipts = readReceipts.filter((readReceipt) => {
+    return !(
+      readReceipt.conversationId === nextReadReceipt.conversationId &&
+      readReceipt.messageId === nextReadReceipt.messageId &&
+      readReceipt.participantId === nextReadReceipt.participantId
+    )
+  })
+
+  return [...otherReadReceipts, nextReadReceipt]
 }

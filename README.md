@@ -321,10 +321,20 @@ import {
   openLeeChat,
 } from 'lee-chat-sdk/vanilla'
 
-initLeeChat({
+const leeChat = initLeeChat({
   appId: 'landing-page',
   endpoint: '/api/chat',
   initialOpen: true,
+})
+
+leeChat.applyEvent({
+  type: 'participant.typing_changed',
+  typingIndicator: {
+    conversationId: 'landing-page:conversation',
+    participantId: 'landing-page-assistant',
+    isTyping: true,
+    updatedAt: new Date().toISOString(),
+  },
 })
 
 openLeeChat()
@@ -351,6 +361,7 @@ if (container instanceof HTMLElement) {
 기본 UI보다 더 깊게 커스터마이징해야 한다면 headless controller와 primitive를 사용할 수 있습니다.
 
 - `ConversationClient`: React와 무관하게 메시지 전송, 실패 처리, retry, persistence 저장을 처리하는 core client입니다.
+- `ConversationClient.applyEvent`: transport나 realtime adapter에서 받은 presence, typing, read event를 core state에 적용합니다.
 - `useChatController`: 입력 상태, 제출 상태, 메시지 목록, transport 호출, persistence 저장을 관리합니다.
 - `ChatTransport`: HTTP, mock, WebSocket, SSE 같은 전송 방식을 교체하기 위한 adapter interface입니다.
 - `HttpChatTransport`: 기본 HTTP POST transport입니다.

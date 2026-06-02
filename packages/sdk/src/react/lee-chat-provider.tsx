@@ -110,7 +110,9 @@ export function LeeChatProvider({
         unreadCount,
         chat,
         messages: chat.messages,
+        participantState: chat.participantState,
         submitMessage: chat.submitMessage,
+        applyEvent: chat.applyEvent,
       }}
     >
       {children}

@@ -12,6 +12,7 @@ import {
 interface WidgetStoryProps {
   config: LeeChatConfig
   seededMessages?: string[]
+  seedParticipantState?: boolean
   renderMode?: 'default' | 'compact'
 }
 
@@ -72,14 +73,48 @@ function SeedMessages({ messages }: { messages: string[] }) {
   return null
 }
 
+function SeedParticipantState() {
+  const leeChat = useLeeChat()
+  const didSeedParticipantStateRef = useRef(false)
+
+  useEffect(() => {
+    if (didSeedParticipantStateRef.current) {
+      return
+    }
+
+    didSeedParticipantStateRef.current = true
+    leeChat.applyEvent({
+      type: 'participant.presence_changed',
+      presence: {
+        participantId: `${leeChat.config.appId}-assistant`,
+        status: 'online',
+        updatedAt: new Date().toISOString(),
+      },
+    })
+    leeChat.applyEvent({
+      type: 'participant.typing_changed',
+      typingIndicator: {
+        conversationId: leeChat.config.conversation.id,
+        participantId: `${leeChat.config.appId}-assistant`,
+        isTyping: true,
+        updatedAt: new Date().toISOString(),
+      },
+    })
+  }, [leeChat])
+
+  return null
+}
+
 function WidgetStory({
   config,
   seededMessages = [],
+  seedParticipantState = false,
   renderMode = 'default',
 }: WidgetStoryProps) {
   return (
     <LeeChatProvider config={config} fetchImplementation={storybookFetch}>
       {seededMessages.length > 0 ? <SeedMessages messages={seededMessages} /> : null}
+      {seedParticipantState ? <SeedParticipantState /> : null}
       <LeeChatWidget
         renderMessage={
           renderMode === 'compact'
@@ -188,6 +223,21 @@ export const FailedWithRetry: Story = {
       },
     },
     seededMessages: ['This request intentionally fails.'],
+  },
+}
+
+export const ParticipantState: Story = {
+  args: {
+    config: {
+      appId: 'storybook-participant-state',
+      endpoint: STORY_ENDPOINT,
+      initialOpen: true,
+      texts: {
+        title: 'Participant State',
+        subtitle: 'Review online and typing indicators.',
+      },
+    },
+    seedParticipantState: true,
   },
 }
 
