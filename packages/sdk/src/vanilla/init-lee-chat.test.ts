@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { fireEvent, waitFor } from '@testing-library/react'
 import {
   closeLeeChat,
@@ -8,10 +8,15 @@ import {
 } from './init-lee-chat'
 
 const fetchMock = vi.fn()
+const scrollIntoViewMock = vi.fn()
 
 afterEach(() => {
   destroyLeeChat()
   vi.clearAllMocks()
+})
+
+beforeAll(() => {
+  Element.prototype.scrollIntoView = scrollIntoViewMock
 })
 
 describe('vanilla initLeeChat', () => {
@@ -91,6 +96,96 @@ describe('vanilla initLeeChat', () => {
         method: 'POST',
       }),
     )
+  })
+
+  it('사용자 메시지를 전송하면 최신 메시지로 스크롤한다', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          message: {
+            content: 'Latest vanilla response',
+          },
+        }),
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        },
+      ),
+    )
+
+    initLeeChat({
+      appId: 'vanilla-app',
+      endpoint: '/api/chat',
+      fetchImplementation: fetchMock,
+      initialOpen: true,
+    })
+
+    const input = document.querySelector('textarea')
+
+    if (!(input instanceof HTMLTextAreaElement)) {
+      throw new Error('textarea not found')
+    }
+
+    scrollIntoViewMock.mockClear()
+    fireEvent.change(input, {
+      target: {
+        value: 'Latest vanilla question',
+      },
+    })
+    fireEvent.submit(input.form as HTMLFormElement)
+
+    await waitFor(() => {
+      expect(document.body.textContent).toContain('Latest vanilla response')
+    })
+    expect(scrollIntoViewMock).toHaveBeenCalled()
+  })
+
+  it('widget을 다시 열면 최신 메시지로 스크롤한다', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          message: {
+            content: 'Reopen vanilla response',
+          },
+        }),
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        },
+      ),
+    )
+
+    initLeeChat({
+      appId: 'vanilla-app',
+      endpoint: '/api/chat',
+      fetchImplementation: fetchMock,
+      initialOpen: true,
+    })
+
+    const input = document.querySelector('textarea')
+
+    if (!(input instanceof HTMLTextAreaElement)) {
+      throw new Error('textarea not found')
+    }
+
+    fireEvent.change(input, {
+      target: {
+        value: 'Reopen vanilla question',
+      },
+    })
+    fireEvent.submit(input.form as HTMLFormElement)
+
+    await waitFor(() => {
+      expect(document.body.textContent).toContain('Reopen vanilla response')
+    })
+
+    scrollIntoViewMock.mockClear()
+    closeLeeChat()
+    openLeeChat()
+
+    expect(scrollIntoViewMock).toHaveBeenCalled()
   })
 
   it('Enter로 전송하고 Shift+Enter는 줄바꿈 입력으로 남긴다', async () => {

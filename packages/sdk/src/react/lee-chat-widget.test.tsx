@@ -5,15 +5,20 @@ import {
   screen,
   waitFor,
 } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { LeeChatProvider } from './lee-chat-provider'
 import { LeeChatWidget } from './lee-chat-widget'
 
 const fetchMock = vi.fn()
+const scrollIntoViewMock = vi.fn()
 
 afterEach(() => {
   cleanup()
   vi.clearAllMocks()
+})
+
+beforeAll(() => {
+  Element.prototype.scrollIntoView = scrollIntoViewMock
 })
 
 describe('LeeChatWidget', () => {
@@ -79,6 +84,83 @@ describe('LeeChatWidget', () => {
         method: 'POST',
       }),
     )
+  })
+
+  it('메시지를 보내면 최신 메시지로 스크롤한다', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        message: {
+          content: 'Latest response',
+        },
+      }),
+    })
+
+    render(
+      <LeeChatProvider
+        config={{
+          appId: 'app',
+          endpoint: '/api/chat',
+          initialOpen: true,
+        }}
+        fetchImplementation={fetchMock}
+      >
+        <LeeChatWidget />
+      </LeeChatProvider>,
+    )
+
+    scrollIntoViewMock.mockClear()
+
+    fireEvent.change(screen.getByLabelText('Message'), {
+      target: { value: 'Latest question' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Latest response')).toBeTruthy()
+    })
+    expect(scrollIntoViewMock).toHaveBeenCalled()
+  })
+
+  it('panel을 다시 열면 최신 메시지로 스크롤한다', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        message: {
+          content: 'Reopen response',
+        },
+      }),
+    })
+
+    render(
+      <LeeChatProvider
+        config={{
+          appId: 'app',
+          endpoint: '/api/chat',
+          initialOpen: true,
+        }}
+        fetchImplementation={fetchMock}
+      >
+        <LeeChatWidget />
+      </LeeChatProvider>,
+    )
+
+    fireEvent.change(screen.getByLabelText('Message'), {
+      target: { value: 'Reopen question' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Reopen response')).toBeTruthy()
+    })
+
+    scrollIntoViewMock.mockClear()
+    fireEvent.click(screen.getByRole('button', { name: 'Close chat' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Open chat' }))
+
+    await waitFor(() => {
+      expect(scrollIntoViewMock).toHaveBeenCalled()
+    })
   })
 
   it('CSS class hook을 root, trigger, panel에 적용한다', () => {

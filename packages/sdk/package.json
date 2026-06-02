@@ -64,5 +64,8 @@
     "react-dom": {
       "optional": true
     }
+  },
+  "dependencies": {
+    "@radix-ui/react-popover": "^1.1.15"
   }
 }

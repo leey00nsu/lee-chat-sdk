@@ -24,6 +24,7 @@ const LEE_CHAT_STORAGE_VERSION = '1'
 const LEE_CHAT_FORM_CLASS_NAME = 'lee-chat-vanilla-form'
 const LEE_CHAT_TEXTAREA_CLASS_NAME = 'lee-chat-vanilla-textarea'
 const LEE_CHAT_SUBMIT_CLASS_NAME = 'lee-chat-vanilla-submit'
+const LEE_CHAT_SCROLL_ANCHOR_CLASS_NAME = 'lee-chat-scroll-anchor'
 const LEE_CHAT_CLOSE_LABEL = 'Close chat'
 const LEE_CHAT_INPUT_LABEL = 'Message'
 const LEE_CHAT_CONTENT_TYPE_HEADER = 'Content-Type'
@@ -148,7 +149,13 @@ function renderMessageList(config: LeeChatConfig): HTMLElement {
     list.append(item)
   })
 
-  wrapper.append(list)
+  const scrollAnchor = createElementWithClassName(
+    'div',
+    LEE_CHAT_SCROLL_ANCHOR_CLASS_NAME,
+  )
+  scrollAnchor.setAttribute('aria-hidden', 'true')
+
+  wrapper.append(list, scrollAnchor)
 
   return wrapper
 }
@@ -287,6 +294,21 @@ function renderActiveWidget(): void {
 
   root.append(renderTrigger(activeConfig))
   activeContainer.append(root)
+  scrollLatestMessageIntoView(root)
+}
+
+function scrollLatestMessageIntoView(root: HTMLElement): void {
+  if (!activeIsOpen) {
+    return
+  }
+
+  const scrollAnchor = root.querySelector(`.${LEE_CHAT_SCROLL_ANCHOR_CLASS_NAME}`)
+
+  if (typeof scrollAnchor?.scrollIntoView !== 'function') {
+    return
+  }
+
+  scrollAnchor.scrollIntoView({ block: 'end' })
 }
 
 async function submitMessage(
