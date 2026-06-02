@@ -21,10 +21,42 @@ import type {
 } from '../transport/chat-event-transport'
 import '../react/lee-chat-widget.css'
 
+export interface LeeChatVanillaHeaderRenderParams {
+  title: string
+  subtitle: string
+  isOpen: boolean
+  hasOnlineParticipant: boolean
+  close: () => void
+}
+
+export interface LeeChatVanillaTriggerRenderParams {
+  label: string
+  isOpen: boolean
+  unreadCount: number
+  open: () => void
+  close: () => void
+  toggle: () => void
+}
+
+export interface LeeChatVanillaMessageRenderParams {
+  message: ChatMessage<Record<string, unknown>>
+  retryMessage: (messageId: string) => void
+}
+
+export interface LeeChatVanillaComposerFooterRenderParams {
+  isSubmitting: boolean
+}
+
 export interface InitLeeChatConfig extends LeeChatConfig {
   container?: HTMLElement
   fetchImplementation?: typeof fetch
   eventTransport?: ChatEventTransport
+  renderHeader?: (params: LeeChatVanillaHeaderRenderParams) => HTMLElement
+  renderTrigger?: (params: LeeChatVanillaTriggerRenderParams) => HTMLElement
+  renderMessage?: (params: LeeChatVanillaMessageRenderParams) => HTMLElement
+  renderComposerFooter?: (
+    params: LeeChatVanillaComposerFooterRenderParams,
+  ) => HTMLElement
 }
 
 export interface LeeChatInstance {
@@ -214,6 +246,15 @@ function renderMessage(
   config: LeeChatConfig,
   message: ChatMessage<Record<string, unknown>>,
 ): HTMLElement {
+  if (activeConfig?.renderMessage) {
+    return activeConfig.renderMessage({
+      message,
+      retryMessage: (messageId) => {
+        void retryMessage(messageId)
+      },
+    })
+  }
+
   const article = createElementWithClassName(
     'article',
     mergeClassNames(
@@ -426,6 +467,14 @@ function renderComposer(config: LeeChatConfig): HTMLElement {
   form.append(label, textarea, button)
   wrapper.append(form)
 
+  if (activeConfig?.renderComposerFooter) {
+    wrapper.append(
+      activeConfig.renderComposerFooter({
+        isSubmitting: activeIsSubmitting,
+      }),
+    )
+  }
+
   return wrapper
 }
 
@@ -457,19 +506,47 @@ function renderPanel(config: LeeChatConfig): HTMLElement {
     'header',
     mergeClassNames('lee-chat-header', resolvedConfig.className?.header),
   )
+
+  panel.setAttribute('aria-label', resolvedConfig.texts.title)
+
+  if (activeConfig?.renderHeader) {
+    header.append(
+      activeConfig.renderHeader({
+        title: resolvedConfig.texts.title,
+        subtitle: resolvedConfig.texts.subtitle,
+        isOpen: activeIsOpen,
+        hasOnlineParticipant: hasOnlineParticipant(config),
+        close: closeLeeChat,
+      }),
+    )
+    panel.append(header, renderMessageList(config), renderComposer(config))
+
+    return panel
+  }
+
+  appendDefaultHeaderContent(header, config)
+
+  panel.append(header, renderMessageList(config), renderComposer(config))
+
+  return panel
+}
+
+function appendDefaultHeaderContent(
+  header: HTMLElement,
+  config: LeeChatConfig,
+): void {
+  const resolvedConfig = resolveLeeChatConfig(config)
   const headingWrapper = document.createElement('div')
   const title = document.createElement('h2')
   const subtitle = document.createElement('p')
   const closeButton = createElementWithClassName('button', 'lee-chat-close')
 
-  panel.setAttribute('aria-label', resolvedConfig.texts.title)
   title.textContent = resolvedConfig.texts.title
   subtitle.textContent = resolvedConfig.texts.subtitle
   closeButton.setAttribute('type', 'button')
   closeButton.setAttribute('aria-label', LEE_CHAT_CLOSE_LABEL)
   closeButton.textContent = '×'
   closeButton.addEventListener('click', closeLeeChat)
-
   headingWrapper.append(title, subtitle)
 
   if (hasOnlineParticipant(config)) {
@@ -486,13 +563,22 @@ function renderPanel(config: LeeChatConfig): HTMLElement {
   }
 
   header.append(headingWrapper, closeButton)
-  panel.append(header, renderMessageList(config), renderComposer(config))
-
-  return panel
 }
 
 function renderTrigger(config: LeeChatConfig): HTMLElement {
   const resolvedConfig = resolveLeeChatConfig(config)
+
+  if (activeConfig?.renderTrigger) {
+    return activeConfig.renderTrigger({
+      label: resolvedConfig.texts.triggerLabel,
+      isOpen: activeIsOpen,
+      unreadCount: resolveUnreadCount(config),
+      open: openLeeChat,
+      close: closeLeeChat,
+      toggle: toggleLeeChat,
+    })
+  }
+
   const trigger = createElementWithClassName(
     'button',
     mergeClassNames('lee-chat-trigger', resolvedConfig.className?.trigger),
@@ -504,12 +590,29 @@ function renderTrigger(config: LeeChatConfig): HTMLElement {
   trigger.setAttribute('aria-expanded', String(activeIsOpen))
   label.textContent = resolvedConfig.texts.triggerLabel
   trigger.append(label)
-  trigger.addEventListener('click', () => {
-    activeIsOpen = !activeIsOpen
-    renderActiveWidget()
-  })
+  trigger.addEventListener('click', toggleLeeChat)
 
   return trigger
+}
+
+function resolveUnreadCount(config: LeeChatConfig): number {
+  if (activeIsOpen) {
+    return 0
+  }
+
+  const resolvedConfig = resolveLeeChatConfig(config)
+
+  return activeMessages.filter((message) => {
+    return (
+      message.senderId !== resolvedConfig.participant.id &&
+      message.status === 'sent'
+    )
+  }).length
+}
+
+function toggleLeeChat(): void {
+  activeIsOpen = !activeIsOpen
+  renderActiveWidget()
 }
 
 function renderActiveWidget(): void {

@@ -435,6 +435,27 @@ if (container instanceof HTMLElement) {
 }
 ```
 
+The Vanilla API also supports renderer hooks that return DOM elements.
+
+```ts
+initLeeChat({
+  appId: 'docs',
+  endpoint: '/api/chat',
+  renderTrigger: ({ open, unreadCount }) => {
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.textContent = `Contact us ${unreadCount || ''}`
+    button.addEventListener('click', open)
+    return button
+  },
+  renderMessage: ({ message }) => {
+    const article = document.createElement('article')
+    article.textContent = `${message.role}: ${message.content}`
+    return article
+  },
+})
+```
+
 ## Headless API
 
 Use the headless controller and primitives when you need deeper customization.

@@ -184,6 +184,131 @@ describe('vanilla initLeeChat', () => {
     })
   })
 
+  it('renderHeader로 header를 교체하고 close 액션을 사용할 수 있다', () => {
+    initLeeChat({
+      appId: 'vanilla-app',
+      endpoint: '/api/chat',
+      fetchImplementation: fetchMock,
+      initialOpen: true,
+      renderHeader: ({ close, title, subtitle }) => {
+        const header = document.createElement('header')
+        const titleElement = document.createElement('strong')
+        const subtitleElement = document.createElement('span')
+        const closeButton = document.createElement('button')
+
+        titleElement.textContent = title
+        subtitleElement.textContent = subtitle
+        closeButton.type = 'button'
+        closeButton.textContent = 'Custom close'
+        closeButton.addEventListener('click', close)
+        header.append(titleElement, subtitleElement, closeButton)
+
+        return header
+      },
+    })
+
+    expect(document.body.textContent).toContain('Chat')
+    expect(document.body.textContent).toContain('Send us a message.')
+
+    fireEvent.click(document.querySelector('button') as HTMLButtonElement)
+
+    expect(document.querySelector('[aria-label="Chat"]')).toBeNull()
+  })
+
+  it('renderTrigger로 trigger를 교체하고 open 액션을 사용할 수 있다', () => {
+    initLeeChat({
+      appId: 'vanilla-app',
+      endpoint: '/api/chat',
+      fetchImplementation: fetchMock,
+      renderTrigger: ({ open, unreadCount }) => {
+        const trigger = document.createElement('button')
+        trigger.type = 'button'
+        trigger.textContent = `Custom trigger ${unreadCount}`
+        trigger.addEventListener('click', open)
+
+        return trigger
+      },
+    })
+
+    expect(document.body.textContent).toContain('Custom trigger 0')
+
+    fireEvent.click(document.querySelector('button') as HTMLButtonElement)
+
+    expect(document.querySelector('[aria-label="Chat"]')).toBeTruthy()
+  })
+
+  it('renderMessage로 메시지 렌더링을 교체한다', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          message: {
+            content: 'Custom vanilla response',
+          },
+        }),
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        },
+      ),
+    )
+
+    initLeeChat({
+      appId: 'vanilla-app',
+      endpoint: '/api/chat',
+      fetchImplementation: fetchMock,
+      initialOpen: true,
+      renderMessage: ({ message }) => {
+        const article = document.createElement('article')
+        article.dataset.testid = `custom-${message.role}`
+        article.textContent = `${message.role}:${message.content}`
+
+        return article
+      },
+    })
+
+    const input = document.querySelector('textarea')
+
+    if (!(input instanceof HTMLTextAreaElement)) {
+      throw new Error('textarea not found')
+    }
+
+    fireEvent.change(input, {
+      target: {
+        value: 'Custom vanilla question',
+      },
+    })
+    fireEvent.submit(input.form as HTMLFormElement)
+
+    await waitFor(() => {
+      expect(
+        document.querySelector('[data-testid="custom-user"]')?.textContent,
+      ).toContain('user:Custom vanilla question')
+      expect(
+        document.querySelector('[data-testid="custom-assistant"]')?.textContent,
+      ).toContain('assistant:Custom vanilla response')
+    })
+  })
+
+  it('renderComposerFooter로 composer 아래 영역을 추가한다', () => {
+    initLeeChat({
+      appId: 'vanilla-app',
+      endpoint: '/api/chat',
+      fetchImplementation: fetchMock,
+      initialOpen: true,
+      renderComposerFooter: ({ isSubmitting }) => {
+        const footer = document.createElement('small')
+        footer.textContent = isSubmitting
+          ? 'Sending custom footer'
+          : 'Custom footer'
+
+        return footer
+      },
+    })
+
+    expect(document.body.textContent).toContain('Custom footer')
+  })
+
   it('사용자 메시지를 전송하면 최신 메시지로 스크롤한다', async () => {
     fetchMock.mockResolvedValue(
       new Response(

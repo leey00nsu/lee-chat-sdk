@@ -8,5 +8,9 @@ export type {
   InitLeeChatConfig,
   LeeChatInstance,
   LeeChatVanillaEvent,
+  LeeChatVanillaComposerFooterRenderParams,
+  LeeChatVanillaHeaderRenderParams,
+  LeeChatVanillaMessageRenderParams,
   LeeChatVanillaParticipantState,
+  LeeChatVanillaTriggerRenderParams,
 } from './vanilla/init-lee-chat'

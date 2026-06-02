@@ -435,6 +435,27 @@ if (container instanceof HTMLElement) {
 }
 ```
 
+Vanilla API에서도 DOM을 반환하는 renderer hook으로 주요 영역을 교체할 수 있습니다.
+
+```ts
+initLeeChat({
+  appId: 'docs',
+  endpoint: '/api/chat',
+  renderTrigger: ({ open, unreadCount }) => {
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.textContent = `문의하기 ${unreadCount || ''}`
+    button.addEventListener('click', open)
+    return button
+  },
+  renderMessage: ({ message }) => {
+    const article = document.createElement('article')
+    article.textContent = `${message.role}: ${message.content}`
+    return article
+  },
+})
+```
+
 ## Headless API
 
 기본 UI보다 더 깊게 커스터마이징해야 한다면 headless controller와 primitive를 사용할 수 있습니다.
