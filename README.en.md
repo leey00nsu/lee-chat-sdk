@@ -1,43 +1,43 @@
 # lee-chat-sdk
 
-한국어 | [English](./README.en.md)
+[한국어](./README.md) | English
 
-도메인별 채팅 위젯, 메시지 흐름, 운영 콘솔을 만들기 위한 재사용 가능한 React primitives입니다.
+Reusable React primitives for building domain-specific chat widgets, message flows, and operator consoles.
 
-`lee-chat-sdk`는 챗봇 서비스가 아니며 특정 백엔드를 전제로 하지 않습니다. 채팅 제품을 만들 때 반복되는 클라이언트 구조인 메시지 모델, transport adapter, persistence adapter, controller hook, 가벼운 UI primitive, 운영 도구용 event model을 제공합니다.
+`lee-chat-sdk` is not a chatbot service and does not assume a specific backend. It provides the reusable client-side pieces that most chat products need: message models, transport adapters, persistence adapters, a controller hook, lightweight UI primitives, and event models for operational tooling.
 
-## 무엇을 만들 수 있나
+## What You Can Build
 
-- floating support chat widget
-- 도메인별 AI assistant UI
-- HTTP, mock, WebSocket, SSE transport로 연결되는 채팅 인터페이스
-- memory 또는 localStorage 기반 대화 저장
-- citation, 상담자 이름, 주문 ID, 내부 메모 같은 metadata가 붙은 메시지 렌더러
-- 대화 배정, 내부 메모, 고객 이벤트, message/event stream을 다루는 운영 콘솔
+- A floating support chat widget
+- A domain-specific AI assistant UI
+- A chat interface backed by HTTP, mock, WebSocket, or SSE transport
+- A persisted conversation experience using memory or localStorage
+- A message renderer with custom metadata such as citations, agent names, order IDs, or internal notes
+- An operator console with conversation assignment, internal notes, customer events, and message/event streams
 
-## 상태
+## Status
 
-이 패키지는 초기 개발 단계입니다.
+This package is in early development.
 
-- public API는 아직 변경될 수 있습니다.
-- UI primitive는 의도적으로 작고 최소한의 형태입니다.
-- npm 배포를 염두에 둔 구조지만, 안정적인 `1.0.0` 릴리스 전까지는 experimental로 보는 것이 좋습니다.
+- Public API is still evolving.
+- UI primitives are intentionally minimal.
+- The package is designed for npm publishing, but should be treated as experimental until a stable `1.0.0` release.
 
-## 설치
+## Installation
 
-npm 배포 후에는 다음처럼 설치합니다.
+After publishing to npm:
 
 ```bash
 pnpm add lee-chat-sdk
 ```
 
-또는:
+or:
 
 ```bash
 npm install lee-chat-sdk
 ```
 
-로컬 개발 중에는 sibling workspace에서 직접 연결할 수 있습니다.
+During local development, you can link it from a sibling workspace:
 
 ```bash
 pnpm add lee-chat-sdk@file:../lee-chat-sdk/packages/sdk
@@ -52,7 +52,7 @@ pnpm add lee-chat-sdk@file:../lee-chat-sdk/packages/sdk
 }
 ```
 
-## 패키지 구성
+## Package Contents
 
 ```text
 packages/sdk
@@ -62,15 +62,15 @@ packages/sdk
   src/transport        ChatTransport, HttpChatTransport
   src/ui               ChatComposer, ChatMessageList, ChatWidgetShell, FloatingChatTrigger
 
-apps/demo              support chat widget 예제
-apps/console           operator console 예제
+apps/demo              support chat widget example
+apps/console           operator console example
 ```
 
-## 핵심 개념
+## Core Concepts
 
 ### Messages
 
-`ChatMessage`는 기본 메시지 타입입니다. generic metadata를 지원하므로 제품별 도메인 컨텍스트를 메시지에 붙일 수 있습니다.
+`ChatMessage` is the base message type. It supports generic metadata so each product can attach its own domain-specific context.
 
 ```ts
 import type { ChatMessage } from 'lee-chat-sdk'
@@ -98,7 +98,7 @@ const message: ChatMessage<SupportMetadata> = {
 
 ### Transport
 
-`ChatTransport`는 메시지를 보내는 방식을 교체할 수 있게 해줍니다. SDK는 HTTP, mock, WebSocket, SSE, custom backend 중 무엇을 쓰는지 알 필요가 없습니다.
+`ChatTransport` lets you swap how messages are sent. The SDK does not care whether you use HTTP, mocks, WebSocket, SSE, or a custom backend.
 
 ```ts
 import type { ChatTransport } from 'lee-chat-sdk'
@@ -124,7 +124,7 @@ const mockTransport: ChatTransport<
 }
 ```
 
-기본 HTTP transport도 제공합니다.
+The package also includes an HTTP transport:
 
 ```ts
 import { HttpChatTransport } from 'lee-chat-sdk'
@@ -139,7 +139,7 @@ const transport = new HttpChatTransport<
 
 ### Persistence
 
-demo나 임시 세션에는 memory persistence를 사용할 수 있습니다.
+Use memory persistence for demos or temporary sessions:
 
 ```ts
 import { MemoryChatPersistence, type ChatMessage } from 'lee-chat-sdk'
@@ -147,7 +147,7 @@ import { MemoryChatPersistence, type ChatMessage } from 'lee-chat-sdk'
 const persistence = new MemoryChatPersistence<ChatMessage>()
 ```
 
-브라우저 대화 기록에는 localStorage persistence를 사용할 수 있습니다.
+Use localStorage persistence for browser-side conversation history:
 
 ```ts
 import { LocalStorageChatPersistence, type ChatMessage } from 'lee-chat-sdk'
@@ -163,7 +163,7 @@ const persistence = new LocalStorageChatPersistence<ChatMessage>({
 
 ### Controller
 
-`useChatController`는 입력 상태, 제출 상태, 사용자 메시지, assistant 메시지, 실패 메시지, transport 호출, persistence 저장을 관리합니다.
+`useChatController` manages input state, submission state, user messages, assistant messages, failed messages, transport calls, and persistence.
 
 ```tsx
 'use client'
@@ -261,7 +261,7 @@ export function SupportChatWidget() {
 
 ### Events
 
-`ChatEvent`는 운영 콘솔이나 audit trail을 만들 때 유용합니다. 메시지, 실패 메시지, 배정 변경, 대화 종료, 내부 메모, 고객 이벤트를 표현할 수 있습니다.
+`ChatEvent` is useful when building operator consoles or audit trails. It can represent messages, failed messages, assignment changes, closed conversations, internal notes, and customer events.
 
 ```ts
 import {
@@ -295,16 +295,16 @@ const conversationEvents = collectChatEventsByConversationId({
 
 ## UI Primitives
 
-포함된 UI 컴포넌트는 작고 특정 디자인 시스템에 강하게 묶이지 않도록 작성되어 있습니다.
+The included UI components are deliberately small and unopinionated:
 
-- `ChatWidgetShell`: title, description, content, footer slot을 가진 panel layout
-- `ChatMessageList`: `renderMessage` slot을 가진 message list
-- `ChatComposer`: controlled textarea와 submit form
-- `FloatingChatTrigger`: 접근 가능한 open/close trigger button
+- `ChatWidgetShell`: panel layout with title, description, content, and footer slots
+- `ChatMessageList`: message list with a `renderMessage` slot
+- `ChatComposer`: controlled textarea and submit form
+- `FloatingChatTrigger`: accessible open/close trigger button
 
-이 컴포넌트를 직접 사용해도 되고, SDK의 controller, transport, persistence, model layer만 유지한 채 자체 디자인 시스템 컴포넌트로 교체해도 됩니다.
+You can use these directly or replace them with your own design system components while keeping the SDK controller, transport, persistence, and model layer.
 
-## 예제 앱
+## Example Apps
 
 ### Support Chat Demo
 
@@ -312,9 +312,9 @@ const conversationEvents = collectChatEventsByConversationId({
 pnpm --filter lee-chat-sdk-demo dev
 ```
 
-포함된 내용:
+Demonstrates:
 
-- support chat widget
+- A support chat widget
 - `useChatController`
 - mock transport
 - memory persistence
@@ -326,19 +326,19 @@ pnpm --filter lee-chat-sdk-demo dev
 pnpm --filter lee-chat-sdk-console dev
 ```
 
-포함된 내용:
+Demonstrates:
 
-- conversation list
-- message thread
-- customer context panel
+- Conversation list
+- Message thread
+- Customer context panel
 - unread count
-- assigned / unassigned / closed 상태
+- assigned / unassigned / closed states
 - assignment action
 - internal notes
 - customer event timeline
 - `ChatEvent` stream collection
 
-## 개발
+## Development
 
 ```bash
 pnpm install
@@ -347,7 +347,7 @@ pnpm test:run
 pnpm build
 ```
 
-패키지별 확인:
+Run package-level checks:
 
 ```bash
 pnpm --filter lee-chat-sdk test:run
@@ -355,38 +355,38 @@ pnpm --filter lee-chat-sdk-demo test:run
 pnpm --filter lee-chat-sdk-console test:run
 ```
 
-## 배포 체크리스트
+## Publishing Checklist
 
-npm 배포 전에는 다음을 확인합니다.
+Before publishing to npm:
 
-- `packages/sdk/package.json`에서 `"private": true` 제거
-- npm에서 패키지 이름 사용 가능 여부 확인
-- package metadata 추가: `description`, `license`, `author`, `repository`, `keywords`
-- 배포 패키지에 `dist`만 포함할지 추가 문서도 포함할지 결정
-- `pnpm --filter lee-chat-sdk build` 실행
-- `pnpm --filter lee-chat-sdk test:run` 실행
-- `pnpm --filter lee-chat-sdk typecheck` 실행
-- `packages/sdk`에서 publish
+- Remove `"private": true` from `packages/sdk/package.json`.
+- Confirm the package name is available on npm.
+- Add package metadata: `description`, `license`, `author`, `repository`, `keywords`.
+- Decide whether the published package should include only `dist` or additional docs.
+- Run `pnpm --filter lee-chat-sdk build`.
+- Run `pnpm --filter lee-chat-sdk test:run`.
+- Run `pnpm --filter lee-chat-sdk typecheck`.
+- Publish from `packages/sdk`.
 
 ```bash
 cd packages/sdk
 pnpm publish --access public
 ```
 
-## 현재 한계
+## Current Limitations
 
-- UI primitive는 production styling을 포함하지 않습니다.
-- WebSocket/SSE transport는 아직 구현되어 있지 않습니다.
-- conversation-list controller는 아직 없습니다.
-- retry/resend 정책은 아직 포함되어 있지 않습니다.
-- Storybook 문서화는 아직 없습니다.
-- package export path는 현재 root export로 제한되어 있습니다.
+- UI primitives are not styled for production.
+- WebSocket and SSE transports are not implemented yet.
+- There is no conversation-list controller yet.
+- Retry and resend policies are not included yet.
+- Storybook documentation is not included yet.
+- Package export paths are currently limited to the root export.
 
 ## Roadmap
 
-- headless logic과 styled UI package 분리
-- WebSocket/SSE transport adapter 추가
-- conversation list와 operator-console controller API 추가
-- retry, resend, optimistic update 정책 추가
-- Storybook examples 추가
-- 안정적인 npm 배포 metadata와 release workflow 준비
+- Split headless logic and styled UI packages.
+- Add WebSocket and SSE transport adapters.
+- Add conversation list and operator-console controller APIs.
+- Add retry, resend, and optimistic update policies.
+- Add Storybook examples.
+- Prepare stable npm publishing metadata and release workflow.
