@@ -88,7 +88,7 @@ import 'lee-chat-sdk/style.css'
 
 ## Headless
 
-`ConversationClient`는 React와 무관하게 메시지 전송, 실패 처리, retry, persistence 저장을 처리합니다. `applyEvent`로 realtime adapter의 presence, typing, read event를 적용할 수 있고, `ChatParticipantPresence`, `ChatTypingIndicator`, `ChatReadReceipt`로 상태를 참여자 기준으로 표현할 수 있습니다. `SseChatEventTransport`와 `WebSocketChatEventTransport`는 서버 event를 `ConversationClientEvent`로 파싱해 React Provider나 Vanilla widget에 연결합니다.
+`ConversationClient`는 React와 무관하게 메시지 전송, 실패 처리, retry, persistence 저장을 처리합니다. `applyEvent`로 realtime adapter의 presence, typing, read event를 적용할 수 있고, `ChatParticipantPresence`, `ChatTypingIndicator`, `ChatReadReceipt`로 상태를 참여자 기준으로 표현할 수 있습니다. `SseChatEventTransport`와 `WebSocketChatEventTransport`는 서버 event를 `ConversationClientEvent`로 파싱해 React Provider나 Vanilla widget에 연결합니다. `WebSocketChatEventTransport`는 reconnect/backoff 옵션도 제공합니다.
 
 ## Backend Contract
 

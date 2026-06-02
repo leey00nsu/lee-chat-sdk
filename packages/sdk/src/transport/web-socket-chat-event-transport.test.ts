@@ -6,13 +6,13 @@ import {
 
 class TestWebSocket implements WebSocketLike {
   readonly close = vi.fn()
-  private readonly listeners = new Map<string, Array<(event: MessageEvent) => void>>()
+  private readonly listeners = new Map<string, Array<(event: Event) => void>>()
 
-  addEventListener(type: string, listener: (event: MessageEvent) => void): void {
+  addEventListener(type: string, listener: (event: Event) => void): void {
     this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener])
   }
 
-  removeEventListener(type: string, listener: (event: MessageEvent) => void): void {
+  removeEventListener(type: string, listener: (event: Event) => void): void {
     this.listeners.set(
       type,
       (this.listeners.get(type) ?? []).filter((currentListener) => {
@@ -24,6 +24,12 @@ class TestWebSocket implements WebSocketLike {
   emit(type: string, data: unknown): void {
     this.listeners.get(type)?.forEach((listener) => {
       listener({ data: JSON.stringify(data) } as MessageEvent)
+    })
+  }
+
+  emitClose(): void {
+    this.listeners.get('close')?.forEach((listener) => {
+      listener(new Event('close'))
     })
   }
 }
@@ -88,5 +94,69 @@ describe('WebSocketChatEventTransport', () => {
       'wss://example.com/chat/events',
       ['lee-chat'],
     )
+  })
+
+  it('reconnect가 켜져 있으면 close event 후 backoff delay로 다시 연결한다', () => {
+    vi.useFakeTimers()
+
+    try {
+      const webSockets = [new TestWebSocket(), new TestWebSocket()]
+      const createWebSocket = vi.fn(() => {
+        return webSockets[
+          createWebSocket.mock.calls.length - 1
+        ] as TestWebSocket
+      })
+      const transport = new WebSocketChatEventTransport({
+        endpoint: 'wss://example.com/chat/events',
+        createWebSocket,
+        reconnect: {
+          enabled: true,
+          initialDelayMs: 100,
+        },
+      })
+
+      transport.subscribe(() => {})
+
+      webSockets[0]?.emitClose()
+      vi.advanceTimersByTime(99)
+      expect(createWebSocket).toHaveBeenCalledTimes(1)
+
+      vi.advanceTimersByTime(1)
+      expect(createWebSocket).toHaveBeenCalledTimes(2)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('unsubscribe하면 예약된 reconnect를 취소하고 현재 연결을 닫는다', () => {
+    vi.useFakeTimers()
+
+    try {
+      const webSockets = [new TestWebSocket(), new TestWebSocket()]
+      const createWebSocket = vi.fn(() => {
+        return webSockets[
+          createWebSocket.mock.calls.length - 1
+        ] as TestWebSocket
+      })
+      const transport = new WebSocketChatEventTransport({
+        endpoint: 'wss://example.com/chat/events',
+        createWebSocket,
+        reconnect: {
+          enabled: true,
+          initialDelayMs: 100,
+        },
+      })
+
+      const unsubscribe = transport.subscribe(() => {})
+
+      webSockets[0]?.emitClose()
+      unsubscribe()
+      vi.advanceTimersByTime(100)
+
+      expect(createWebSocket).toHaveBeenCalledTimes(1)
+      expect(webSockets[0]?.close).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

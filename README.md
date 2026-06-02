@@ -308,6 +308,21 @@ export function SupportWidget() {
 }
 ```
 
+WebSocket을 쓰는 경우 같은 `eventTransport` 자리에 reconnect/backoff 옵션을 가진 adapter를 전달합니다.
+
+```ts
+import { WebSocketChatEventTransport } from 'lee-chat-sdk'
+
+const eventTransport = new WebSocketChatEventTransport({
+  endpoint: 'wss://example.com/support-chat/events',
+  reconnect: {
+    enabled: true,
+    initialDelayMs: 1000,
+    maxDelayMs: 30000,
+  },
+})
+```
+
 `useLeeChat()`으로 열림 상태와 controller에 직접 접근할 수 있습니다.
 
 ```tsx
@@ -387,7 +402,7 @@ if (container instanceof HTMLElement) {
 - `ChatTransport`: HTTP, mock, WebSocket, SSE 같은 전송 방식을 교체하기 위한 adapter interface입니다.
 - `HttpChatTransport`: 기본 HTTP POST transport입니다.
 - `SseChatEventTransport`: browser `EventSource` 기반 SSE adapter입니다. 서버 event를 `ConversationClientEvent`로 파싱해 React Provider나 Vanilla widget에 연결합니다.
-- `WebSocketChatEventTransport`: browser `WebSocket` 기반 realtime adapter입니다. 서버 message payload를 `ConversationClientEvent`로 파싱해 React Provider나 Vanilla widget에 연결합니다.
+- `WebSocketChatEventTransport`: browser `WebSocket` 기반 realtime adapter입니다. 서버 message payload를 `ConversationClientEvent`로 파싱해 React Provider나 Vanilla widget에 연결하며, reconnect/backoff 옵션을 제공합니다.
 - `MemoryChatPersistence`: 메모리 기반 대화 저장소입니다.
 - `LocalStorageChatPersistence`: 브라우저 localStorage 기반 대화 저장소입니다.
 - `ChatParticipantPresence`, `ChatTypingIndicator`, `ChatReadReceipt`: presence, typing, 읽음 상태를 참여자 기준으로 표현하는 core 모델입니다.
@@ -469,7 +484,8 @@ pnpm publish --access public
 ## 현재 한계
 
 - 현재 Vanilla JS API는 React 코드를 작성하지 않아도 되지만 내부 렌더러는 React 기반입니다.
-- SSE/WebSocket reconnect/backoff, auth header 갱신, session refresh 정책은 아직 포함되어 있지 않습니다.
+- SSE reconnect/backoff, auth header 갱신, session refresh 정책은 아직 포함되어 있지 않습니다.
+- WebSocket auth header 갱신, session refresh 정책은 아직 포함되어 있지 않습니다.
 - 고급 retry 정책, timeout, abort/cancel 정책은 아직 포함되어 있지 않습니다.
 - Storybook 문서화는 아직 없습니다.
 - package export path는 현재 root export로 제한되어 있습니다.
@@ -477,7 +493,8 @@ pnpm publish --access public
 ## Roadmap
 
 - no-React browser bundle 제공
-- SSE/WebSocket reconnect/backoff, auth header 갱신, session refresh 정책 추가
+- SSE reconnect/backoff 정책 추가
+- WebSocket auth header 갱신, session refresh 정책 추가
 - conversation list와 operator-console controller API 추가
 - timeout, abort/cancel, 고급 retry 정책 추가
 - Storybook examples 추가

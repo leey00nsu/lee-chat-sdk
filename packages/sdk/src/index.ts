@@ -85,6 +85,7 @@ export type {
   CreateWebSocket,
   WebSocketChatEventTransportParams,
   WebSocketLike,
+  WebSocketReconnectOptions,
 } from './transport/web-socket-chat-event-transport'
 export {
   buildLeeChatRequest,

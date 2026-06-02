@@ -5,8 +5,8 @@ import type {
 } from './chat-event-transport'
 
 export interface WebSocketLike {
-  addEventListener(type: string, listener: (event: MessageEvent) => void): void
-  removeEventListener(type: string, listener: (event: MessageEvent) => void): void
+  addEventListener(type: string, listener: (event: Event) => void): void
+  removeEventListener(type: string, listener: (event: Event) => void): void
   close(): void
 }
 
@@ -19,10 +19,23 @@ export interface WebSocketChatEventTransportParams {
   endpoint: string
   protocols?: string | string[]
   createWebSocket?: CreateWebSocket
+  reconnect?: WebSocketReconnectOptions
+}
+
+export interface WebSocketReconnectOptions {
+  enabled?: boolean
+  initialDelayMs?: number
+  maxDelayMs?: number
+  backoffMultiplier?: number
+  maxAttempts?: number
 }
 
 const WEB_SOCKET_CHAT_EVENT_TRANSPORT = {
+  CLOSE_EVENT_NAME: 'close',
   MESSAGE_EVENT_NAME: 'message',
+  DEFAULT_RECONNECT_INITIAL_DELAY_MS: 1000,
+  DEFAULT_RECONNECT_MAX_DELAY_MS: 30000,
+  DEFAULT_RECONNECT_BACKOFF_MULTIPLIER: 2,
 } as const
 
 function createDefaultWebSocket(
@@ -36,34 +49,101 @@ export class WebSocketChatEventTransport implements ChatEventTransport {
   private readonly endpoint: string
   private readonly protocols?: string | string[]
   private readonly createWebSocket: CreateWebSocket
+  private readonly reconnect: Required<WebSocketReconnectOptions>
 
   constructor({
     endpoint,
     protocols,
     createWebSocket = createDefaultWebSocket,
+    reconnect,
   }: WebSocketChatEventTransportParams) {
     this.endpoint = endpoint
     this.protocols = protocols
     this.createWebSocket = createWebSocket
+    this.reconnect = {
+      enabled: reconnect?.enabled ?? false,
+      initialDelayMs:
+        reconnect?.initialDelayMs ??
+        WEB_SOCKET_CHAT_EVENT_TRANSPORT.DEFAULT_RECONNECT_INITIAL_DELAY_MS,
+      maxDelayMs:
+        reconnect?.maxDelayMs ??
+        WEB_SOCKET_CHAT_EVENT_TRANSPORT.DEFAULT_RECONNECT_MAX_DELAY_MS,
+      backoffMultiplier:
+        reconnect?.backoffMultiplier ??
+        WEB_SOCKET_CHAT_EVENT_TRANSPORT.DEFAULT_RECONNECT_BACKOFF_MULTIPLIER,
+      maxAttempts: reconnect?.maxAttempts ?? Number.POSITIVE_INFINITY,
+    }
   }
 
   subscribe(listener: ChatEventListener): ChatEventUnsubscribe {
-    const webSocket = this.createWebSocket(this.endpoint, this.protocols)
-    const handleMessage = (event: MessageEvent): void => {
-      listener(JSON.parse(String(event.data)))
+    let activeWebSocket: WebSocketLike | null = null
+    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null
+    let reconnectAttempts = 0
+    let isSubscribed = true
+
+    const clearReconnectTimeout = (): void => {
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout)
+        reconnectTimeout = null
+      }
     }
 
-    webSocket.addEventListener(
-      WEB_SOCKET_CHAT_EVENT_TRANSPORT.MESSAGE_EVENT_NAME,
-      handleMessage,
-    )
+    const connect = (): void => {
+      const webSocket = this.createWebSocket(this.endpoint, this.protocols)
+      activeWebSocket = webSocket
 
-    return () => {
-      webSocket.removeEventListener(
+      const handleMessage = (event: Event): void => {
+        listener(JSON.parse(String((event as MessageEvent).data)))
+      }
+
+      const handleClose = (): void => {
+        webSocket.removeEventListener(
+          WEB_SOCKET_CHAT_EVENT_TRANSPORT.MESSAGE_EVENT_NAME,
+          handleMessage,
+        )
+        webSocket.removeEventListener(
+          WEB_SOCKET_CHAT_EVENT_TRANSPORT.CLOSE_EVENT_NAME,
+          handleClose,
+        )
+
+        if (
+          !isSubscribed ||
+          !this.reconnect.enabled ||
+          reconnectAttempts >= this.reconnect.maxAttempts
+        ) {
+          return
+        }
+
+        reconnectAttempts += 1
+        const delayMs = Math.min(
+          this.reconnect.initialDelayMs *
+            this.reconnect.backoffMultiplier ** (reconnectAttempts - 1),
+          this.reconnect.maxDelayMs,
+        )
+
+        reconnectTimeout = setTimeout(() => {
+          reconnectTimeout = null
+          connect()
+        }, delayMs)
+      }
+
+      webSocket.addEventListener(
         WEB_SOCKET_CHAT_EVENT_TRANSPORT.MESSAGE_EVENT_NAME,
         handleMessage,
       )
-      webSocket.close()
+      webSocket.addEventListener(
+        WEB_SOCKET_CHAT_EVENT_TRANSPORT.CLOSE_EVENT_NAME,
+        handleClose,
+      )
+    }
+
+    connect()
+
+    return () => {
+      isSubscribed = false
+      clearReconnectTimeout()
+      activeWebSocket?.close()
+      activeWebSocket = null
     }
   }
 }

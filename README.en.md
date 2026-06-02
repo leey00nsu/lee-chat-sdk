@@ -308,6 +308,21 @@ export function SupportWidget() {
 }
 ```
 
+When using WebSocket, pass an adapter with reconnect/backoff options to the same `eventTransport` prop.
+
+```ts
+import { WebSocketChatEventTransport } from 'lee-chat-sdk'
+
+const eventTransport = new WebSocketChatEventTransport({
+  endpoint: 'wss://example.com/support-chat/events',
+  reconnect: {
+    enabled: true,
+    initialDelayMs: 1000,
+    maxDelayMs: 30000,
+  },
+})
+```
+
 Use `useLeeChat()` when you need direct access to open state and the controller.
 
 ```tsx
@@ -387,7 +402,7 @@ Use the headless controller and primitives when you need deeper customization.
 - `ChatTransport`: adapter interface for HTTP, mock, WebSocket, SSE, or any custom transport.
 - `HttpChatTransport`: default HTTP POST transport.
 - `SseChatEventTransport`: browser `EventSource`-based SSE adapter. It parses server events as `ConversationClientEvent` and connects them to the React Provider or Vanilla widget.
-- `WebSocketChatEventTransport`: browser `WebSocket`-based realtime adapter. It parses server message payloads as `ConversationClientEvent` and connects them to the React Provider or Vanilla widget.
+- `WebSocketChatEventTransport`: browser `WebSocket`-based realtime adapter. It parses server message payloads as `ConversationClientEvent`, connects them to the React Provider or Vanilla widget, and provides reconnect/backoff options.
 - `MemoryChatPersistence`: in-memory conversation storage.
 - `LocalStorageChatPersistence`: browser localStorage conversation storage.
 - `ChatParticipantPresence`, `ChatTypingIndicator`, `ChatReadReceipt`: core participant-state models for presence, typing, and read state.
@@ -469,7 +484,8 @@ pnpm publish --access public
 ## Current Limitations
 
 - The current Vanilla JS API does not require writing React code, but its internal renderer is React-based.
-- SSE/WebSocket reconnect/backoff, auth header refresh, and session refresh policies are not included yet.
+- SSE reconnect/backoff, auth header refresh, and session refresh policies are not included yet.
+- WebSocket auth header refresh and session refresh policies are not included yet.
 - Advanced retry policies, timeout, and abort/cancel policies are not included yet.
 - Storybook documentation is not included yet.
 - Package export paths are currently limited to the root export.
@@ -477,7 +493,8 @@ pnpm publish --access public
 ## Roadmap
 
 - Provide a no-React browser bundle.
-- Add SSE/WebSocket reconnect/backoff, auth header refresh, and session refresh policies.
+- Add SSE reconnect/backoff policies.
+- Add WebSocket auth header refresh and session refresh policies.
 - Add conversation list and operator-console controller APIs.
 - Add timeout, abort/cancel, and advanced retry policies.
 - Add Storybook examples.
