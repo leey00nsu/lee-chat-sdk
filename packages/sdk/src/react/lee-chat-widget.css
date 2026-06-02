@@ -96,11 +96,30 @@
   margin: 0;
 }
 
+.lee-chat-message-status {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .lee-chat-message--user {
   align-self: flex-end;
   margin-left: auto;
   background: var(--lee-chat-primary);
   color: #ffffff;
+}
+
+.lee-chat-message--sending {
+  opacity: 0.82;
+}
+
+.lee-chat-message--failed {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
 }
 
 .lee-chat-message--assistant,
@@ -110,6 +129,22 @@
   margin-right: auto;
   background: var(--lee-chat-muted);
   color: var(--lee-chat-foreground);
+}
+
+.lee-chat-message--loading {
+  opacity: 0.72;
+}
+
+.lee-chat-retry {
+  border: 0;
+  border-radius: 999px;
+  background: #991b1b;
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 8px;
 }
 
 .lee-chat-composer {

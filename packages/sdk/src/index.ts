@@ -44,6 +44,10 @@ export type {
 export { LeeChatProvider } from './react/lee-chat-provider'
 export type { LeeChatProviderProps } from './react/lee-chat-provider'
 export { LeeChatWidget } from './react/lee-chat-widget'
+export type {
+  LeeChatWidgetMessageRenderParams,
+  LeeChatWidgetProps,
+} from './react/lee-chat-widget'
 export { useLeeChat } from './react/use-lee-chat'
 export type { LeeChatContextValue } from './react/lee-chat-context'
 export {

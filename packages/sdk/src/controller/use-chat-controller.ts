@@ -46,6 +46,7 @@ export interface UseChatControllerResult<TMessageMetadata = unknown> {
   isSubmitting: boolean
   setInputValue: (nextInputValue: string) => void
   submitMessage: (contentOverride?: string) => Promise<void>
+  retryMessage: (messageId: string) => Promise<void>
   clearMessages: () => void
 }
 
@@ -109,24 +110,64 @@ export function useChatController<
     }
     const nextMessages = [...messages, userMessage]
 
-    setMessages(nextMessages)
-    setIsSubmitting(true)
-
     if (!contentOverride) {
       updateInputValue('')
     }
 
+    await sendUserMessage({
+      userMessage,
+      requestMessages: messages,
+      nextMessages,
+    })
+  }
+
+  async function retryMessage(messageId: string): Promise<void> {
+    if (isSubmitting) {
+      return
+    }
+
+    const failedMessage = messages.find((message) => message.id === messageId)
+
+    if (!failedMessage || failedMessage.status !== 'failed') {
+      return
+    }
+
+    const retryingMessage: ChatMessage<TMessageMetadata> = {
+      ...failedMessage,
+      status: 'sending',
+    }
+    const retryingMessages = replaceMessage(messages, retryingMessage)
+
+    await sendUserMessage({
+      userMessage: retryingMessage,
+      requestMessages: messages.filter((message) => message.id !== messageId),
+      nextMessages: retryingMessages,
+    })
+  }
+
+  async function sendUserMessage({
+    userMessage,
+    requestMessages,
+    nextMessages,
+  }: {
+    userMessage: ChatMessage<TMessageMetadata>
+    requestMessages: Array<ChatMessage<TMessageMetadata>>
+    nextMessages: Array<ChatMessage<TMessageMetadata>>
+  }): Promise<void> {
+    setMessages(nextMessages)
+    setIsSubmitting(true)
+
     try {
       const response = await transport.sendMessage(
         buildRequest({
-          content: trimmedContent,
+          content: userMessage.content,
           conversationId,
-          messages,
+          messages: requestMessages,
         }),
       )
       const builtAssistantMessage = buildAssistantMessage({
         response,
-        requestContent: trimmedContent,
+        requestContent: userMessage.content,
         conversationId,
         messages: nextMessages,
       })
@@ -168,6 +209,7 @@ export function useChatController<
     isSubmitting,
     setInputValue: updateInputValue,
     submitMessage,
+    retryMessage,
     clearMessages,
   }
 

@@ -235,4 +235,107 @@ describe('vanilla initLeeChat', () => {
     })
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
+
+  it('전송 중 상태와 assistant loading을 표시한다', async () => {
+    let resolveResponse: (response: Response) => void = () => {}
+    fetchMock.mockReturnValue(
+      new Promise((resolve) => {
+        resolveResponse = resolve
+      }),
+    )
+
+    initLeeChat({
+      appId: 'vanilla-app',
+      endpoint: '/api/chat',
+      fetchImplementation: fetchMock,
+      initialOpen: true,
+    })
+
+    const input = document.querySelector('textarea')
+
+    if (!(input instanceof HTMLTextAreaElement)) {
+      throw new Error('textarea not found')
+    }
+
+    fireEvent.change(input, {
+      target: {
+        value: 'Pending vanilla',
+      },
+    })
+    fireEvent.submit(input.form as HTMLFormElement)
+
+    await waitFor(() => {
+      expect(document.body.textContent).toContain('Pending vanilla')
+      expect(document.body.textContent).toContain('Sending...')
+      expect(document.body.textContent).toContain('Assistant is typing...')
+    })
+
+    resolveResponse(
+      new Response(
+        JSON.stringify({
+          message: {
+            content: 'Pending vanilla response',
+          },
+        }),
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        },
+      ),
+    )
+  })
+
+  it('실패 메시지에 retry 버튼을 표시하고 다시 전송한다', async () => {
+    fetchMock
+      .mockRejectedValueOnce(new Error('network error'))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            message: {
+              content: 'Retry vanilla response',
+            },
+          }),
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          },
+        ),
+      )
+
+    initLeeChat({
+      appId: 'vanilla-app',
+      endpoint: '/api/chat',
+      fetchImplementation: fetchMock,
+      initialOpen: true,
+    })
+
+    const input = document.querySelector('textarea')
+
+    if (!(input instanceof HTMLTextAreaElement)) {
+      throw new Error('textarea not found')
+    }
+
+    fireEvent.change(input, {
+      target: {
+        value: 'Retry vanilla',
+      },
+    })
+    fireEvent.submit(input.form as HTMLFormElement)
+
+    await waitFor(() => {
+      expect(document.body.textContent).toContain(
+        'Message failed. Please try again.',
+      )
+    })
+
+    const retryButton = document.querySelector('button.lee-chat-retry')
+    retryButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+
+    await waitFor(() => {
+      expect(document.body.textContent).toContain('Retry vanilla response')
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
 })

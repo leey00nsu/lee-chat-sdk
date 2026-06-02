@@ -99,7 +99,10 @@ const config: LeeChatConfig = {
     placeholder: '메시지를 입력하세요',
     send: '보내기',
     sending: '전송 중',
+    messageSending: '전송 중...',
+    assistantLoading: '답변을 작성 중입니다...',
     error: '전송에 실패했습니다. 다시 시도해 주세요.',
+    retry: '다시 보내기',
   },
   theme: {
     colorScheme: 'light',
@@ -212,9 +215,31 @@ initLeeChat({
     panel: 'my-chat-panel',
     header: 'my-chat-header',
     messageList: 'my-chat-message-list',
+    message: 'my-chat-message',
+    messageStatus: 'my-chat-message-status',
+    retryButton: 'my-chat-retry',
+    assistantLoading: 'my-chat-assistant-loading',
     composer: 'my-chat-composer',
   },
 })
+```
+
+React에서는 기본 말풍선 렌더링을 더 깊게 바꿀 수 있습니다.
+
+```tsx
+<LeeChatWidget
+  renderMessage={({ message, retryMessage }) => (
+    <article data-status={message.status}>
+      <p>{message.content}</p>
+      {message.status === 'failed' ? (
+        <button type="button" onClick={() => retryMessage(message.id)}>
+          다시 보내기
+        </button>
+      ) : null}
+    </article>
+  )}
+  renderAssistantLoading={() => <p>답변을 작성 중입니다...</p>}
+/>
 ```
 
 ## React API
@@ -383,7 +408,7 @@ pnpm publish --access public
 
 - 현재 Vanilla JS API는 React 코드를 작성하지 않아도 되지만 내부 렌더러는 React 기반입니다.
 - WebSocket/SSE transport adapter는 아직 포함되어 있지 않습니다.
-- retry/resend 정책은 아직 포함되어 있지 않습니다.
+- 고급 retry 정책, timeout, abort/cancel 정책은 아직 포함되어 있지 않습니다.
 - Storybook 문서화는 아직 없습니다.
 - package export path는 현재 root export로 제한되어 있습니다.
 
@@ -392,6 +417,6 @@ pnpm publish --access public
 - no-React browser bundle 제공
 - WebSocket/SSE transport adapter 추가
 - conversation list와 operator-console controller API 추가
-- retry, resend, optimistic update 정책 추가
+- timeout, abort/cancel, 고급 retry 정책 추가
 - Storybook examples 추가
 - npm release workflow 준비

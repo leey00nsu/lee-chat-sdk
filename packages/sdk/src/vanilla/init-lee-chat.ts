@@ -25,6 +25,9 @@ const LEE_CHAT_FORM_CLASS_NAME = 'lee-chat-vanilla-form'
 const LEE_CHAT_TEXTAREA_CLASS_NAME = 'lee-chat-vanilla-textarea'
 const LEE_CHAT_SUBMIT_CLASS_NAME = 'lee-chat-vanilla-submit'
 const LEE_CHAT_SCROLL_ANCHOR_CLASS_NAME = 'lee-chat-scroll-anchor'
+const LEE_CHAT_MESSAGE_STATUS_CLASS_NAME = 'lee-chat-message-status'
+const LEE_CHAT_RETRY_CLASS_NAME = 'lee-chat-retry'
+const LEE_CHAT_ASSISTANT_LOADING_CLASS_NAME = 'lee-chat-assistant-loading'
 const LEE_CHAT_CLOSE_LABEL = 'Close chat'
 const LEE_CHAT_INPUT_LABEL = 'Message'
 const LEE_CHAT_CONTENT_TYPE_HEADER = 'Content-Type'
@@ -38,6 +41,7 @@ const LEE_CHAT_KEY = {
 let activeContainer: HTMLElement | null = null
 let activeConfig: InitLeeChatConfig | null = null
 let activeIsOpen = false
+let activeIsSubmitting = false
 let activeMessages: ChatMessage<Record<string, unknown>>[] = []
 
 function mergeClassNames(...classNames: Array<string | undefined>): string {
@@ -123,11 +127,55 @@ function applyTheme(config: LeeChatConfig): void {
 function renderMessage(message: ChatMessage<Record<string, unknown>>): HTMLElement {
   const article = createElementWithClassName(
     'article',
-    mergeClassNames('lee-chat-message', `lee-chat-message--${message.role}`),
+    mergeClassNames(
+      'lee-chat-message',
+      `lee-chat-message--${message.role}`,
+      `lee-chat-message--${message.status}`,
+      activeConfig?.className?.message,
+    ),
   )
   const paragraph = document.createElement('p')
   paragraph.textContent = message.content
   article.append(paragraph)
+
+  if (message.status === 'sending') {
+    const status = createElementWithClassName(
+      'small',
+      mergeClassNames(
+        LEE_CHAT_MESSAGE_STATUS_CLASS_NAME,
+        activeConfig?.className?.messageStatus,
+      ),
+    )
+    status.textContent = activeConfig?.texts?.messageSending ?? 'Sending...'
+    article.append(status)
+  }
+
+  if (message.status === 'failed') {
+    const status = createElementWithClassName(
+      'div',
+      mergeClassNames(
+        LEE_CHAT_MESSAGE_STATUS_CLASS_NAME,
+        activeConfig?.className?.messageStatus,
+      ),
+    )
+    const error = document.createElement('small')
+    const retryButton = createElementWithClassName(
+      'button',
+      mergeClassNames(
+        LEE_CHAT_RETRY_CLASS_NAME,
+        activeConfig?.className?.retryButton,
+      ),
+    )
+
+    error.textContent = activeConfig?.texts?.error ?? 'Message failed. Please try again.'
+    retryButton.setAttribute('type', 'button')
+    retryButton.textContent = activeConfig?.texts?.retry ?? 'Retry'
+    retryButton.addEventListener('click', () => {
+      void retryMessage(message.id)
+    })
+    status.append(error, retryButton)
+    article.append(status)
+  }
 
   return article
 }
@@ -148,6 +196,27 @@ function renderMessageList(config: LeeChatConfig): HTMLElement {
     item.append(renderMessage(message))
     list.append(item)
   })
+
+  if (activeIsSubmitting) {
+    const loadingItem = document.createElement('li')
+    const loadingMessage = createElementWithClassName(
+      'article',
+      mergeClassNames(
+        'lee-chat-message',
+        'lee-chat-message--assistant',
+        'lee-chat-message--loading',
+        LEE_CHAT_ASSISTANT_LOADING_CLASS_NAME,
+        resolvedConfig.className?.assistantLoading,
+      ),
+    )
+    const loadingText = document.createElement('p')
+
+    loadingMessage.setAttribute('role', 'status')
+    loadingText.textContent = resolvedConfig.texts.assistantLoading
+    loadingMessage.append(loadingText)
+    loadingItem.append(loadingMessage)
+    list.append(loadingItem)
+  }
 
   const scrollAnchor = createElementWithClassName(
     'div',
@@ -179,7 +248,10 @@ function renderComposer(config: LeeChatConfig): HTMLElement {
   textarea.placeholder = resolvedConfig.texts.placeholder
   button.type = 'submit'
   button.className = LEE_CHAT_SUBMIT_CLASS_NAME
-  button.textContent = resolvedConfig.texts.send
+  button.textContent = activeIsSubmitting
+    ? resolvedConfig.texts.sending
+    : resolvedConfig.texts.send
+  button.disabled = activeIsSubmitting
 
   form.addEventListener('submit', (event) => {
     event.preventDefault()
@@ -208,6 +280,10 @@ function submitTextareaMessage(
   config: LeeChatConfig,
   textarea: HTMLTextAreaElement,
 ): void {
+  if (activeIsSubmitting) {
+    return
+  }
+
   const content = textarea.value.trim()
 
   if (!content) {
@@ -322,51 +398,119 @@ async function submitMessage(
     conversationId: resolveConversationId(config),
     role: 'user',
     content,
-    status: 'sent',
+    status: 'sending',
     createdAt,
   }
   const previousMessages = activeMessages
 
   activeMessages = [...activeMessages, userMessage]
+  activeIsSubmitting = true
   persistMessages(config)
   renderActiveWidget()
 
-  const response = await fetchImplementation(config.endpoint, {
-    method: LEE_CHAT_POST_METHOD,
-    headers: {
-      [LEE_CHAT_CONTENT_TYPE_HEADER]: LEE_CHAT_JSON_CONTENT_TYPE,
-    },
-    body: JSON.stringify(
-      buildLeeChatRequest({
-        appId: config.appId,
-        message: userMessage,
-        history: previousMessages,
-        user: config.user,
-        metadata: config.metadata,
-      }),
-    ),
+  await sendMessageToEndpoint({
+    config,
+    userMessage,
+    previousMessages,
   })
-  const responseBody = (await response.json()) as LeeChatResponse
-  const parsedResponse = parseLeeChatResponse(responseBody)
-  const assistantMessage: ChatMessage<Record<string, unknown>> = {
-    id: parsedResponse.message.id,
-    conversationId: userMessage.conversationId,
-    role: 'assistant',
-    content: parsedResponse.message.content,
-    status: 'sent',
-    createdAt: parsedResponse.message.createdAt,
-    metadata: parsedResponse.message.metadata,
+}
+
+async function retryMessage(messageId: string): Promise<void> {
+  if (!activeConfig || activeIsSubmitting) {
+    return
   }
 
-  activeMessages = [...activeMessages, assistantMessage]
-  persistMessages(config)
+  const failedMessage = activeMessages.find((message) => {
+    return message.id === messageId && message.status === 'failed'
+  })
+
+  if (!failedMessage) {
+    return
+  }
+
+  const retryingMessage: ChatMessage<Record<string, unknown>> = {
+    ...failedMessage,
+    status: 'sending',
+  }
+
+  activeMessages = replaceMessage(activeMessages, retryingMessage)
+  activeIsSubmitting = true
+  persistMessages(activeConfig)
   renderActiveWidget()
+
+  await sendMessageToEndpoint({
+    config: activeConfig,
+    userMessage: retryingMessage,
+    previousMessages: activeMessages.filter((message) => message.id !== messageId),
+  })
+}
+
+async function sendMessageToEndpoint({
+  config,
+  userMessage,
+  previousMessages,
+}: {
+  config: LeeChatConfig
+  userMessage: ChatMessage<Record<string, unknown>>
+  previousMessages: ChatMessage<Record<string, unknown>>[]
+}): Promise<void> {
+  const fetchImplementation = activeConfig?.fetchImplementation ?? fetch
+
+  try {
+    const response = await fetchImplementation(config.endpoint, {
+      method: LEE_CHAT_POST_METHOD,
+      headers: {
+        [LEE_CHAT_CONTENT_TYPE_HEADER]: LEE_CHAT_JSON_CONTENT_TYPE,
+      },
+      body: JSON.stringify(
+        buildLeeChatRequest({
+          appId: config.appId,
+          message: userMessage,
+          history: previousMessages,
+          user: config.user,
+          metadata: config.metadata,
+        }),
+      ),
+    })
+    const responseBody = (await response.json()) as LeeChatResponse
+    const parsedResponse = parseLeeChatResponse(responseBody)
+    const sentUserMessage: ChatMessage<Record<string, unknown>> = {
+      ...userMessage,
+      status: 'sent',
+    }
+    const assistantMessage: ChatMessage<Record<string, unknown>> = {
+      id: parsedResponse.message.id,
+      conversationId: userMessage.conversationId,
+      role: 'assistant',
+      content: parsedResponse.message.content,
+      status: 'sent',
+      createdAt: parsedResponse.message.createdAt,
+      metadata: parsedResponse.message.metadata,
+    }
+
+    activeMessages = [
+      ...replaceMessage(activeMessages, sentUserMessage),
+      assistantMessage,
+    ]
+  } catch {
+    activeMessages = replaceMessage(activeMessages, {
+      ...userMessage,
+      status: 'failed',
+    })
+  } finally {
+    activeIsSubmitting = false
+    persistMessages(config)
+    renderActiveWidget()
+  }
 }
 
 export function initLeeChat(config: InitLeeChatConfig): LeeChatInstance {
   destroyLeeChat()
 
-  activeConfig = config
+  activeConfig = {
+    ...config,
+    ...resolveLeeChatConfig(config),
+  }
   activeContainer = config.container ?? createDefaultContainer()
   activeContainer.setAttribute(LEE_CHAT_CONTAINER_ATTRIBUTE, 'true')
   activeIsOpen = Boolean(config.initialOpen)
@@ -399,5 +543,19 @@ export function destroyLeeChat(): void {
   activeContainer = null
   activeConfig = null
   activeIsOpen = false
+  activeIsSubmitting = false
   activeMessages = []
+}
+
+function replaceMessage(
+  messages: ChatMessage<Record<string, unknown>>[],
+  nextMessage: ChatMessage<Record<string, unknown>>,
+): ChatMessage<Record<string, unknown>>[] {
+  return messages.map((message) => {
+    if (message.id !== nextMessage.id) {
+      return message
+    }
+
+    return nextMessage
+  })
 }

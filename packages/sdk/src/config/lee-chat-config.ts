@@ -15,7 +15,10 @@ export interface LeeChatWidgetText {
   placeholder: string
   send: string
   sending: string
+  messageSending: string
+  assistantLoading: string
   error: string
+  retry: string
 }
 
 export interface LeeChatTheme {
@@ -30,6 +33,10 @@ export interface LeeChatClassName {
   panel?: string
   header?: string
   messageList?: string
+  message?: string
+  messageStatus?: string
+  retryButton?: string
+  assistantLoading?: string
   composer?: string
 }
 
@@ -63,7 +70,10 @@ const DEFAULT_LEE_CHAT_TEXTS: LeeChatWidgetText = {
   placeholder: 'Type your message',
   send: 'Send',
   sending: 'Sending',
+  messageSending: 'Sending...',
+  assistantLoading: 'Assistant is typing...',
   error: 'Message failed. Please try again.',
+  retry: 'Retry',
 }
 
 const DEFAULT_LEE_CHAT_THEME: LeeChatTheme = {

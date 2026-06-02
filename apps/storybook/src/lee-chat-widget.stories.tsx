@@ -11,6 +11,7 @@ import {
 interface WidgetStoryProps {
   config: LeeChatConfig
   seededMessages?: string[]
+  renderMode?: 'default' | 'compact'
 }
 
 const STORY_ENDPOINT = '/api/storybook-chat'
@@ -20,6 +21,14 @@ async function storybookFetch(
   init?: RequestInit,
 ): Promise<Response> {
   const requestBody = JSON.parse(String(init?.body)) as LeeChatRequest
+
+  if (requestBody.appId.includes('failure')) {
+    throw new Error('Storybook failure response')
+  }
+
+  if (requestBody.appId.includes('sending')) {
+    return new Promise(() => {})
+  }
 
   return new Response(
     JSON.stringify({
@@ -57,11 +66,26 @@ function SeedMessages({ messages }: { messages: string[] }) {
   return null
 }
 
-function WidgetStory({ config, seededMessages = [] }: WidgetStoryProps) {
+function WidgetStory({
+  config,
+  seededMessages = [],
+  renderMode = 'default',
+}: WidgetStoryProps) {
   return (
     <LeeChatProvider config={config} fetchImplementation={storybookFetch}>
       {seededMessages.length > 0 ? <SeedMessages messages={seededMessages} /> : null}
-      <LeeChatWidget />
+      <LeeChatWidget
+        renderMessage={
+          renderMode === 'compact'
+            ? ({ message }) => (
+                <article className="lee-chat-message">
+                  <strong>{message.role}</strong>
+                  <p>{message.content}</p>
+                </article>
+              )
+            : undefined
+        }
+      />
     </LeeChatProvider>
   )
 }
@@ -131,6 +155,36 @@ export const LongMessages: Story = {
   },
 }
 
+export const Sending: Story = {
+  args: {
+    config: {
+      appId: 'storybook-sending',
+      endpoint: STORY_ENDPOINT,
+      initialOpen: true,
+      texts: {
+        title: 'Sending',
+        subtitle: 'Review pending user message and assistant loading states.',
+      },
+    },
+    seededMessages: ['This request intentionally stays pending.'],
+  },
+}
+
+export const FailedWithRetry: Story = {
+  args: {
+    config: {
+      appId: 'storybook-failure',
+      endpoint: STORY_ENDPOINT,
+      initialOpen: true,
+      texts: {
+        title: 'Failed Message',
+        subtitle: 'Review failed message and retry affordance.',
+      },
+    },
+    seededMessages: ['This request intentionally fails.'],
+  },
+}
+
 export const CustomTheme: Story = {
   args: {
     config: {
@@ -161,5 +215,21 @@ export const BottomLeft: Story = {
         subtitle: 'The launcher and panel are anchored to the left side.',
       },
     },
+  },
+}
+
+export const CustomRender: Story = {
+  args: {
+    config: {
+      appId: 'storybook-custom-render',
+      endpoint: STORY_ENDPOINT,
+      initialOpen: true,
+      texts: {
+        title: 'Custom Render',
+        subtitle: 'Messages are rendered through LeeChatWidget renderMessage.',
+      },
+    },
+    renderMode: 'compact',
+    seededMessages: ['Render this message with a custom renderer.'],
   },
 }

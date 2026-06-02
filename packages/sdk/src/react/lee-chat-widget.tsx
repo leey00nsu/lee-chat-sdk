@@ -1,11 +1,22 @@
 'use client'
 
 import * as Popover from '@radix-ui/react-popover'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
+import type { ChatMessage } from '../model/chat-message'
 import { ChatComposer } from '../ui/chat-composer'
 import { ChatMessageList } from '../ui/chat-message-list'
 import { useLeeChat } from './use-lee-chat'
 import './lee-chat-widget.css'
+
+export interface LeeChatWidgetMessageRenderParams {
+  message: ChatMessage<Record<string, unknown>>
+  retryMessage: (messageId: string) => void
+}
+
+export interface LeeChatWidgetProps {
+  renderMessage?: (params: LeeChatWidgetMessageRenderParams) => ReactNode
+  renderAssistantLoading?: () => ReactNode
+}
 
 function mergeClassNames(...classNames: Array<string | undefined>): string {
   return classNames.filter(Boolean).join(' ')
@@ -21,7 +32,10 @@ function resolvePopoverAlign(position: string): 'start' | 'end' {
   return position === 'bottom-left' ? 'start' : 'end'
 }
 
-export function LeeChatWidget() {
+export function LeeChatWidget({
+  renderMessage,
+  renderAssistantLoading,
+}: LeeChatWidgetProps = {}) {
   const leeChat = useLeeChat()
   const { config, chat } = leeChat
   const latestMessageAnchorRef = useRef<HTMLDivElement>(null)
@@ -57,6 +71,75 @@ export function LeeChatWidget() {
     }
 
     leeChat.close()
+  }
+
+  function handleRetryMessage(messageId: string): void {
+    void chat.retryMessage(messageId)
+  }
+
+  function renderDefaultMessage(
+    message: ChatMessage<Record<string, unknown>>,
+  ): ReactNode {
+    return (
+      <article
+        className={mergeClassNames(
+          'lee-chat-message',
+          `lee-chat-message--${message.role}`,
+          `lee-chat-message--${message.status}`,
+          config.className?.message,
+        )}
+        data-status={message.status}
+      >
+        <p>{message.content}</p>
+        {message.status === 'sending' ? (
+          <small
+            className={mergeClassNames(
+              'lee-chat-message-status',
+              config.className?.messageStatus,
+            )}
+          >
+            {config.texts.messageSending}
+          </small>
+        ) : null}
+        {message.status === 'failed' ? (
+          <div
+            className={mergeClassNames(
+              'lee-chat-message-status',
+              config.className?.messageStatus,
+            )}
+          >
+            <small>{config.texts.error}</small>
+            <button
+              type="button"
+              className={mergeClassNames(
+                'lee-chat-retry',
+                config.className?.retryButton,
+              )}
+              onClick={() => handleRetryMessage(message.id)}
+            >
+              {config.texts.retry}
+            </button>
+          </div>
+        ) : null}
+      </article>
+    )
+  }
+
+  function renderDefaultAssistantLoading(): ReactNode {
+    return (
+      <article
+        className={mergeClassNames(
+          'lee-chat-message',
+          'lee-chat-message--assistant',
+          'lee-chat-message--loading',
+          'lee-chat-assistant-loading',
+          config.className?.assistantLoading,
+        )}
+        role="status"
+      >
+        <p>{config.texts.assistantLoading}</p>
+      </article>
+    )
   }
 
   return (
@@ -109,23 +192,26 @@ export function LeeChatWidget() {
                 'lee-chat-message-list',
                 config.className?.messageList,
               )}
+              aria-live="polite"
             >
               <ChatMessageList
                 messages={chat.messages}
                 renderMessage={(message) => (
-                  <article
-                    className={mergeClassNames(
-                      'lee-chat-message',
-                      `lee-chat-message--${message.role}`,
-                    )}
-                  >
-                    <p>{message.content}</p>
-                    {message.status === 'failed' ? (
-                      <small>{config.texts.error}</small>
-                    ) : null}
-                  </article>
+                  <>
+                    {renderMessage
+                      ? renderMessage({
+                          message,
+                          retryMessage: handleRetryMessage,
+                        })
+                      : renderDefaultMessage(message)}
+                  </>
                 )}
               />
+              {chat.isSubmitting
+                ? renderAssistantLoading
+                  ? renderAssistantLoading()
+                  : renderDefaultAssistantLoading()
+                : null}
               <div
                 aria-hidden="true"
                 className="lee-chat-scroll-anchor"

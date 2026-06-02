@@ -76,6 +76,8 @@ Main CSS custom properties:
 }
 ```
 
+The default UI includes `sending`, `failed`, retry, and assistant loading states. Customize copy through `config.texts`, class hooks through `config.className`, and replace message rendering in React with `LeeChatWidget` `renderMessage` and `renderAssistantLoading`.
+
 ## Backend Contract
 
 The SDK sends `LeeChatRequest` to `endpoint` with POST and expects a `LeeChatResponse`.

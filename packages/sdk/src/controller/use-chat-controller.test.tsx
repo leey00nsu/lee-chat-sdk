@@ -111,4 +111,68 @@ describe('useChatController', () => {
       }),
     ])
   })
+
+  it('failed 메시지를 retry하면 같은 메시지를 sending으로 바꾼 뒤 sent 처리하고 응답을 추가한다', async () => {
+    const sendMessage = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('network error'))
+      .mockResolvedValueOnce({
+        content: '재시도 응답',
+        metadata: { source: 'retry' },
+      })
+    let messageIdSequence = 0
+
+    const { result } = renderHook(() =>
+      useChatController<TestRequest, TestResponse, { source: string }>({
+        conversationId: 'conversation',
+        transport: { sendMessage },
+        buildRequest: ({ content, conversationId }) => ({
+          content,
+          conversationId,
+        }),
+        buildAssistantMessage: ({ response }) => ({
+          content: response.content,
+          metadata: response.metadata,
+        }),
+        createMessageId: () => {
+          messageIdSequence += 1
+          return `message-${messageIdSequence}`
+        },
+        getCurrentDate: () => new Date('2026-06-01T00:00:00.000Z'),
+      }),
+    )
+
+    await act(async () => {
+      await result.current.submitMessage('재시도 질문')
+    })
+
+    expect(result.current.messages[0]).toEqual(
+      expect.objectContaining({
+        id: 'message-1',
+        content: '재시도 질문',
+        status: 'failed',
+      }),
+    )
+
+    await act(async () => {
+      await result.current.retryMessage('message-1')
+    })
+
+    await waitFor(() => {
+      expect(result.current.messages).toHaveLength(2)
+    })
+    expect(sendMessage).toHaveBeenCalledTimes(2)
+    expect(result.current.messages).toEqual([
+      expect.objectContaining({
+        id: 'message-1',
+        content: '재시도 질문',
+        status: 'sent',
+      }),
+      expect.objectContaining({
+        id: 'message-2',
+        content: '재시도 응답',
+        status: 'sent',
+      }),
+    ])
+  })
 })

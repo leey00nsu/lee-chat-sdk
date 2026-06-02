@@ -99,7 +99,10 @@ const config: LeeChatConfig = {
     placeholder: 'Type your message',
     send: 'Send',
     sending: 'Sending',
+    messageSending: 'Sending...',
+    assistantLoading: 'Assistant is typing...',
     error: 'Message failed. Please try again.',
+    retry: 'Retry',
   },
   theme: {
     colorScheme: 'light',
@@ -212,9 +215,31 @@ initLeeChat({
     panel: 'my-chat-panel',
     header: 'my-chat-header',
     messageList: 'my-chat-message-list',
+    message: 'my-chat-message',
+    messageStatus: 'my-chat-message-status',
+    retryButton: 'my-chat-retry',
+    assistantLoading: 'my-chat-assistant-loading',
     composer: 'my-chat-composer',
   },
 })
+```
+
+React apps can replace the default message rendering when deeper customization is needed.
+
+```tsx
+<LeeChatWidget
+  renderMessage={({ message, retryMessage }) => (
+    <article data-status={message.status}>
+      <p>{message.content}</p>
+      {message.status === 'failed' ? (
+        <button type="button" onClick={() => retryMessage(message.id)}>
+          Retry
+        </button>
+      ) : null}
+    </article>
+  )}
+  renderAssistantLoading={() => <p>Assistant is typing...</p>}
+/>
 ```
 
 ## React API
@@ -383,7 +408,7 @@ pnpm publish --access public
 
 - The current Vanilla JS API does not require writing React code, but its internal renderer is React-based.
 - WebSocket and SSE transport adapters are not included yet.
-- Retry and resend policies are not included yet.
+- Advanced retry policies, timeout, and abort/cancel policies are not included yet.
 - Storybook documentation is not included yet.
 - Package export paths are currently limited to the root export.
 
@@ -392,6 +417,6 @@ pnpm publish --access public
 - Provide a no-React browser bundle.
 - Add WebSocket and SSE transport adapters.
 - Add conversation list and operator-console controller APIs.
-- Add retry, resend, and optimistic update policies.
+- Add timeout, abort/cancel, and advanced retry policies.
 - Add Storybook examples.
 - Prepare an npm release workflow.
