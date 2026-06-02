@@ -2,26 +2,41 @@
 
 [한국어](./README.md) | English
 
-Reusable React primitives for building domain-specific chat widgets, message flows, and operator consoles.
+`lee-chat-sdk` is a drop-in chat widget kit for adding customer support chat UI to a website. The default UI starts as a floating button in the bottom-right corner and opens a chat panel when clicked. Use it as React components in React apps, or call `initLeeChat()` from plain JavaScript.
 
-`lee-chat-sdk` is not a chatbot service and does not assume a specific backend. It provides the reusable client-side pieces that most chat products need: message models, transport adapters, persistence adapters, a controller hook, lightweight UI primitives, and event models for operational tooling.
+## Quick Start
 
-## What You Can Build
+### React
 
-- A floating support chat widget
-- A domain-specific AI assistant UI
-- A chat interface backed by HTTP, mock, WebSocket, or SSE transport
-- A persisted conversation experience using memory or localStorage
-- A message renderer with custom metadata such as citations, agent names, order IDs, or internal notes
-- An operator console with conversation assignment, internal notes, customer events, and message/event streams
+```tsx
+import { LeeChatProvider, LeeChatWidget } from 'lee-chat-sdk'
 
-## Status
+export function App() {
+  return (
+    <LeeChatProvider
+      config={{
+        appId: 'my-service',
+        endpoint: '/api/chat',
+      }}
+    >
+      <LeeChatWidget />
+    </LeeChatProvider>
+  )
+}
+```
 
-This package is in early development.
+### Vanilla JS
 
-- Public API is still evolving.
-- UI primitives are intentionally minimal.
-- The package is designed for npm publishing, but should be treated as experimental until a stable `1.0.0` release.
+```ts
+import { initLeeChat } from 'lee-chat-sdk'
+
+const leeChat = initLeeChat({
+  appId: 'my-service',
+  endpoint: '/api/chat',
+})
+
+leeChat.open()
+```
 
 ## Installation
 
@@ -43,225 +58,240 @@ During local development, you can link it from a sibling workspace:
 pnpm add lee-chat-sdk@file:../lee-chat-sdk/packages/sdk
 ```
 
-## Peer Dependencies
+## Default Behavior
 
-```json
-{
-  "react": "^19.0.0",
-  "react-dom": "^19.0.0"
-}
-```
+- Renders a floating chat button in the bottom-right corner.
+- Opens a chat panel, message list, composer, and send button.
+- Sends user messages to `endpoint` with POST.
+- Adds the response as an assistant message.
+- Supports `memory` or `localStorage` persistence.
+- Exposes CSS custom properties and class hooks for styling.
 
-## Package Contents
-
-```text
-packages/sdk
-  src/controller       useChatController
-  src/model            ChatMessage, ChatEvent
-  src/persistence      MemoryChatPersistence, LocalStorageChatPersistence
-  src/transport        ChatTransport, HttpChatTransport
-  src/ui               ChatComposer, ChatMessageList, ChatWidgetShell, FloatingChatTrigger
-
-apps/demo              support chat widget example
-apps/console           operator console example
-```
-
-## Core Concepts
-
-### Messages
-
-`ChatMessage` is the base message type. It supports generic metadata so each product can attach its own domain-specific context.
+## Configuration
 
 ```ts
-import type { ChatMessage } from 'lee-chat-sdk'
+import type { LeeChatConfig } from 'lee-chat-sdk'
 
-interface SupportMetadata {
-  agentName?: string
-  orderId?: string
-  assignmentStatus?: 'unassigned' | 'assigned' | 'closed'
-}
-
-const message: ChatMessage<SupportMetadata> = {
-  id: 'message-1',
-  conversationId: 'conversation-1',
-  role: 'agent',
-  content: 'I can help with that order.',
-  status: 'sent',
-  createdAt: new Date().toISOString(),
-  metadata: {
-    agentName: 'Mina',
-    orderId: 'order-123',
-    assignmentStatus: 'assigned',
-  },
-}
-```
-
-### Transport
-
-`ChatTransport` lets you swap how messages are sent. The SDK does not care whether you use HTTP, mocks, WebSocket, SSE, or a custom backend.
-
-```ts
-import type { ChatTransport } from 'lee-chat-sdk'
-
-interface SendMessageRequest {
-  content: string
-  conversationId: string
-}
-
-interface SendMessageResponse {
-  content: string
-}
-
-const mockTransport: ChatTransport<
-  SendMessageRequest,
-  SendMessageResponse
-> = {
-  async sendMessage(request) {
-    return {
-      content: `Received: ${request.content}`,
-    }
-  },
-}
-```
-
-The package also includes an HTTP transport:
-
-```ts
-import { HttpChatTransport } from 'lee-chat-sdk'
-
-const transport = new HttpChatTransport<
-  SendMessageRequest,
-  SendMessageResponse
->({
+const config: LeeChatConfig = {
+  appId: 'commerce-web',
   endpoint: '/api/chat',
-})
-```
-
-### Persistence
-
-Use memory persistence for demos or temporary sessions:
-
-```ts
-import { MemoryChatPersistence, type ChatMessage } from 'lee-chat-sdk'
-
-const persistence = new MemoryChatPersistence<ChatMessage>()
-```
-
-Use localStorage persistence for browser-side conversation history:
-
-```ts
-import { LocalStorageChatPersistence, type ChatMessage } from 'lee-chat-sdk'
-
-const persistence = new LocalStorageChatPersistence<ChatMessage>({
-  storageKey: 'support-chat:conversation-1',
-  storageVersion: 1,
-  validateMessages(messages) {
-    return Array.isArray(messages) ? (messages as ChatMessage[]) : []
+  user: {
+    id: 'user-123',
+    name: 'Lee',
+    email: 'lee@example.com',
   },
-})
+  metadata: {
+    plan: 'pro',
+  },
+  position: 'bottom-right',
+  initialOpen: false,
+  persistence: 'localStorage',
+  texts: {
+    title: 'Support',
+    subtitle: 'Leave your question.',
+    triggerLabel: 'Open support',
+    placeholder: 'Type your message',
+    send: 'Send',
+    sending: 'Sending',
+    error: 'Message failed. Please try again.',
+  },
+  theme: {
+    colorScheme: 'light',
+    primaryColor: '#111827',
+    radius: '12px',
+  },
+}
 ```
 
-### Controller
+## Backend Contract
 
-`useChatController` manages input state, submission state, user messages, assistant messages, failed messages, transport calls, and persistence.
+The SDK sends the following request body to `endpoint`.
 
-```tsx
-'use client'
-
-import {
-  ChatComposer,
-  ChatMessageList,
-  ChatWidgetShell,
-  MemoryChatPersistence,
-  useChatController,
-  type ChatMessage,
-} from 'lee-chat-sdk'
-
-interface SupportMetadata {
-  agentName?: string
-  assignmentStatus?: 'unassigned' | 'assigned' | 'closed'
-}
-
-interface SupportRequest {
-  content: string
+```ts
+interface LeeChatRequest {
+  appId: string
   conversationId: string
+  message: {
+    id: string
+    content: string
+    createdAt: string
+  }
+  user?: {
+    id: string
+    name?: string
+    email?: string
+  }
+  metadata?: Record<string, unknown>
+  history: Array<{
+    role: 'user' | 'assistant' | 'system' | 'agent'
+    content: string
+    createdAt: string
+  }>
 }
+```
 
-interface SupportResponse {
-  content: string
-  metadata: SupportMetadata
+The response should match this shape.
+
+```ts
+interface LeeChatResponse {
+  message: {
+    id?: string
+    content: string
+    createdAt?: string
+    metadata?: Record<string, unknown>
+  }
 }
+```
 
-const persistence = new MemoryChatPersistence<ChatMessage<SupportMetadata>>()
+A small Next.js route handler example:
 
-export function SupportChatWidget() {
-  const chat = useChatController<
-    SupportRequest,
-    SupportResponse,
-    SupportMetadata
-  >({
-    conversationId: 'support-conversation',
-    persistence,
-    transport: {
-      async sendMessage(request) {
-        return {
-          content: `Agent received: ${request.content}`,
-          metadata: {
-            agentName: 'Mina',
-            assignmentStatus: 'assigned',
-          },
-        }
+```ts
+import type { LeeChatRequest, LeeChatResponse } from 'lee-chat-sdk'
+
+export async function POST(request: Request) {
+  const body = (await request.json()) as LeeChatRequest
+
+  const response: LeeChatResponse = {
+    message: {
+      content: `Received: ${body.message.content}`,
+      metadata: {
+        agentName: 'Mina',
       },
     },
-    buildRequest: ({ content, conversationId }) => ({
-      content,
-      conversationId,
-    }),
-    buildAssistantMessage: ({ response }) => ({
-      content: response.content,
-      metadata: response.metadata,
-    }),
-  })
+  }
 
+  return Response.json(response)
+}
+```
+
+## Styling
+
+The default UI exposes CSS custom properties and class hooks.
+
+```css
+:root {
+  --lee-chat-primary: #111827;
+  --lee-chat-background: #ffffff;
+  --lee-chat-foreground: #111827;
+  --lee-chat-muted: #f3f4f6;
+  --lee-chat-border: #e5e7eb;
+  --lee-chat-radius: 12px;
+  --lee-chat-z-index: 60;
+}
+
+.lee-chat-trigger {
+  box-shadow: 0 12px 28px rgb(15 23 42 / 18%);
+}
+
+.lee-chat-panel {
+  width: min(420px, calc(100vw - 32px));
+}
+```
+
+You can also pass additional class names through config.
+
+```ts
+initLeeChat({
+  appId: 'my-service',
+  endpoint: '/api/chat',
+  className: {
+    root: 'my-chat-root',
+    trigger: 'my-chat-trigger',
+    panel: 'my-chat-panel',
+    header: 'my-chat-header',
+    messageList: 'my-chat-message-list',
+    composer: 'my-chat-composer',
+  },
+})
+```
+
+## React API
+
+In React apps, compose the provider and widget.
+
+```tsx
+import { LeeChatProvider, LeeChatWidget } from 'lee-chat-sdk'
+
+export function SupportWidget() {
   return (
-    <ChatWidgetShell
-      title="Support Chat"
-      description="Ask a support question."
-      footer={
-        <ChatComposer
-          inputId="support-message"
-          label="Message"
-          value={chat.inputValue}
-          placeholder="Type your message"
-          submitLabel={chat.isSubmitting ? 'Sending' : 'Send'}
-          isLoading={chat.isSubmitting}
-          onChange={chat.setInputValue}
-          onSubmit={() => {
-            void chat.submitMessage()
-          }}
-        />
-      }
+    <LeeChatProvider
+      config={{
+        appId: 'support',
+        endpoint: '/api/support-chat',
+        texts: {
+          title: 'Support',
+          subtitle: 'We usually reply in a few minutes.',
+        },
+      }}
     >
-      <ChatMessageList
-        messages={chat.messages}
-        renderMessage={(message) => (
-          <article>
-            <strong>{message.role}</strong>
-            <p>{message.content}</p>
-            {message.metadata?.agentName ? (
-              <small>{message.metadata.agentName}</small>
-            ) : null}
-          </article>
-        )}
-      />
-    </ChatWidgetShell>
+      <LeeChatWidget />
+    </LeeChatProvider>
   )
 }
 ```
 
-### Events
+Use `useLeeChat()` when you need direct access to open state and the controller.
 
-`ChatEvent` is useful when building operator consoles or audit trails. It can represent messages, failed messages, assignment changes, closed conversations, internal notes, and customer events.
+```tsx
+import { useLeeChat } from 'lee-chat-sdk'
+
+export function CustomOpenButton() {
+  const leeChat = useLeeChat()
+
+  return (
+    <button type="button" onClick={leeChat.open}>
+      Open
+    </button>
+  )
+}
+```
+
+## Vanilla JS API
+
+For apps that do not write React code, call `initLeeChat()`.
+
+```ts
+import { closeLeeChat, destroyLeeChat, initLeeChat, openLeeChat } from 'lee-chat-sdk'
+
+initLeeChat({
+  appId: 'landing-page',
+  endpoint: '/api/chat',
+  initialOpen: true,
+})
+
+openLeeChat()
+closeLeeChat()
+destroyLeeChat()
+```
+
+You can mount the widget into a specific container.
+
+```ts
+const container = document.querySelector('#chat-root')
+
+if (container instanceof HTMLElement) {
+  initLeeChat({
+    appId: 'docs',
+    endpoint: '/api/chat',
+    container,
+  })
+}
+```
+
+## Headless API
+
+Use the headless controller and primitives when you need deeper customization.
+
+- `useChatController`: manages input state, submission state, messages, transport calls, and persistence.
+- `ChatTransport`: adapter interface for HTTP, mock, WebSocket, SSE, or any custom transport.
+- `HttpChatTransport`: default HTTP POST transport.
+- `MemoryChatPersistence`: in-memory conversation storage.
+- `LocalStorageChatPersistence`: browser localStorage conversation storage.
+- `ChatComposer`, `ChatMessageList`, `ChatWidgetShell`, `FloatingChatTrigger`: composable UI primitives.
+
+## Operator Console Model
+
+Use `ChatEvent` for operational tooling and internal consoles. It can model message creation, failed messages, assignment changes, closed conversations, internal notes, and customer events as a single event stream.
 
 ```ts
 import {
@@ -278,13 +308,6 @@ const events: ChatEvent[] = [
     createdAt: '2026-06-01T00:00:00.000Z',
     payload: { agentName: 'Jin' },
   }),
-  buildChatEvent({
-    id: 'event-2',
-    conversationId: 'conversation-1',
-    type: 'internal_note.created',
-    createdAt: '2026-06-01T00:01:00.000Z',
-    payload: { content: 'Customer may churn.' },
-  }),
 ]
 
 const conversationEvents = collectChatEventsByConversationId({
@@ -293,50 +316,15 @@ const conversationEvents = collectChatEventsByConversationId({
 })
 ```
 
-## UI Primitives
-
-The included UI components are deliberately small and unopinionated:
-
-- `ChatWidgetShell`: panel layout with title, description, content, and footer slots
-- `ChatMessageList`: message list with a `renderMessage` slot
-- `ChatComposer`: controlled textarea and submit form
-- `FloatingChatTrigger`: accessible open/close trigger button
-
-You can use these directly or replace them with your own design system components while keeping the SDK controller, transport, persistence, and model layer.
-
 ## Example Apps
-
-### Support Chat Demo
 
 ```bash
 pnpm --filter lee-chat-sdk-demo dev
-```
-
-Demonstrates:
-
-- A support chat widget
-- `useChatController`
-- mock transport
-- memory persistence
-- custom support metadata
-
-### Operator Console
-
-```bash
 pnpm --filter lee-chat-sdk-console dev
 ```
 
-Demonstrates:
-
-- Conversation list
-- Message thread
-- Customer context panel
-- unread count
-- assigned / unassigned / closed states
-- assignment action
-- internal notes
-- customer event timeline
-- `ChatEvent` stream collection
+- `apps/demo`: drop-in chat widget example
+- `apps/console`: operator console model example
 
 ## Development
 
@@ -355,17 +343,15 @@ pnpm --filter lee-chat-sdk-demo test:run
 pnpm --filter lee-chat-sdk-console test:run
 ```
 
-## Publishing Checklist
-
-Before publishing to npm:
+## npm Publishing Checklist
 
 - Remove `"private": true` from `packages/sdk/package.json`.
-- Confirm the package name is available on npm.
-- Add package metadata: `description`, `license`, `author`, `repository`, `keywords`.
-- Decide whether the published package should include only `dist` or additional docs.
-- Run `pnpm --filter lee-chat-sdk build`.
-- Run `pnpm --filter lee-chat-sdk test:run`.
+- Add `description`, `license`, `author`, `repository`, and `keywords`.
+- Decide the React-only peer dependency policy and Vanilla JS bundle policy.
+- Confirm that the package name is available on npm.
 - Run `pnpm --filter lee-chat-sdk typecheck`.
+- Run `pnpm --filter lee-chat-sdk test:run`.
+- Run `pnpm --filter lee-chat-sdk build`.
 - Publish from `packages/sdk`.
 
 ```bash
@@ -375,18 +361,17 @@ pnpm publish --access public
 
 ## Current Limitations
 
-- UI primitives are not styled for production.
-- WebSocket and SSE transports are not implemented yet.
-- There is no conversation-list controller yet.
+- The current Vanilla JS API does not require writing React code, but its internal renderer is React-based.
+- WebSocket and SSE transport adapters are not included yet.
 - Retry and resend policies are not included yet.
 - Storybook documentation is not included yet.
 - Package export paths are currently limited to the root export.
 
 ## Roadmap
 
-- Split headless logic and styled UI packages.
+- Provide a no-React browser bundle.
 - Add WebSocket and SSE transport adapters.
 - Add conversation list and operator-console controller APIs.
 - Add retry, resend, and optimistic update policies.
 - Add Storybook examples.
-- Prepare stable npm publishing metadata and release workflow.
+- Prepare an npm release workflow.

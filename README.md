@@ -2,26 +2,41 @@
 
 한국어 | [English](./README.en.md)
 
-도메인별 채팅 위젯, 메시지 흐름, 운영 콘솔을 만들기 위한 재사용 가능한 React primitives입니다.
+`lee-chat-sdk`는 웹사이트에 고객상담 채팅 UI를 빠르게 붙이기 위한 drop-in chat widget kit입니다. 기본 UI는 페이지 오른쪽 아래의 플로팅 버튼으로 시작하고, 버튼을 누르면 채팅 패널이 열립니다. React 앱에서는 컴포넌트로, 일반 JavaScript 환경에서는 `initLeeChat()` 함수로 사용할 수 있습니다.
 
-`lee-chat-sdk`는 챗봇 서비스가 아니며 특정 백엔드를 전제로 하지 않습니다. 채팅 제품을 만들 때 반복되는 클라이언트 구조인 메시지 모델, transport adapter, persistence adapter, controller hook, 가벼운 UI primitive, 운영 도구용 event model을 제공합니다.
+## 빠른 시작
 
-## 무엇을 만들 수 있나
+### React
 
-- floating support chat widget
-- 도메인별 AI assistant UI
-- HTTP, mock, WebSocket, SSE transport로 연결되는 채팅 인터페이스
-- memory 또는 localStorage 기반 대화 저장
-- citation, 상담자 이름, 주문 ID, 내부 메모 같은 metadata가 붙은 메시지 렌더러
-- 대화 배정, 내부 메모, 고객 이벤트, message/event stream을 다루는 운영 콘솔
+```tsx
+import { LeeChatProvider, LeeChatWidget } from 'lee-chat-sdk'
 
-## 상태
+export function App() {
+  return (
+    <LeeChatProvider
+      config={{
+        appId: 'my-service',
+        endpoint: '/api/chat',
+      }}
+    >
+      <LeeChatWidget />
+    </LeeChatProvider>
+  )
+}
+```
 
-이 패키지는 초기 개발 단계입니다.
+### Vanilla JS
 
-- public API는 아직 변경될 수 있습니다.
-- UI primitive는 의도적으로 작고 최소한의 형태입니다.
-- npm 배포를 염두에 둔 구조지만, 안정적인 `1.0.0` 릴리스 전까지는 experimental로 보는 것이 좋습니다.
+```ts
+import { initLeeChat } from 'lee-chat-sdk'
+
+const leeChat = initLeeChat({
+  appId: 'my-service',
+  endpoint: '/api/chat',
+})
+
+leeChat.open()
+```
 
 ## 설치
 
@@ -43,225 +58,240 @@ npm install lee-chat-sdk
 pnpm add lee-chat-sdk@file:../lee-chat-sdk/packages/sdk
 ```
 
-## Peer Dependencies
+## 기본 동작
 
-```json
-{
-  "react": "^19.0.0",
-  "react-dom": "^19.0.0"
-}
-```
+- 페이지 오른쪽 아래에 플로팅 채팅 버튼을 렌더링합니다.
+- 버튼을 누르면 채팅 패널, 메시지 목록, 입력창, 전송 버튼이 표시됩니다.
+- 사용자가 보낸 메시지를 `endpoint`로 POST 전송합니다.
+- 응답 메시지를 assistant 메시지로 추가합니다.
+- `memory` 또는 `localStorage` persistence를 선택할 수 있습니다.
+- CSS custom properties와 class hook으로 스타일을 조정할 수 있습니다.
 
-## 패키지 구성
-
-```text
-packages/sdk
-  src/controller       useChatController
-  src/model            ChatMessage, ChatEvent
-  src/persistence      MemoryChatPersistence, LocalStorageChatPersistence
-  src/transport        ChatTransport, HttpChatTransport
-  src/ui               ChatComposer, ChatMessageList, ChatWidgetShell, FloatingChatTrigger
-
-apps/demo              support chat widget 예제
-apps/console           operator console 예제
-```
-
-## 핵심 개념
-
-### Messages
-
-`ChatMessage`는 기본 메시지 타입입니다. generic metadata를 지원하므로 제품별 도메인 컨텍스트를 메시지에 붙일 수 있습니다.
+## 설정
 
 ```ts
-import type { ChatMessage } from 'lee-chat-sdk'
+import type { LeeChatConfig } from 'lee-chat-sdk'
 
-interface SupportMetadata {
-  agentName?: string
-  orderId?: string
-  assignmentStatus?: 'unassigned' | 'assigned' | 'closed'
-}
-
-const message: ChatMessage<SupportMetadata> = {
-  id: 'message-1',
-  conversationId: 'conversation-1',
-  role: 'agent',
-  content: 'I can help with that order.',
-  status: 'sent',
-  createdAt: new Date().toISOString(),
-  metadata: {
-    agentName: 'Mina',
-    orderId: 'order-123',
-    assignmentStatus: 'assigned',
-  },
-}
-```
-
-### Transport
-
-`ChatTransport`는 메시지를 보내는 방식을 교체할 수 있게 해줍니다. SDK는 HTTP, mock, WebSocket, SSE, custom backend 중 무엇을 쓰는지 알 필요가 없습니다.
-
-```ts
-import type { ChatTransport } from 'lee-chat-sdk'
-
-interface SendMessageRequest {
-  content: string
-  conversationId: string
-}
-
-interface SendMessageResponse {
-  content: string
-}
-
-const mockTransport: ChatTransport<
-  SendMessageRequest,
-  SendMessageResponse
-> = {
-  async sendMessage(request) {
-    return {
-      content: `Received: ${request.content}`,
-    }
-  },
-}
-```
-
-기본 HTTP transport도 제공합니다.
-
-```ts
-import { HttpChatTransport } from 'lee-chat-sdk'
-
-const transport = new HttpChatTransport<
-  SendMessageRequest,
-  SendMessageResponse
->({
+const config: LeeChatConfig = {
+  appId: 'commerce-web',
   endpoint: '/api/chat',
-})
-```
-
-### Persistence
-
-demo나 임시 세션에는 memory persistence를 사용할 수 있습니다.
-
-```ts
-import { MemoryChatPersistence, type ChatMessage } from 'lee-chat-sdk'
-
-const persistence = new MemoryChatPersistence<ChatMessage>()
-```
-
-브라우저 대화 기록에는 localStorage persistence를 사용할 수 있습니다.
-
-```ts
-import { LocalStorageChatPersistence, type ChatMessage } from 'lee-chat-sdk'
-
-const persistence = new LocalStorageChatPersistence<ChatMessage>({
-  storageKey: 'support-chat:conversation-1',
-  storageVersion: 1,
-  validateMessages(messages) {
-    return Array.isArray(messages) ? (messages as ChatMessage[]) : []
+  user: {
+    id: 'user-123',
+    name: 'Lee',
+    email: 'lee@example.com',
   },
-})
+  metadata: {
+    plan: 'pro',
+  },
+  position: 'bottom-right',
+  initialOpen: false,
+  persistence: 'localStorage',
+  texts: {
+    title: '상담',
+    subtitle: '궁금한 점을 남겨주세요.',
+    triggerLabel: '상담 열기',
+    placeholder: '메시지를 입력하세요',
+    send: '보내기',
+    sending: '전송 중',
+    error: '전송에 실패했습니다. 다시 시도해 주세요.',
+  },
+  theme: {
+    colorScheme: 'light',
+    primaryColor: '#111827',
+    radius: '12px',
+  },
+}
 ```
 
-### Controller
+## Backend Contract
 
-`useChatController`는 입력 상태, 제출 상태, 사용자 메시지, assistant 메시지, 실패 메시지, transport 호출, persistence 저장을 관리합니다.
+SDK는 `endpoint`로 다음 형태의 요청을 보냅니다.
 
-```tsx
-'use client'
-
-import {
-  ChatComposer,
-  ChatMessageList,
-  ChatWidgetShell,
-  MemoryChatPersistence,
-  useChatController,
-  type ChatMessage,
-} from 'lee-chat-sdk'
-
-interface SupportMetadata {
-  agentName?: string
-  assignmentStatus?: 'unassigned' | 'assigned' | 'closed'
-}
-
-interface SupportRequest {
-  content: string
+```ts
+interface LeeChatRequest {
+  appId: string
   conversationId: string
+  message: {
+    id: string
+    content: string
+    createdAt: string
+  }
+  user?: {
+    id: string
+    name?: string
+    email?: string
+  }
+  metadata?: Record<string, unknown>
+  history: Array<{
+    role: 'user' | 'assistant' | 'system' | 'agent'
+    content: string
+    createdAt: string
+  }>
 }
+```
 
-interface SupportResponse {
-  content: string
-  metadata: SupportMetadata
+응답은 다음 형태를 기대합니다.
+
+```ts
+interface LeeChatResponse {
+  message: {
+    id?: string
+    content: string
+    createdAt?: string
+    metadata?: Record<string, unknown>
+  }
 }
+```
 
-const persistence = new MemoryChatPersistence<ChatMessage<SupportMetadata>>()
+간단한 Next.js route handler 예시:
 
-export function SupportChatWidget() {
-  const chat = useChatController<
-    SupportRequest,
-    SupportResponse,
-    SupportMetadata
-  >({
-    conversationId: 'support-conversation',
-    persistence,
-    transport: {
-      async sendMessage(request) {
-        return {
-          content: `Agent received: ${request.content}`,
-          metadata: {
-            agentName: 'Mina',
-            assignmentStatus: 'assigned',
-          },
-        }
+```ts
+import type { LeeChatRequest, LeeChatResponse } from 'lee-chat-sdk'
+
+export async function POST(request: Request) {
+  const body = (await request.json()) as LeeChatRequest
+
+  const response: LeeChatResponse = {
+    message: {
+      content: `Received: ${body.message.content}`,
+      metadata: {
+        agentName: 'Mina',
       },
     },
-    buildRequest: ({ content, conversationId }) => ({
-      content,
-      conversationId,
-    }),
-    buildAssistantMessage: ({ response }) => ({
-      content: response.content,
-      metadata: response.metadata,
-    }),
-  })
+  }
 
+  return Response.json(response)
+}
+```
+
+## Styling
+
+기본 UI는 CSS custom properties와 class hook을 노출합니다.
+
+```css
+:root {
+  --lee-chat-primary: #111827;
+  --lee-chat-background: #ffffff;
+  --lee-chat-foreground: #111827;
+  --lee-chat-muted: #f3f4f6;
+  --lee-chat-border: #e5e7eb;
+  --lee-chat-radius: 12px;
+  --lee-chat-z-index: 60;
+}
+
+.lee-chat-trigger {
+  box-shadow: 0 12px 28px rgb(15 23 42 / 18%);
+}
+
+.lee-chat-panel {
+  width: min(420px, calc(100vw - 32px));
+}
+```
+
+설정으로 class name을 추가할 수도 있습니다.
+
+```ts
+initLeeChat({
+  appId: 'my-service',
+  endpoint: '/api/chat',
+  className: {
+    root: 'my-chat-root',
+    trigger: 'my-chat-trigger',
+    panel: 'my-chat-panel',
+    header: 'my-chat-header',
+    messageList: 'my-chat-message-list',
+    composer: 'my-chat-composer',
+  },
+})
+```
+
+## React API
+
+React 앱에서는 provider와 widget을 조합합니다.
+
+```tsx
+import { LeeChatProvider, LeeChatWidget } from 'lee-chat-sdk'
+
+export function SupportWidget() {
   return (
-    <ChatWidgetShell
-      title="Support Chat"
-      description="Ask a support question."
-      footer={
-        <ChatComposer
-          inputId="support-message"
-          label="Message"
-          value={chat.inputValue}
-          placeholder="Type your message"
-          submitLabel={chat.isSubmitting ? 'Sending' : 'Send'}
-          isLoading={chat.isSubmitting}
-          onChange={chat.setInputValue}
-          onSubmit={() => {
-            void chat.submitMessage()
-          }}
-        />
-      }
+    <LeeChatProvider
+      config={{
+        appId: 'support',
+        endpoint: '/api/support-chat',
+        texts: {
+          title: 'Support',
+          subtitle: 'We usually reply in a few minutes.',
+        },
+      }}
     >
-      <ChatMessageList
-        messages={chat.messages}
-        renderMessage={(message) => (
-          <article>
-            <strong>{message.role}</strong>
-            <p>{message.content}</p>
-            {message.metadata?.agentName ? (
-              <small>{message.metadata.agentName}</small>
-            ) : null}
-          </article>
-        )}
-      />
-    </ChatWidgetShell>
+      <LeeChatWidget />
+    </LeeChatProvider>
   )
 }
 ```
 
-### Events
+`useLeeChat()`으로 열림 상태와 controller에 직접 접근할 수 있습니다.
 
-`ChatEvent`는 운영 콘솔이나 audit trail을 만들 때 유용합니다. 메시지, 실패 메시지, 배정 변경, 대화 종료, 내부 메모, 고객 이벤트를 표현할 수 있습니다.
+```tsx
+import { useLeeChat } from 'lee-chat-sdk'
+
+export function CustomOpenButton() {
+  const leeChat = useLeeChat()
+
+  return (
+    <button type="button" onClick={leeChat.open}>
+      Open
+    </button>
+  )
+}
+```
+
+## Vanilla JS API
+
+React 코드를 작성하지 않는 앱에서는 `initLeeChat()`을 호출합니다.
+
+```ts
+import { closeLeeChat, destroyLeeChat, initLeeChat, openLeeChat } from 'lee-chat-sdk'
+
+initLeeChat({
+  appId: 'landing-page',
+  endpoint: '/api/chat',
+  initialOpen: true,
+})
+
+openLeeChat()
+closeLeeChat()
+destroyLeeChat()
+```
+
+특정 컨테이너에 마운트할 수도 있습니다.
+
+```ts
+const container = document.querySelector('#chat-root')
+
+if (container instanceof HTMLElement) {
+  initLeeChat({
+    appId: 'docs',
+    endpoint: '/api/chat',
+    container,
+  })
+}
+```
+
+## Headless API
+
+기본 UI보다 더 깊게 커스터마이징해야 한다면 headless controller와 primitive를 사용할 수 있습니다.
+
+- `useChatController`: 입력 상태, 제출 상태, 메시지 목록, transport 호출, persistence 저장을 관리합니다.
+- `ChatTransport`: HTTP, mock, WebSocket, SSE 같은 전송 방식을 교체하기 위한 adapter interface입니다.
+- `HttpChatTransport`: 기본 HTTP POST transport입니다.
+- `MemoryChatPersistence`: 메모리 기반 대화 저장소입니다.
+- `LocalStorageChatPersistence`: 브라우저 localStorage 기반 대화 저장소입니다.
+- `ChatComposer`, `ChatMessageList`, `ChatWidgetShell`, `FloatingChatTrigger`: 직접 조합 가능한 UI primitive입니다.
+
+## Operator Console Model
+
+운영 도구나 내부 콘솔에는 `ChatEvent` 모델을 사용할 수 있습니다. 메시지 생성, 실패, 배정 변경, 대화 종료, 내부 메모, 고객 이벤트를 하나의 event stream으로 다룰 수 있습니다.
 
 ```ts
 import {
@@ -278,13 +308,6 @@ const events: ChatEvent[] = [
     createdAt: '2026-06-01T00:00:00.000Z',
     payload: { agentName: 'Jin' },
   }),
-  buildChatEvent({
-    id: 'event-2',
-    conversationId: 'conversation-1',
-    type: 'internal_note.created',
-    createdAt: '2026-06-01T00:01:00.000Z',
-    payload: { content: 'Customer may churn.' },
-  }),
 ]
 
 const conversationEvents = collectChatEventsByConversationId({
@@ -293,50 +316,15 @@ const conversationEvents = collectChatEventsByConversationId({
 })
 ```
 
-## UI Primitives
-
-포함된 UI 컴포넌트는 작고 특정 디자인 시스템에 강하게 묶이지 않도록 작성되어 있습니다.
-
-- `ChatWidgetShell`: title, description, content, footer slot을 가진 panel layout
-- `ChatMessageList`: `renderMessage` slot을 가진 message list
-- `ChatComposer`: controlled textarea와 submit form
-- `FloatingChatTrigger`: 접근 가능한 open/close trigger button
-
-이 컴포넌트를 직접 사용해도 되고, SDK의 controller, transport, persistence, model layer만 유지한 채 자체 디자인 시스템 컴포넌트로 교체해도 됩니다.
-
 ## 예제 앱
-
-### Support Chat Demo
 
 ```bash
 pnpm --filter lee-chat-sdk-demo dev
-```
-
-포함된 내용:
-
-- support chat widget
-- `useChatController`
-- mock transport
-- memory persistence
-- custom support metadata
-
-### Operator Console
-
-```bash
 pnpm --filter lee-chat-sdk-console dev
 ```
 
-포함된 내용:
-
-- conversation list
-- message thread
-- customer context panel
-- unread count
-- assigned / unassigned / closed 상태
-- assignment action
-- internal notes
-- customer event timeline
-- `ChatEvent` stream collection
+- `apps/demo`: drop-in chat widget 사용 예제
+- `apps/console`: 운영 콘솔 모델 예제
 
 ## 개발
 
@@ -355,17 +343,15 @@ pnpm --filter lee-chat-sdk-demo test:run
 pnpm --filter lee-chat-sdk-console test:run
 ```
 
-## 배포 체크리스트
-
-npm 배포 전에는 다음을 확인합니다.
+## npm 배포 체크리스트
 
 - `packages/sdk/package.json`에서 `"private": true` 제거
-- npm에서 패키지 이름 사용 가능 여부 확인
-- package metadata 추가: `description`, `license`, `author`, `repository`, `keywords`
-- 배포 패키지에 `dist`만 포함할지 추가 문서도 포함할지 결정
-- `pnpm --filter lee-chat-sdk build` 실행
-- `pnpm --filter lee-chat-sdk test:run` 실행
+- `description`, `license`, `author`, `repository`, `keywords` 추가
+- React 전용 peer dependency 정책과 Vanilla JS bundle 정책 결정
+- npm 패키지 이름 사용 가능 여부 확인
 - `pnpm --filter lee-chat-sdk typecheck` 실행
+- `pnpm --filter lee-chat-sdk test:run` 실행
+- `pnpm --filter lee-chat-sdk build` 실행
 - `packages/sdk`에서 publish
 
 ```bash
@@ -375,18 +361,17 @@ pnpm publish --access public
 
 ## 현재 한계
 
-- UI primitive는 production styling을 포함하지 않습니다.
-- WebSocket/SSE transport는 아직 구현되어 있지 않습니다.
-- conversation-list controller는 아직 없습니다.
+- 현재 Vanilla JS API는 React 코드를 작성하지 않아도 되지만 내부 렌더러는 React 기반입니다.
+- WebSocket/SSE transport adapter는 아직 포함되어 있지 않습니다.
 - retry/resend 정책은 아직 포함되어 있지 않습니다.
 - Storybook 문서화는 아직 없습니다.
 - package export path는 현재 root export로 제한되어 있습니다.
 
 ## Roadmap
 
-- headless logic과 styled UI package 분리
+- no-React browser bundle 제공
 - WebSocket/SSE transport adapter 추가
 - conversation list와 operator-console controller API 추가
 - retry, resend, optimistic update 정책 추가
 - Storybook examples 추가
-- 안정적인 npm 배포 metadata와 release workflow 준비
+- npm release workflow 준비
