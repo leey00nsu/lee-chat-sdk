@@ -6,7 +6,7 @@ import {
   initLeeChat,
   openLeeChat,
 } from './init-lee-chat'
-import type { ChatEventTransport } from '../transport/sse-chat-event-transport'
+import type { ChatEventTransport } from '../transport/chat-event-transport'
 
 const fetchMock = vi.fn()
 const scrollIntoViewMock = vi.fn()

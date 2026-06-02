@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { LeeChatProvider } from './lee-chat-provider'
 import { useLeeChat } from './use-lee-chat'
-import type { ChatEventTransport } from '../transport/sse-chat-event-transport'
+import type { ChatEventTransport } from '../transport/chat-event-transport'
 
 describe('LeeChatProvider', () => {
   it('config와 기본 open 상태를 context로 제공한다', () => {

@@ -14,7 +14,7 @@ import {
 import type {
   ChatEventTransport,
   ChatEventUnsubscribe,
-} from '../transport/sse-chat-event-transport'
+} from '../transport/chat-event-transport'
 import '../react/lee-chat-widget.css'
 
 export interface InitLeeChatConfig extends LeeChatConfig {

@@ -88,7 +88,7 @@ The default UI includes `sending`, `failed`, retry, assistant loading, presence,
 
 ## Headless
 
-`ConversationClient` handles message sending, failure handling, retry, and persistence without depending on React. Use `applyEvent` to apply presence, typing, and read events from realtime adapters, and use `ChatParticipantPresence`, `ChatTypingIndicator`, and `ChatReadReceipt` to model state by participant. `SseChatEventTransport` is a browser `EventSource`-based SSE adapter that parses server events as `ConversationClientEvent` and connects them to the React Provider or Vanilla widget.
+`ConversationClient` handles message sending, failure handling, retry, and persistence without depending on React. Use `applyEvent` to apply presence, typing, and read events from realtime adapters, and use `ChatParticipantPresence`, `ChatTypingIndicator`, and `ChatReadReceipt` to model state by participant. `SseChatEventTransport` and `WebSocketChatEventTransport` parse server events as `ConversationClientEvent` and connect them to the React Provider or Vanilla widget.
 
 ## Backend Contract
 

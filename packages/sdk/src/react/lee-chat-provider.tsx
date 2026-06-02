@@ -8,7 +8,7 @@ import { LocalStorageChatPersistence } from '../persistence/local-storage-chat-p
 import { HttpChatTransport } from '../transport/http-chat-transport'
 import { buildLeeChatRequest, parseLeeChatResponse, type LeeChatRequest, type LeeChatResponse } from '../request/lee-chat-request'
 import { createTextMessageParts, type ChatMessage } from '../model/chat-message'
-import type { ChatEventTransport } from '../transport/sse-chat-event-transport'
+import type { ChatEventTransport } from '../transport/chat-event-transport'
 import { LeeChatContext } from './lee-chat-context'
 
 export interface LeeChatProviderProps {

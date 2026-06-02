@@ -68,16 +68,24 @@ export type { ChatPersistence } from './persistence/chat-persistence'
 export { LocalStorageChatPersistence } from './persistence/local-storage-chat-persistence'
 export { MemoryChatPersistence } from './persistence/memory-chat-persistence'
 export type { ChatTransport } from './transport/chat-transport'
-export { HttpChatTransport } from './transport/http-chat-transport'
-export { SseChatEventTransport } from './transport/sse-chat-event-transport'
 export type {
   ChatEventListener,
   ChatEventTransport,
   ChatEventUnsubscribe,
+} from './transport/chat-event-transport'
+export { HttpChatTransport } from './transport/http-chat-transport'
+export { SseChatEventTransport } from './transport/sse-chat-event-transport'
+export type {
   CreateEventSource,
   EventSourceLike,
   SseChatEventTransportParams,
 } from './transport/sse-chat-event-transport'
+export { WebSocketChatEventTransport } from './transport/web-socket-chat-event-transport'
+export type {
+  CreateWebSocket,
+  WebSocketChatEventTransportParams,
+  WebSocketLike,
+} from './transport/web-socket-chat-event-transport'
 export {
   buildLeeChatRequest,
   parseLeeChatResponse,

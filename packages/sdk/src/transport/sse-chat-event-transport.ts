@@ -1,4 +1,8 @@
-import type { ConversationClientEvent } from '../client/conversation-client'
+import type {
+  ChatEventListener,
+  ChatEventTransport,
+  ChatEventUnsubscribe,
+} from './chat-event-transport'
 
 export interface EventSourceLike {
   addEventListener(type: string, listener: (event: MessageEvent) => void): void
@@ -7,12 +11,6 @@ export interface EventSourceLike {
 }
 
 export type CreateEventSource = (endpoint: string) => EventSourceLike
-export type ChatEventUnsubscribe = () => void
-export type ChatEventListener = (event: ConversationClientEvent) => void
-
-export interface ChatEventTransport {
-  subscribe(listener: ChatEventListener): ChatEventUnsubscribe
-}
 
 export interface SseChatEventTransportParams {
   endpoint: string
@@ -46,7 +44,7 @@ export class SseChatEventTransport implements ChatEventTransport {
   subscribe(listener: ChatEventListener): ChatEventUnsubscribe {
     const eventSource = this.createEventSource(this.endpoint)
     const handleMessage = (event: MessageEvent): void => {
-      listener(JSON.parse(String(event.data)) as ConversationClientEvent)
+      listener(JSON.parse(String(event.data)))
     }
 
     eventSource.addEventListener(this.eventName, handleMessage)
