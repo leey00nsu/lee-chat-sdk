@@ -1,97 +1,61 @@
 'use client'
 
-import { useState } from 'react'
-import {
-  ChatComposer,
-  ChatMessageList,
-  ChatWidgetShell,
-  FloatingChatTrigger,
-  MemoryChatPersistence,
-  useChatController,
-  type ChatMessage,
-} from 'lee-chat-sdk'
-import {
-  createSupportChatTransport,
-  type SupportChatMetadata,
-  type SupportChatRequest,
-  type SupportChatResponse,
-} from '../model/support-chat'
+import { LeeChatProvider, LeeChatWidget, type LeeChatRequest } from 'lee-chat-sdk'
 
 const SUPPORT_CHAT_DEMO = {
-  CONVERSATION_ID: 'support-demo-conversation',
-  INPUT_ID: 'support-chat-message',
+  APP_ID: 'support-demo',
+  ENDPOINT: '/api/support-chat',
+  USER_ID: 'demo-user',
 } as const
 
-const supportChatTransport = createSupportChatTransport()
-const supportChatPersistence =
-  new MemoryChatPersistence<ChatMessage<SupportChatMetadata>>()
+async function supportDemoFetch(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+): Promise<Response> {
+  const requestBody = JSON.parse(String(init?.body)) as LeeChatRequest
 
-function renderSupportMessage(message: ChatMessage<SupportChatMetadata>) {
-  return (
-    <article>
-      <strong>{message.role}</strong>
-      <p>{message.content}</p>
-      {message.metadata?.assignmentStatus ? (
-        <small>{message.metadata.assignmentStatus}</small>
-      ) : null}
-    </article>
+  return new Response(
+    JSON.stringify({
+      message: {
+        content: `Support received: ${requestBody.message.content}`,
+        metadata: {
+          agentName: 'Mina',
+          assignmentStatus: 'assigned',
+        },
+      },
+    }),
+    {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Lee-Chat-Demo-Endpoint': String(input),
+      },
+    },
   )
 }
 
 export function SupportChatDemo() {
-  const [isOpen, setIsOpen] = useState(false)
-  const chatController = useChatController<
-    SupportChatRequest,
-    SupportChatResponse,
-    SupportChatMetadata
-  >({
-    conversationId: SUPPORT_CHAT_DEMO.CONVERSATION_ID,
-    transport: supportChatTransport,
-    persistence: supportChatPersistence,
-    buildRequest: ({ content, conversationId, messages }) => ({
-      content,
-      conversationId,
-      previousMessages: messages,
-    }),
-    buildAssistantMessage: ({ response }) => ({
-      content: response.content,
-      metadata: response.metadata,
-    }),
-  })
-
   return (
-    <div>
-      {isOpen ? (
-        <ChatWidgetShell
-          title="Support Chat Demo"
-          description="SDK metadata로 상담 상태와 고객 이벤트를 전달합니다."
-          footer={
-            <ChatComposer
-              inputId={SUPPORT_CHAT_DEMO.INPUT_ID}
-              label="상담 메시지"
-              value={chatController.inputValue}
-              placeholder="문의 내용을 입력하세요"
-              submitLabel={chatController.isSubmitting ? '전송 중' : '보내기'}
-              isLoading={chatController.isSubmitting}
-              onChange={chatController.setInputValue}
-              onSubmit={() => {
-                void chatController.submitMessage()
-              }}
-            />
-          }
-        >
-          <ChatMessageList
-            messages={chatController.messages}
-            renderMessage={renderSupportMessage}
-          />
-        </ChatWidgetShell>
-      ) : null}
-
-      <FloatingChatTrigger
-        label={isOpen ? '상담 닫기' : '상담 열기'}
-        isOpen={isOpen}
-        onClick={() => setIsOpen((previousIsOpen) => !previousIsOpen)}
-      />
-    </div>
+    <LeeChatProvider
+      config={{
+        appId: SUPPORT_CHAT_DEMO.APP_ID,
+        endpoint: SUPPORT_CHAT_DEMO.ENDPOINT,
+        user: {
+          id: SUPPORT_CHAT_DEMO.USER_ID,
+          name: 'Demo User',
+        },
+        texts: {
+          title: 'Support Chat Demo',
+          subtitle: 'Drop-in widget powered by lee-chat-sdk.',
+          triggerLabel: 'Open support chat',
+        },
+        className: {
+          root: 'support-demo-chat-root',
+        },
+      }}
+      fetchImplementation={supportDemoFetch}
+    >
+      <LeeChatWidget />
+    </LeeChatProvider>
   )
 }
