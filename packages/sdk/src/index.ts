@@ -46,6 +46,16 @@ export type { LeeChatProviderProps } from './react/lee-chat-provider'
 export { LeeChatWidget } from './react/lee-chat-widget'
 export { useLeeChat } from './react/use-lee-chat'
 export type { LeeChatContextValue } from './react/lee-chat-context'
+export {
+  closeLeeChat,
+  destroyLeeChat,
+  initLeeChat,
+  openLeeChat,
+} from './widget/init-lee-chat'
+export type {
+  InitLeeChatConfig,
+  LeeChatInstance,
+} from './widget/init-lee-chat'
 export { ChatComposer } from './ui/chat-composer'
 export type { ChatComposerProps } from './ui/chat-composer'
 export { ChatMessageList } from './ui/chat-message-list'
