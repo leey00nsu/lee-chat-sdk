@@ -41,6 +41,11 @@ export type {
   LeeChatResponse,
   ResolvedLeeChatResponse,
 } from './request/lee-chat-request'
+export { LeeChatProvider } from './react/lee-chat-provider'
+export type { LeeChatProviderProps } from './react/lee-chat-provider'
+export { LeeChatWidget } from './react/lee-chat-widget'
+export { useLeeChat } from './react/use-lee-chat'
+export type { LeeChatContextValue } from './react/lee-chat-context'
 export { ChatComposer } from './ui/chat-composer'
 export type { ChatComposerProps } from './ui/chat-composer'
 export { ChatMessageList } from './ui/chat-message-list'
