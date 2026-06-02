@@ -14,6 +14,12 @@ pnpm add lee-chat-sdk
 npm install lee-chat-sdk
 ```
 
+Import the CSS once from your app entry when using the default widget styles.
+
+```ts
+import 'lee-chat-sdk/style.css'
+```
+
 ## React
 
 ```tsx
@@ -36,7 +42,7 @@ export function App() {
 ## Vanilla JS
 
 ```ts
-import { initLeeChat } from 'lee-chat-sdk'
+import { initLeeChat } from 'lee-chat-sdk/vanilla'
 
 const leeChat = initLeeChat({
   appId: 'my-service',
@@ -46,9 +52,11 @@ const leeChat = initLeeChat({
 leeChat.open()
 ```
 
+`lee-chat-sdk/vanilla` is a DOM-based entry that does not import React.
+
 ## CSS
 
-The default widget CSS is included by the root import. If your bundler needs an explicit CSS import, use this subpath.
+The default widget CSS is available through this subpath.
 
 ```ts
 import 'lee-chat-sdk/style.css'

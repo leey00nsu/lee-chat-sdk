@@ -6,6 +6,12 @@
 
 ## Quick Start
 
+Import the CSS once from your app entry when using the default widget styles.
+
+```ts
+import 'lee-chat-sdk/style.css'
+```
+
 ### React
 
 ```tsx
@@ -28,7 +34,7 @@ export function App() {
 ### Vanilla JS
 
 ```ts
-import { initLeeChat } from 'lee-chat-sdk'
+import { initLeeChat } from 'lee-chat-sdk/vanilla'
 
 const leeChat = initLeeChat({
   appId: 'my-service',
@@ -168,7 +174,7 @@ export async function POST(request: Request) {
 
 The default UI exposes CSS custom properties and class hooks.
 
-Most bundlers include the default CSS through the root import. If your environment needs an explicit CSS import, use this subpath.
+Import this subpath once from your app when using the default widget styles.
 
 ```ts
 import 'lee-chat-sdk/style.css'
@@ -254,10 +260,15 @@ export function CustomOpenButton() {
 
 ## Vanilla JS API
 
-For apps that do not write React code, call `initLeeChat()`.
+For apps that do not write React code, import `initLeeChat()` from `lee-chat-sdk/vanilla`. This subpath is a DOM-based entry that does not import React.
 
 ```ts
-import { closeLeeChat, destroyLeeChat, initLeeChat, openLeeChat } from 'lee-chat-sdk'
+import {
+  closeLeeChat,
+  destroyLeeChat,
+  initLeeChat,
+  openLeeChat,
+} from 'lee-chat-sdk/vanilla'
 
 initLeeChat({
   appId: 'landing-page',
@@ -353,7 +364,7 @@ pnpm --filter lee-chat-sdk-console test:run
 
 - Confirm that `"private": true` has been removed from `packages/sdk/package.json`.
 - Confirm `description`, `license`, `author`, `keywords`, and `publishConfig`.
-- Decide the React-only peer dependency policy and Vanilla JS bundle policy.
+- Confirm the `lee-chat-sdk/vanilla` subpath and optional React peer dependency policy.
 - Confirm that the package name is available on npm.
 - Run `pnpm --filter lee-chat-sdk typecheck`.
 - Run `pnpm --filter lee-chat-sdk test:run`.

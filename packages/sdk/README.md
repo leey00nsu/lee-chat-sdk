@@ -14,6 +14,12 @@ pnpm add lee-chat-sdk
 npm install lee-chat-sdk
 ```
 
+기본 위젯 스타일을 사용하려면 앱 진입점에서 CSS를 한 번 import합니다.
+
+```ts
+import 'lee-chat-sdk/style.css'
+```
+
 ## React
 
 ```tsx
@@ -36,7 +42,7 @@ export function App() {
 ## Vanilla JS
 
 ```ts
-import { initLeeChat } from 'lee-chat-sdk'
+import { initLeeChat } from 'lee-chat-sdk/vanilla'
 
 const leeChat = initLeeChat({
   appId: 'my-service',
@@ -46,9 +52,11 @@ const leeChat = initLeeChat({
 leeChat.open()
 ```
 
+`lee-chat-sdk/vanilla`는 React를 import하지 않는 DOM 기반 엔트리입니다.
+
 ## CSS
 
-패키지의 기본 위젯 CSS는 root import에 포함됩니다. 별도로 CSS만 가져와야 하는 bundler라면 다음 subpath를 사용할 수 있습니다.
+기본 위젯 CSS는 다음 subpath로 제공합니다.
 
 ```ts
 import 'lee-chat-sdk/style.css'

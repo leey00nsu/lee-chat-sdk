@@ -6,6 +6,12 @@
 
 ## 빠른 시작
 
+위젯 기본 스타일을 사용하려면 앱 진입점에서 CSS를 한 번 import합니다.
+
+```ts
+import 'lee-chat-sdk/style.css'
+```
+
 ### React
 
 ```tsx
@@ -28,7 +34,7 @@ export function App() {
 ### Vanilla JS
 
 ```ts
-import { initLeeChat } from 'lee-chat-sdk'
+import { initLeeChat } from 'lee-chat-sdk/vanilla'
 
 const leeChat = initLeeChat({
   appId: 'my-service',
@@ -168,7 +174,7 @@ export async function POST(request: Request) {
 
 기본 UI는 CSS custom properties와 class hook을 노출합니다.
 
-대부분의 bundler에서는 root import가 기본 CSS를 함께 포함합니다. CSS를 명시적으로 가져와야 하는 환경에서는 다음 subpath를 사용할 수 있습니다.
+위젯 기본 스타일을 사용하려면 다음 subpath를 앱에서 한 번 import합니다.
 
 ```ts
 import 'lee-chat-sdk/style.css'
@@ -254,10 +260,15 @@ export function CustomOpenButton() {
 
 ## Vanilla JS API
 
-React 코드를 작성하지 않는 앱에서는 `initLeeChat()`을 호출합니다.
+React 코드를 작성하지 않는 앱에서는 `lee-chat-sdk/vanilla`에서 `initLeeChat()`을 가져옵니다. 이 subpath는 React를 import하지 않는 DOM 기반 엔트리입니다.
 
 ```ts
-import { closeLeeChat, destroyLeeChat, initLeeChat, openLeeChat } from 'lee-chat-sdk'
+import {
+  closeLeeChat,
+  destroyLeeChat,
+  initLeeChat,
+  openLeeChat,
+} from 'lee-chat-sdk/vanilla'
 
 initLeeChat({
   appId: 'landing-page',
@@ -353,7 +364,7 @@ pnpm --filter lee-chat-sdk-console test:run
 
 - `packages/sdk/package.json`에서 `"private": true` 제거 확인
 - `description`, `license`, `author`, `keywords`, `publishConfig` 확인
-- React 전용 peer dependency 정책과 Vanilla JS bundle 정책 결정
+- `lee-chat-sdk/vanilla` subpath와 React optional peer dependency 확인
 - npm 패키지 이름 사용 가능 여부 확인
 - `pnpm --filter lee-chat-sdk typecheck` 실행
 - `pnpm --filter lee-chat-sdk test:run` 실행
