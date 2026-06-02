@@ -168,6 +168,12 @@ export async function POST(request: Request) {
 
 The default UI exposes CSS custom properties and class hooks.
 
+Most bundlers include the default CSS through the root import. If your environment needs an explicit CSS import, use this subpath.
+
+```ts
+import 'lee-chat-sdk/style.css'
+```
+
 ```css
 :root {
   --lee-chat-primary: #111827;
@@ -345,8 +351,8 @@ pnpm --filter lee-chat-sdk-console test:run
 
 ## npm Publishing Checklist
 
-- Remove `"private": true` from `packages/sdk/package.json`.
-- Add `description`, `license`, `author`, `repository`, and `keywords`.
+- Confirm that `"private": true` has been removed from `packages/sdk/package.json`.
+- Confirm `description`, `license`, `author`, `keywords`, and `publishConfig`.
 - Decide the React-only peer dependency policy and Vanilla JS bundle policy.
 - Confirm that the package name is available on npm.
 - Run `pnpm --filter lee-chat-sdk typecheck`.

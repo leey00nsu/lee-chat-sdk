@@ -1,7 +1,17 @@
 {
   "name": "lee-chat-sdk",
   "version": "0.1.0",
-  "private": true,
+  "description": "Drop-in chat widget kit for React and vanilla JavaScript websites.",
+  "license": "MIT",
+  "author": "leeyoonsu",
+  "keywords": [
+    "chat",
+    "chat-widget",
+    "customer-support",
+    "sdk",
+    "react",
+    "vanilla-js"
+  ],
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -11,9 +21,26 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./style.css": {
+      "default": "./dist/index.css"
+    },
+    "./package.json": {
+      "default": "./package.json"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md",
+    "README.en.md"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts",
     "prepare": "pnpm build",

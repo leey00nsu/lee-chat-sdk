@@ -168,6 +168,12 @@ export async function POST(request: Request) {
 
 기본 UI는 CSS custom properties와 class hook을 노출합니다.
 
+대부분의 bundler에서는 root import가 기본 CSS를 함께 포함합니다. CSS를 명시적으로 가져와야 하는 환경에서는 다음 subpath를 사용할 수 있습니다.
+
+```ts
+import 'lee-chat-sdk/style.css'
+```
+
 ```css
 :root {
   --lee-chat-primary: #111827;
@@ -345,8 +351,8 @@ pnpm --filter lee-chat-sdk-console test:run
 
 ## npm 배포 체크리스트
 
-- `packages/sdk/package.json`에서 `"private": true` 제거
-- `description`, `license`, `author`, `repository`, `keywords` 추가
+- `packages/sdk/package.json`에서 `"private": true` 제거 확인
+- `description`, `license`, `author`, `keywords`, `publishConfig` 확인
 - React 전용 peer dependency 정책과 Vanilla JS bundle 정책 결정
 - npm 패키지 이름 사용 가능 여부 확인
 - `pnpm --filter lee-chat-sdk typecheck` 실행
