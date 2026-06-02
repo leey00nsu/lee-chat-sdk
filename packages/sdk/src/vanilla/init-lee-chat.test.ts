@@ -92,4 +92,52 @@ describe('vanilla initLeeChat', () => {
       }),
     )
   })
+
+  it('Enter로 전송하고 Shift+Enter는 줄바꿈 입력으로 남긴다', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          message: {
+            content: 'Enter response',
+          },
+        }),
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        },
+      ),
+    )
+
+    initLeeChat({
+      appId: 'vanilla-app',
+      endpoint: '/api/chat',
+      fetchImplementation: fetchMock,
+      initialOpen: true,
+    })
+
+    const input = document.querySelector('textarea')
+
+    if (!(input instanceof HTMLTextAreaElement)) {
+      throw new Error('textarea not found')
+    }
+
+    fireEvent.change(input, {
+      target: {
+        value: 'Hello enter',
+      },
+    })
+    fireEvent.keyDown(input, {
+      key: 'Enter',
+      shiftKey: true,
+    })
+    fireEvent.keyDown(input, {
+      key: 'Enter',
+    })
+
+    await waitFor(() => {
+      expect(document.body.textContent).toContain('Hello enter')
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
 })

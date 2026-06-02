@@ -1,6 +1,6 @@
 'use client'
 
-import type { FormEvent } from 'react'
+import type { FormEvent, KeyboardEvent } from 'react'
 
 export interface ChatComposerProps {
   inputId: string
@@ -13,6 +13,10 @@ export interface ChatComposerProps {
   onChange: (nextValue: string) => void
   onSubmit: () => void
 }
+
+const CHAT_COMPOSER_KEY = {
+  ENTER: 'Enter',
+} as const
 
 export function ChatComposer({
   inputId,
@@ -27,12 +31,28 @@ export function ChatComposer({
 }: ChatComposerProps) {
   function handleSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault()
+    submitMessage()
+  }
 
+  function submitMessage(): void {
     if (isLoading || !value.trim()) {
       return
     }
 
     onSubmit()
+  }
+
+  function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>): void {
+    if (
+      event.key !== CHAT_COMPOSER_KEY.ENTER ||
+      event.shiftKey ||
+      event.nativeEvent.isComposing
+    ) {
+      return
+    }
+
+    event.preventDefault()
+    submitMessage()
   }
 
   return (
@@ -44,6 +64,7 @@ export function ChatComposer({
         placeholder={placeholder}
         maxLength={maximumLength}
         onChange={(event) => onChange(event.target.value)}
+        onKeyDown={handleKeyDown}
       />
       <button type="submit" disabled={isLoading || !value.trim()}>
         {submitLabel}

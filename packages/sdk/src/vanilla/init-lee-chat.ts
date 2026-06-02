@@ -30,6 +30,9 @@ const LEE_CHAT_CONTENT_TYPE_HEADER = 'Content-Type'
 const LEE_CHAT_JSON_CONTENT_TYPE = 'application/json'
 const LEE_CHAT_POST_METHOD = 'POST'
 const LEE_CHAT_CONVERSATION_SUFFIX = 'conversation'
+const LEE_CHAT_KEY = {
+  ENTER: 'Enter',
+} as const
 
 let activeContainer: HTMLElement | null = null
 let activeConfig: InitLeeChatConfig | null = null
@@ -173,20 +176,39 @@ function renderComposer(config: LeeChatConfig): HTMLElement {
 
   form.addEventListener('submit', (event) => {
     event.preventDefault()
-    const content = textarea.value.trim()
-
-    if (!content) {
+    submitTextareaMessage(config, textarea)
+  })
+  textarea.addEventListener('keydown', (event) => {
+    if (
+      event.key !== LEE_CHAT_KEY.ENTER ||
+      event.shiftKey ||
+      event.isComposing
+    ) {
       return
     }
 
-    textarea.value = ''
-    void submitMessage(config, content)
+    event.preventDefault()
+    submitTextareaMessage(config, textarea)
   })
 
   form.append(label, textarea, button)
   wrapper.append(form)
 
   return wrapper
+}
+
+function submitTextareaMessage(
+  config: LeeChatConfig,
+  textarea: HTMLTextAreaElement,
+): void {
+  const content = textarea.value.trim()
+
+  if (!content) {
+    return
+  }
+
+  textarea.value = ''
+  void submitMessage(config, content)
 }
 
 function renderPanel(config: LeeChatConfig): HTMLElement {

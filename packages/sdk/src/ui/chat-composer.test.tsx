@@ -32,6 +32,34 @@ describe('ChatComposer', () => {
     expect(handleSubmit).toHaveBeenCalledTimes(1)
   })
 
+  it('Enter로 전송하고 Shift+Enter는 줄바꿈 입력으로 남긴다', () => {
+    const handleSubmit = vi.fn()
+
+    render(
+      <ChatComposer
+        inputId="message"
+        label="메시지"
+        value="질문"
+        placeholder="메시지를 입력하세요"
+        submitLabel="보내기"
+        onChange={vi.fn()}
+        onSubmit={handleSubmit}
+      />,
+    )
+
+    const textarea = screen.getByLabelText('메시지')
+
+    fireEvent.keyDown(textarea, {
+      key: 'Enter',
+      shiftKey: true,
+    })
+    fireEvent.keyDown(textarea, {
+      key: 'Enter',
+    })
+
+    expect(handleSubmit).toHaveBeenCalledTimes(1)
+  })
+
   it('loading이거나 빈 입력이면 submit 버튼을 비활성화한다', () => {
     const { rerender } = render(
       <ChatComposer
