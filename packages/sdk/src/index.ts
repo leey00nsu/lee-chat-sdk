@@ -3,6 +3,18 @@ export type {
   UseChatControllerParams,
   UseChatControllerResult,
 } from './controller/use-chat-controller'
+export { resolveLeeChatConfig } from './config/lee-chat-config'
+export type {
+  LeeChatClassName,
+  LeeChatColorScheme,
+  LeeChatConfig,
+  LeeChatPersistenceType,
+  LeeChatPosition,
+  LeeChatTheme,
+  LeeChatUser,
+  LeeChatWidgetText,
+  ResolvedLeeChatConfig,
+} from './config/lee-chat-config'
 export { createChatMessageId } from './lib/create-chat-message-id'
 export type {
   ChatMessage,
@@ -19,6 +31,16 @@ export { LocalStorageChatPersistence } from './persistence/local-storage-chat-pe
 export { MemoryChatPersistence } from './persistence/memory-chat-persistence'
 export type { ChatTransport } from './transport/chat-transport'
 export { HttpChatTransport } from './transport/http-chat-transport'
+export {
+  buildLeeChatRequest,
+  parseLeeChatResponse,
+} from './request/lee-chat-request'
+export type {
+  LeeChatHistoryItem,
+  LeeChatRequest,
+  LeeChatResponse,
+  ResolvedLeeChatResponse,
+} from './request/lee-chat-request'
 export { ChatComposer } from './ui/chat-composer'
 export type { ChatComposerProps } from './ui/chat-composer'
 export { ChatMessageList } from './ui/chat-message-list'
