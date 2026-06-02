@@ -84,7 +84,7 @@ import 'lee-chat-sdk/style.css'
 }
 ```
 
-기본 UI는 `sending`, `failed`, retry, assistant loading, presence, typing, read receipt 상태와 text/image/file message part 렌더링을 포함합니다. 문구는 `config.texts`, class hook은 `config.className`으로 조정할 수 있습니다. React에서는 `LeeChatWidget`의 `renderMessage`, `renderAssistantLoading`으로 메시지 렌더링을 교체할 수 있습니다.
+기본 UI는 `sending`, `failed`, retry, assistant loading, presence, typing, read receipt 상태와 text/image/file message part 렌더링을 포함합니다. 문구는 `config.texts`, class hook은 `config.className`으로 조정할 수 있습니다. React에서는 `LeeChatWidget`의 `renderMessage`, `renderAssistantLoading`, `renderHeader`, `renderTrigger`, `renderComposerFooter`로 주요 UI slot을 교체할 수 있습니다.
 
 ## Headless
 

@@ -293,6 +293,30 @@ React에서는 기본 말풍선 렌더링을 더 깊게 바꿀 수 있습니다.
 />
 ```
 
+React widget은 header, trigger, composer footer도 slot으로 교체할 수 있습니다.
+
+```tsx
+<LeeChatWidget
+  renderHeader={({ title, subtitle, close }) => (
+    <header>
+      <strong>{title}</strong>
+      <span>{subtitle}</span>
+      <button type="button" onClick={close}>
+        닫기
+      </button>
+    </header>
+  )}
+  renderTrigger={({ open, unreadCount }) => (
+    <button type="button" onClick={open}>
+      문의하기 {unreadCount > 0 ? unreadCount : null}
+    </button>
+  )}
+  renderComposerFooter={({ isSubmitting }) => (
+    <small>{isSubmitting ? '전송 중' : '평균 응답 시간 5분'}</small>
+  )}
+/>
+```
+
 ## React API
 
 React 앱에서는 provider와 widget을 조합합니다.

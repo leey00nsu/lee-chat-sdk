@@ -13,9 +13,36 @@ export interface LeeChatWidgetMessageRenderParams {
   retryMessage: (messageId: string) => void
 }
 
+export interface LeeChatWidgetHeaderRenderParams {
+  title: string
+  subtitle: string
+  isOpen: boolean
+  hasOnlineParticipant: boolean
+  close: () => void
+}
+
+export interface LeeChatWidgetTriggerRenderParams {
+  label: string
+  isOpen: boolean
+  unreadCount: number
+  open: () => void
+  close: () => void
+  toggle: () => void
+}
+
+export interface LeeChatWidgetComposerFooterRenderParams {
+  isSubmitting: boolean
+  inputValue: string
+}
+
 export interface LeeChatWidgetProps {
+  renderHeader?: (params: LeeChatWidgetHeaderRenderParams) => ReactNode
   renderMessage?: (params: LeeChatWidgetMessageRenderParams) => ReactNode
   renderAssistantLoading?: () => ReactNode
+  renderComposerFooter?: (
+    params: LeeChatWidgetComposerFooterRenderParams,
+  ) => ReactNode
+  renderTrigger?: (params: LeeChatWidgetTriggerRenderParams) => ReactNode
 }
 
 function mergeClassNames(...classNames: Array<string | undefined>): string {
@@ -33,8 +60,11 @@ function resolvePopoverAlign(position: string): 'start' | 'end' {
 }
 
 export function LeeChatWidget({
+  renderHeader,
   renderMessage,
   renderAssistantLoading,
+  renderComposerFooter,
+  renderTrigger,
 }: LeeChatWidgetProps = {}) {
   const leeChat = useLeeChat()
   const { config, chat } = leeChat
@@ -92,6 +122,15 @@ export function LeeChatWidget({
 
   function handleRetryMessage(messageId: string): void {
     void chat.retryMessage(messageId)
+  }
+
+  function handleToggle(): void {
+    if (leeChat.isOpen) {
+      leeChat.close()
+      return
+    }
+
+    leeChat.open()
   }
 
   function isMessageReadByAnotherParticipant(
@@ -218,6 +257,54 @@ export function LeeChatWidget({
     )
   }
 
+  function renderDefaultHeader(): ReactNode {
+    return (
+      <>
+        <div>
+          <h2>{config.texts.title}</h2>
+          <p>{config.texts.subtitle}</p>
+          {hasOnlineParticipant ? (
+            <small
+              className={mergeClassNames(
+                'lee-chat-participant-status',
+                config.className?.participantStatus,
+              )}
+            >
+              {config.texts.participantOnline}
+            </small>
+          ) : null}
+        </div>
+        <Popover.Close asChild>
+          <button
+            type="button"
+            className="lee-chat-close"
+            aria-label="Close chat"
+          >
+            ×
+          </button>
+        </Popover.Close>
+      </>
+    )
+  }
+
+  function renderDefaultTrigger(): ReactNode {
+    return (
+      <button
+        type="button"
+        className={mergeClassNames(
+          'lee-chat-trigger',
+          config.className?.trigger,
+        )}
+        aria-label={config.texts.triggerLabel}
+      >
+        <span>{config.texts.triggerLabel}</span>
+        {leeChat.unreadCount > 0 ? (
+          <strong className="lee-chat-unread">{leeChat.unreadCount}</strong>
+        ) : null}
+      </button>
+    )
+  }
+
   return (
     <Popover.Root open={leeChat.isOpen} onOpenChange={handleOpenChange}>
       <div
@@ -249,29 +336,15 @@ export function LeeChatWidget({
                 config.className?.header,
               )}
             >
-              <div>
-                <h2>{config.texts.title}</h2>
-                <p>{config.texts.subtitle}</p>
-                {hasOnlineParticipant ? (
-                  <small
-                    className={mergeClassNames(
-                      'lee-chat-participant-status',
-                      config.className?.participantStatus,
-                    )}
-                  >
-                    {config.texts.participantOnline}
-                  </small>
-                ) : null}
-              </div>
-              <Popover.Close asChild>
-                <button
-                  type="button"
-                  className="lee-chat-close"
-                  aria-label="Close chat"
-                >
-                  ×
-                </button>
-              </Popover.Close>
+              {renderHeader
+                ? renderHeader({
+                    title: config.texts.title,
+                    subtitle: config.texts.subtitle,
+                    isOpen: leeChat.isOpen,
+                    hasOnlineParticipant,
+                    close: leeChat.close,
+                  })
+                : renderDefaultHeader()}
             </header>
             <div
               className={mergeClassNames(
@@ -335,24 +408,27 @@ export function LeeChatWidget({
                   void chat.submitMessage()
                 }}
               />
+              {renderComposerFooter
+                ? renderComposerFooter({
+                    isSubmitting: chat.isSubmitting,
+                    inputValue: chat.inputValue,
+                  })
+                : null}
             </div>
           </section>
         </Popover.Content>
 
         <Popover.Trigger asChild>
-          <button
-            type="button"
-            className={mergeClassNames(
-              'lee-chat-trigger',
-              config.className?.trigger,
-            )}
-            aria-label={config.texts.triggerLabel}
-          >
-            <span>{config.texts.triggerLabel}</span>
-            {leeChat.unreadCount > 0 ? (
-              <strong className="lee-chat-unread">{leeChat.unreadCount}</strong>
-            ) : null}
-          </button>
+          {renderTrigger
+            ? renderTrigger({
+                label: config.texts.triggerLabel,
+                isOpen: leeChat.isOpen,
+                unreadCount: leeChat.unreadCount,
+                open: leeChat.open,
+                close: leeChat.close,
+                toggle: handleToggle,
+              })
+            : renderDefaultTrigger()}
         </Popover.Trigger>
       </div>
     </Popover.Root>

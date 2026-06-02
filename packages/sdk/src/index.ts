@@ -105,8 +105,11 @@ export { LeeChatProvider } from './react/lee-chat-provider'
 export type { LeeChatProviderProps } from './react/lee-chat-provider'
 export { LeeChatWidget } from './react/lee-chat-widget'
 export type {
+  LeeChatWidgetComposerFooterRenderParams,
+  LeeChatWidgetHeaderRenderParams,
   LeeChatWidgetMessageRenderParams,
   LeeChatWidgetProps,
+  LeeChatWidgetTriggerRenderParams,
 } from './react/lee-chat-widget'
 export { useLeeChat } from './react/use-lee-chat'
 export type { LeeChatContextValue } from './react/lee-chat-context'

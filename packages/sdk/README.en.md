@@ -84,7 +84,7 @@ Main CSS custom properties:
 }
 ```
 
-The default UI includes `sending`, `failed`, retry, assistant loading, presence, typing, read receipt states, and text/image/file message part rendering. Customize copy through `config.texts`, class hooks through `config.className`, and replace message rendering in React with `LeeChatWidget` `renderMessage` and `renderAssistantLoading`.
+The default UI includes `sending`, `failed`, retry, assistant loading, presence, typing, read receipt states, and text/image/file message part rendering. Customize copy through `config.texts`, class hooks through `config.className`, and replace key React UI slots with `LeeChatWidget` `renderMessage`, `renderAssistantLoading`, `renderHeader`, `renderTrigger`, and `renderComposerFooter`.
 
 ## Headless
 

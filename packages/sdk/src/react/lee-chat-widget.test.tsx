@@ -473,6 +473,104 @@ describe('LeeChatWidget', () => {
     })
   })
 
+  it('renderHeader slot으로 header를 교체하고 close 액션을 사용할 수 있다', () => {
+    render(
+      <LeeChatProvider
+        config={{
+          appId: 'app',
+          endpoint: '/api/chat',
+          initialOpen: true,
+        }}
+      >
+        <LeeChatWidget
+          renderHeader={({ close, title, subtitle }) => (
+            <header>
+              <strong>{title}</strong>
+              <span>{subtitle}</span>
+              <button type="button" onClick={close}>
+                Custom close
+              </button>
+            </header>
+          )}
+        />
+      </LeeChatProvider>,
+    )
+
+    expect(screen.getByText('Chat')).toBeTruthy()
+    expect(screen.getByText('Send us a message.')).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Custom close' }))
+
+    expect(screen.queryByRole('region', { name: 'Chat' })).toBeNull()
+  })
+
+  it('renderTrigger slot으로 trigger를 교체하고 open 액션과 unread count를 사용할 수 있다', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        message: {
+          content: 'Unread response',
+        },
+      }),
+    })
+
+    render(
+      <LeeChatProvider
+        config={{
+          appId: 'app',
+          endpoint: '/api/chat',
+          initialOpen: true,
+        }}
+        fetchImplementation={fetchMock}
+      >
+        <LeeChatWidget
+          renderTrigger={({ open, unreadCount }) => (
+            <button type="button" onClick={open}>
+              Custom trigger {unreadCount}
+            </button>
+          )}
+        />
+      </LeeChatProvider>,
+    )
+
+    fireEvent.change(screen.getByLabelText('Message'), {
+      target: { value: 'Unread question' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Unread response')).toBeTruthy()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close chat' }))
+
+    expect(screen.getByRole('button', { name: 'Custom trigger 1' })).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Custom trigger 1' }))
+
+    expect(screen.getByRole('region', { name: 'Chat' })).toBeTruthy()
+  })
+
+  it('renderComposerFooter slot으로 composer 아래 영역을 추가한다', () => {
+    render(
+      <LeeChatProvider
+        config={{
+          appId: 'app',
+          endpoint: '/api/chat',
+          initialOpen: true,
+        }}
+      >
+        <LeeChatWidget
+          renderComposerFooter={({ isSubmitting }) => (
+            <p>{isSubmitting ? 'Sending custom footer' : 'Custom footer'}</p>
+          )}
+        />
+      </LeeChatProvider>,
+    )
+
+    expect(screen.getByText('Custom footer')).toBeTruthy()
+  })
+
   it('participant presence와 typing 상태를 표시한다', async () => {
     render(
       <LeeChatProvider

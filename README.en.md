@@ -293,6 +293,30 @@ React apps can replace the default message rendering when deeper customization i
 />
 ```
 
+React widgets can also replace the header, trigger, and composer footer through slots.
+
+```tsx
+<LeeChatWidget
+  renderHeader={({ title, subtitle, close }) => (
+    <header>
+      <strong>{title}</strong>
+      <span>{subtitle}</span>
+      <button type="button" onClick={close}>
+        Close
+      </button>
+    </header>
+  )}
+  renderTrigger={({ open, unreadCount }) => (
+    <button type="button" onClick={open}>
+      Contact us {unreadCount > 0 ? unreadCount : null}
+    </button>
+  )}
+  renderComposerFooter={({ isSubmitting }) => (
+    <small>{isSubmitting ? 'Sending' : 'Average reply time: 5 minutes'}</small>
+  )}
+/>
+```
+
 ## React API
 
 In React apps, compose the provider and widget.
