@@ -350,11 +350,13 @@ if (container instanceof HTMLElement) {
 
 기본 UI보다 더 깊게 커스터마이징해야 한다면 headless controller와 primitive를 사용할 수 있습니다.
 
+- `ConversationClient`: React와 무관하게 메시지 전송, 실패 처리, retry, persistence 저장을 처리하는 core client입니다.
 - `useChatController`: 입력 상태, 제출 상태, 메시지 목록, transport 호출, persistence 저장을 관리합니다.
 - `ChatTransport`: HTTP, mock, WebSocket, SSE 같은 전송 방식을 교체하기 위한 adapter interface입니다.
 - `HttpChatTransport`: 기본 HTTP POST transport입니다.
 - `MemoryChatPersistence`: 메모리 기반 대화 저장소입니다.
 - `LocalStorageChatPersistence`: 브라우저 localStorage 기반 대화 저장소입니다.
+- `ChatParticipantPresence`, `ChatTypingIndicator`, `ChatReadReceipt`: presence, typing, 읽음 상태를 참여자 기준으로 표현하는 core 모델입니다.
 - `ChatComposer`, `ChatMessageList`, `ChatWidgetShell`, `FloatingChatTrigger`: 직접 조합 가능한 UI primitive입니다.
 
 ## Operator Console Model
@@ -442,7 +444,7 @@ pnpm publish --access public
 
 - no-React browser bundle 제공
 - WebSocket/SSE transport adapter 추가
-- participant/read receipt/typing/presence 모델 추가
+- read receipt/typing/presence를 transport event와 widget UI에 연결
 - conversation list와 operator-console controller API 추가
 - timeout, abort/cancel, 고급 retry 정책 추가
 - Storybook examples 추가

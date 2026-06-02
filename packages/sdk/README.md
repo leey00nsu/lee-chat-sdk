@@ -86,6 +86,10 @@ import 'lee-chat-sdk/style.css'
 
 기본 UI는 `sending`, `failed`, retry, assistant loading 상태를 포함합니다. 문구는 `config.texts`, class hook은 `config.className`으로 조정할 수 있습니다. React에서는 `LeeChatWidget`의 `renderMessage`, `renderAssistantLoading`으로 메시지 렌더링을 교체할 수 있습니다.
 
+## Headless
+
+`ConversationClient`는 React와 무관하게 메시지 전송, 실패 처리, retry, persistence 저장을 처리합니다. `ChatParticipantPresence`, `ChatTypingIndicator`, `ChatReadReceipt`로 presence, typing, 읽음 상태를 참여자 기준으로 표현할 수 있습니다.
+
 ## Backend Contract
 
 SDK는 `endpoint`로 `LeeChatRequest`를 POST 전송하고, `LeeChatResponse` 형태의 응답을 기대합니다.

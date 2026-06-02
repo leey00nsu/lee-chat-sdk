@@ -1,29 +1,16 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
+import {
+  ConversationClient,
+  type BuildConversationAssistantMessageParams,
+  type BuildConversationRequestParams,
+  type BuiltConversationAssistantMessage,
+} from '../client/conversation-client'
 import { createChatMessageId } from '../lib/create-chat-message-id'
-import { createTextMessageParts, type ChatMessage, type ChatMessagePart } from '../model/chat-message'
+import type { ChatMessage } from '../model/chat-message'
 import type { ChatPersistence } from '../persistence/chat-persistence'
 import type { ChatTransport } from '../transport/chat-transport'
-
-interface BuildRequestParams<TMessageMetadata> {
-  content: string
-  conversationId: string
-  messages: Array<ChatMessage<TMessageMetadata>>
-}
-
-interface BuildAssistantMessageParams<TResponse, TMessageMetadata> {
-  response: TResponse
-  requestContent: string
-  conversationId: string
-  messages: Array<ChatMessage<TMessageMetadata>>
-}
-
-interface BuiltAssistantMessage<TMessageMetadata> {
-  content: string
-  parts?: ChatMessagePart[]
-  metadata?: TMessageMetadata
-}
 
 export interface UseChatControllerParams<
   TRequest,
@@ -32,10 +19,15 @@ export interface UseChatControllerParams<
 > {
   conversationId: string
   transport: ChatTransport<TRequest, TResponse>
-  buildRequest: (params: BuildRequestParams<TMessageMetadata>) => TRequest
+  buildRequest: (
+    params: BuildConversationRequestParams<TMessageMetadata>,
+  ) => TRequest
   buildAssistantMessage: (
-    params: BuildAssistantMessageParams<TResponse, TMessageMetadata>,
-  ) => BuiltAssistantMessage<TMessageMetadata>
+    params: BuildConversationAssistantMessageParams<
+      TResponse,
+      TMessageMetadata
+    >,
+  ) => BuiltConversationAssistantMessage<TMessageMetadata>
   persistence?: ChatPersistence<ChatMessage<TMessageMetadata>>
   senderId?: string
   assistantSenderId?: string
@@ -51,19 +43,6 @@ export interface UseChatControllerResult<TMessageMetadata = unknown> {
   submitMessage: (contentOverride?: string) => Promise<void>
   retryMessage: (messageId: string) => Promise<void>
   clearMessages: () => void
-}
-
-function replaceMessage<TMessageMetadata>(
-  messages: Array<ChatMessage<TMessageMetadata>>,
-  nextMessage: ChatMessage<TMessageMetadata>,
-): Array<ChatMessage<TMessageMetadata>> {
-  return messages.map((message) => {
-    if (message.id !== nextMessage.id) {
-      return message
-    }
-
-    return nextMessage
-  })
 }
 
 export function useChatController<
@@ -88,13 +67,32 @@ export function useChatController<
   const [messages, setMessages] = useState<Array<ChatMessage<TMessageMetadata>>>(
     () => persistence?.read() ?? [],
   )
+  const clientRef = useRef<
+    ConversationClient<TRequest, TResponse, TMessageMetadata> | undefined
+  >(undefined)
+
+  if (!clientRef.current) {
+    clientRef.current = new ConversationClient<
+      TRequest,
+      TResponse,
+      TMessageMetadata
+    >({
+      conversationId,
+      senderId,
+      assistantSenderId,
+      transport,
+      buildRequest,
+      buildAssistantMessage,
+      persistence,
+      onMessagesChange: setMessages,
+      createMessageId,
+      getCurrentDate,
+    })
+  }
+
   const [inputValue, setInputValue] = useState('')
   const inputValueReference = useRef('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-
-  useEffect(() => {
-    persistence?.write(messages)
-  }, [messages, persistence])
 
   async function submitMessage(contentOverride?: string): Promise<void> {
     const trimmedContent = (contentOverride ?? inputValueReference.current).trim()
@@ -103,29 +101,18 @@ export function useChatController<
       return
     }
 
-    const createdAt = getCurrentDate().toISOString()
-    const userMessageId = createMessageId()
-    const userMessage: ChatMessage<TMessageMetadata> = {
-      id: userMessageId,
-      conversationId,
-      senderId,
-      role: 'user',
-      content: trimmedContent,
-      parts: createTextMessageParts(trimmedContent),
-      status: 'sending',
-      createdAt,
-    }
-    const nextMessages = [...messages, userMessage]
-
     if (!contentOverride) {
       updateInputValue('')
     }
 
-    await sendUserMessage({
-      userMessage,
-      requestMessages: messages,
-      nextMessages,
-    })
+    setIsSubmitting(true)
+
+    try {
+      const result = await clientRef.current?.submitMessage(trimmedContent)
+      setMessages(result?.messages ?? [])
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   async function retryMessage(messageId: string): Promise<void> {
@@ -133,85 +120,18 @@ export function useChatController<
       return
     }
 
-    const failedMessage = messages.find((message) => message.id === messageId)
-
-    if (!failedMessage || failedMessage.status !== 'failed') {
-      return
-    }
-
-    const retryingMessage: ChatMessage<TMessageMetadata> = {
-      ...failedMessage,
-      status: 'sending',
-    }
-    const retryingMessages = replaceMessage(messages, retryingMessage)
-
-    await sendUserMessage({
-      userMessage: retryingMessage,
-      requestMessages: messages.filter((message) => message.id !== messageId),
-      nextMessages: retryingMessages,
-    })
-  }
-
-  async function sendUserMessage({
-    userMessage,
-    requestMessages,
-    nextMessages,
-  }: {
-    userMessage: ChatMessage<TMessageMetadata>
-    requestMessages: Array<ChatMessage<TMessageMetadata>>
-    nextMessages: Array<ChatMessage<TMessageMetadata>>
-  }): Promise<void> {
-    setMessages(nextMessages)
     setIsSubmitting(true)
 
     try {
-      const response = await transport.sendMessage(
-        buildRequest({
-          content: userMessage.content,
-          conversationId,
-          messages: requestMessages,
-        }),
-      )
-      const builtAssistantMessage = buildAssistantMessage({
-        response,
-        requestContent: userMessage.content,
-        conversationId,
-        messages: nextMessages,
-      })
-      const sentUserMessage: ChatMessage<TMessageMetadata> = {
-        ...userMessage,
-        status: 'sent',
-      }
-      const assistantMessage: ChatMessage<TMessageMetadata> = {
-        id: createMessageId(),
-        conversationId,
-        senderId: assistantSenderId,
-        role: 'assistant',
-        content: builtAssistantMessage.content,
-        parts:
-          builtAssistantMessage.parts ??
-          createTextMessageParts(builtAssistantMessage.content),
-        status: 'sent',
-        createdAt: getCurrentDate().toISOString(),
-        metadata: builtAssistantMessage.metadata,
-      }
-
-      setMessages([...replaceMessage(nextMessages, sentUserMessage), assistantMessage])
-    } catch {
-      setMessages(
-        replaceMessage(nextMessages, {
-          ...userMessage,
-          status: 'failed',
-        }),
-      )
+      const result = await clientRef.current?.retryMessage(messageId)
+      setMessages(result?.messages ?? [])
     } finally {
       setIsSubmitting(false)
     }
   }
 
   function clearMessages(): void {
-    persistence?.clear()
-    setMessages([])
+    setMessages(clientRef.current?.clearMessages() ?? [])
   }
 
   return {

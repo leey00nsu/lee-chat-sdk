@@ -350,11 +350,13 @@ if (container instanceof HTMLElement) {
 
 Use the headless controller and primitives when you need deeper customization.
 
+- `ConversationClient`: framework-agnostic core client for message sending, failure handling, retry, and persistence.
 - `useChatController`: manages input state, submission state, messages, transport calls, and persistence.
 - `ChatTransport`: adapter interface for HTTP, mock, WebSocket, SSE, or any custom transport.
 - `HttpChatTransport`: default HTTP POST transport.
 - `MemoryChatPersistence`: in-memory conversation storage.
 - `LocalStorageChatPersistence`: browser localStorage conversation storage.
+- `ChatParticipantPresence`, `ChatTypingIndicator`, `ChatReadReceipt`: core participant-state models for presence, typing, and read state.
 - `ChatComposer`, `ChatMessageList`, `ChatWidgetShell`, `FloatingChatTrigger`: composable UI primitives.
 
 ## Operator Console Model
@@ -442,7 +444,7 @@ pnpm publish --access public
 
 - Provide a no-React browser bundle.
 - Add WebSocket and SSE transport adapters.
-- Add participant, read receipt, typing, and presence models.
+- Connect read receipt, typing, and presence to transport events and widget UI.
 - Add conversation list and operator-console controller APIs.
 - Add timeout, abort/cancel, and advanced retry policies.
 - Add Storybook examples.

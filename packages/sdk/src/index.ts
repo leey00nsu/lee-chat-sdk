@@ -1,3 +1,11 @@
+export { ConversationClient } from './client/conversation-client'
+export type {
+  BuildConversationAssistantMessageParams,
+  BuildConversationRequestParams,
+  BuiltConversationAssistantMessage,
+  ConversationClientMutationResult,
+  ConversationClientParams,
+} from './client/conversation-client'
 export { useChatController } from './controller/use-chat-controller'
 export type {
   UseChatControllerParams,
@@ -38,6 +46,17 @@ export type {
   ChatParticipant,
   ChatParticipantKind,
 } from './model/chat-participant'
+export {
+  collectActiveTypingParticipantIds,
+  collectOnlineParticipantIds,
+  createChatReadReceipt,
+} from './model/chat-participant-state'
+export type {
+  ChatParticipantPresence,
+  ChatParticipantPresenceStatus,
+  ChatReadReceipt,
+  ChatTypingIndicator,
+} from './model/chat-participant-state'
 export {
   buildChatEvent,
   collectChatEventsByConversationId,
