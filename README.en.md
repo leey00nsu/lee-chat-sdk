@@ -338,10 +338,12 @@ const conversationEvents = collectChatEventsByConversationId({
 ```bash
 pnpm --filter lee-chat-sdk-demo dev
 pnpm --filter lee-chat-sdk-console dev
+pnpm storybook
 ```
 
 - `apps/demo`: drop-in chat widget example
 - `apps/console`: operator console model example
+- `apps/storybook`: Storybook for reviewing SDK UI states
 
 ## Development
 
@@ -350,6 +352,7 @@ pnpm install
 pnpm typecheck
 pnpm test:run
 pnpm build
+pnpm storybook:build
 ```
 
 Run package-level checks:

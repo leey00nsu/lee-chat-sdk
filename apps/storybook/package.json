@@ -1,0 +1,22 @@
+{
+  "name": "lee-chat-sdk-storybook",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "storybook": "pnpm --filter lee-chat-sdk build && storybook dev -p 6006",
+    "build": "pnpm --filter lee-chat-sdk build && storybook build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "lee-chat-sdk": "workspace:*",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@storybook/react-vite": "^10.0.8",
+    "storybook": "^10.0.8",
+    "typescript": "^5.9.2",
+    "vite": "^8.0.16"
+  }
+}

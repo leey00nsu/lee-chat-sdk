@@ -338,10 +338,12 @@ const conversationEvents = collectChatEventsByConversationId({
 ```bash
 pnpm --filter lee-chat-sdk-demo dev
 pnpm --filter lee-chat-sdk-console dev
+pnpm storybook
 ```
 
 - `apps/demo`: drop-in chat widget 사용 예제
 - `apps/console`: 운영 콘솔 모델 예제
+- `apps/storybook`: SDK UI 상태 검수용 Storybook
 
 ## 개발
 
@@ -350,6 +352,7 @@ pnpm install
 pnpm typecheck
 pnpm test:run
 pnpm build
+pnpm storybook:build
 ```
 
 패키지별 확인:

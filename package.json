@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "pnpm --recursive --if-present build",
+    "storybook": "pnpm --filter lee-chat-sdk-storybook storybook",
+    "storybook:build": "pnpm --filter lee-chat-sdk-storybook build",
     "test": "pnpm --recursive --if-present test",
     "test:run": "pnpm --recursive --if-present test:run",
     "typecheck": "pnpm --recursive --if-present typecheck"
