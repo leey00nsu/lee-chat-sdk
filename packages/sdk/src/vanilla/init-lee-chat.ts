@@ -1,6 +1,10 @@
 import { resolveLeeChatConfig, type LeeChatConfig } from '../config/lee-chat-config'
 import { createChatMessageId } from '../lib/create-chat-message-id'
-import { createTextMessageParts, getChatMessageText, type ChatMessage } from '../model/chat-message'
+import {
+  createTextMessageParts,
+  type ChatMessage,
+  type ChatMessagePart,
+} from '../model/chat-message'
 import type {
   ChatParticipantPresence,
   ChatReadReceipt,
@@ -219,9 +223,9 @@ function renderMessage(
       activeConfig?.className?.message,
     ),
   )
-  const paragraph = document.createElement('p')
-  paragraph.textContent = getChatMessageText(message)
-  article.append(paragraph)
+  message.parts.forEach((part) => {
+    article.append(renderMessagePart(part))
+  })
 
   if (message.status === 'sending') {
     const status = createElementWithClassName(
@@ -276,6 +280,37 @@ function renderMessage(
   }
 
   return article
+}
+
+function renderMessagePart(part: ChatMessagePart): HTMLElement {
+  if (part.type === 'image') {
+    const image = createElementWithClassName('img', 'lee-chat-message-image')
+    image.setAttribute('src', part.url)
+    image.setAttribute('alt', part.alt ?? '')
+
+    if (part.width) {
+      image.setAttribute('width', String(part.width))
+    }
+
+    if (part.height) {
+      image.setAttribute('height', String(part.height))
+    }
+
+    return image
+  }
+
+  if (part.type === 'file') {
+    const link = createElementWithClassName('a', 'lee-chat-message-file')
+    link.setAttribute('href', part.url)
+    link.setAttribute('target', '_blank')
+    link.setAttribute('rel', 'noreferrer')
+    link.textContent = part.name
+    return link
+  }
+
+  const paragraph = document.createElement('p')
+  paragraph.textContent = part.text
+  return paragraph
 }
 
 function renderMessageList(config: LeeChatConfig): HTMLElement {

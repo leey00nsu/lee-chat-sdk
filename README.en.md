@@ -124,6 +124,27 @@ const config: LeeChatConfig = {
 The SDK sends the following request body to `endpoint`.
 
 ```ts
+type ChatMessagePart =
+  | {
+      type: 'text'
+      text: string
+    }
+  | {
+      type: 'image'
+      url: string
+      alt?: string
+      width?: number
+      height?: number
+      mediaType?: string
+    }
+  | {
+      type: 'file'
+      url: string
+      name: string
+      size?: number
+      mediaType?: string
+    }
+
 interface LeeChatRequest {
   appId: string
   conversation: {
@@ -140,10 +161,7 @@ interface LeeChatRequest {
     id: string
     senderId: string
     content: string
-    parts: Array<{
-      type: 'text'
-      text: string
-    }>
+    parts: ChatMessagePart[]
     createdAt: string
   }
   metadata?: Record<string, unknown>
@@ -151,10 +169,7 @@ interface LeeChatRequest {
     role: 'user' | 'assistant' | 'system' | 'agent'
     senderId: string
     content: string
-    parts: Array<{
-      type: 'text'
-      text: string
-    }>
+    parts: ChatMessagePart[]
     createdAt: string
   }>
 }
@@ -167,10 +182,7 @@ interface LeeChatResponse {
   message: {
     id?: string
     content: string
-    parts?: Array<{
-      type: 'text'
-      text: string
-    }>
+    parts?: ChatMessagePart[]
     createdAt?: string
     metadata?: Record<string, unknown>
   }
@@ -201,6 +213,8 @@ export async function POST(request: Request) {
   return Response.json(response)
 }
 ```
+
+Response `parts` can include image and file attachments as well as text. The default React and Vanilla UI renders `image` parts as images and `file` parts as links.
 
 ## Styling
 
@@ -262,7 +276,12 @@ React apps can replace the default message rendering when deeper customization i
 <LeeChatWidget
   renderMessage={({ message, retryMessage }) => (
     <article data-status={message.status}>
-      <p>{message.parts.map((part) => part.text).join('')}</p>
+      <p>
+        {message.parts
+          .filter((part) => part.type === 'text')
+          .map((part) => part.text)
+          .join('')}
+      </p>
       {message.status === 'failed' ? (
         <button type="button" onClick={() => retryMessage(message.id)}>
           Retry

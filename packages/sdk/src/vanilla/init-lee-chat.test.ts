@@ -120,6 +120,70 @@ describe('vanilla initLeeChat', () => {
     )
   })
 
+  it('assistant 응답의 image와 file part를 기본 UI로 렌더링한다', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          message: {
+            content: '첨부를 확인해 주세요.',
+            parts: [
+              {
+                type: 'text',
+                text: '첨부를 확인해 주세요.',
+              },
+              {
+                type: 'image',
+                url: 'https://example.com/screenshot.png',
+                alt: '상담 화면 캡처',
+              },
+              {
+                type: 'file',
+                url: 'https://example.com/report.pdf',
+                name: 'report.pdf',
+              },
+            ],
+          },
+        }),
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        },
+      ),
+    )
+
+    initLeeChat({
+      appId: 'vanilla-app',
+      endpoint: '/api/chat',
+      fetchImplementation: fetchMock,
+      initialOpen: true,
+    })
+
+    const input = document.querySelector('textarea')
+
+    if (!(input instanceof HTMLTextAreaElement)) {
+      throw new Error('textarea not found')
+    }
+
+    fireEvent.change(input, {
+      target: {
+        value: '첨부 보여줘',
+      },
+    })
+    fireEvent.submit(input.form as HTMLFormElement)
+
+    await waitFor(() => {
+      const image = document.querySelector('img[alt="상담 화면 캡처"]')
+      const link = document.querySelector(
+        'a[href="https://example.com/report.pdf"]',
+      )
+
+      expect(document.body.textContent).toContain('첨부를 확인해 주세요.')
+      expect(image).toBeInstanceOf(HTMLImageElement)
+      expect(link?.textContent).toBe('report.pdf')
+    })
+  })
+
   it('사용자 메시지를 전송하면 최신 메시지로 스크롤한다', async () => {
     fetchMock.mockResolvedValue(
       new Response(

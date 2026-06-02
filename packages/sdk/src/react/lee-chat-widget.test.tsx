@@ -183,6 +183,62 @@ describe('LeeChatWidget', () => {
     )
   })
 
+  it('assistant 응답의 image와 file part를 기본 UI로 렌더링한다', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        message: {
+          content: '첨부를 확인해 주세요.',
+          parts: [
+            {
+              type: 'text',
+              text: '첨부를 확인해 주세요.',
+            },
+            {
+              type: 'image',
+              url: 'https://example.com/screenshot.png',
+              alt: '상담 화면 캡처',
+            },
+            {
+              type: 'file',
+              url: 'https://example.com/report.pdf',
+              name: 'report.pdf',
+            },
+          ],
+        },
+      }),
+    })
+
+    render(
+      <LeeChatProvider
+        config={{
+          appId: 'app',
+          endpoint: '/api/chat',
+          initialOpen: true,
+        }}
+        fetchImplementation={fetchMock}
+      >
+        <LeeChatWidget />
+      </LeeChatProvider>,
+    )
+
+    fireEvent.change(screen.getByLabelText('Message'), {
+      target: { value: '첨부 보여줘' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+
+    await waitFor(() => {
+      const image = screen.getByAltText('상담 화면 캡처')
+      const link = screen.getByRole('link', { name: 'report.pdf' })
+
+      expect(screen.getByText('첨부를 확인해 주세요.')).toBeTruthy()
+      expect(image.getAttribute('src')).toBe(
+        'https://example.com/screenshot.png',
+      )
+      expect(link.getAttribute('href')).toBe('https://example.com/report.pdf')
+    })
+  })
+
   it('메시지를 보내면 최신 메시지로 스크롤한다', async () => {
     fetchMock.mockResolvedValue({
       ok: true,

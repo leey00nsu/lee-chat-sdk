@@ -124,6 +124,27 @@ const config: LeeChatConfig = {
 SDK는 `endpoint`로 다음 형태의 요청을 보냅니다.
 
 ```ts
+type ChatMessagePart =
+  | {
+      type: 'text'
+      text: string
+    }
+  | {
+      type: 'image'
+      url: string
+      alt?: string
+      width?: number
+      height?: number
+      mediaType?: string
+    }
+  | {
+      type: 'file'
+      url: string
+      name: string
+      size?: number
+      mediaType?: string
+    }
+
 interface LeeChatRequest {
   appId: string
   conversation: {
@@ -140,10 +161,7 @@ interface LeeChatRequest {
     id: string
     senderId: string
     content: string
-    parts: Array<{
-      type: 'text'
-      text: string
-    }>
+    parts: ChatMessagePart[]
     createdAt: string
   }
   metadata?: Record<string, unknown>
@@ -151,10 +169,7 @@ interface LeeChatRequest {
     role: 'user' | 'assistant' | 'system' | 'agent'
     senderId: string
     content: string
-    parts: Array<{
-      type: 'text'
-      text: string
-    }>
+    parts: ChatMessagePart[]
     createdAt: string
   }>
 }
@@ -167,10 +182,7 @@ interface LeeChatResponse {
   message: {
     id?: string
     content: string
-    parts?: Array<{
-      type: 'text'
-      text: string
-    }>
+    parts?: ChatMessagePart[]
     createdAt?: string
     metadata?: Record<string, unknown>
   }
@@ -201,6 +213,8 @@ export async function POST(request: Request) {
   return Response.json(response)
 }
 ```
+
+응답 `parts`에는 텍스트뿐 아니라 이미지와 파일 attachment를 함께 넣을 수 있습니다. 기본 React/Vanilla UI는 `image` part를 이미지로, `file` part를 링크로 렌더링합니다.
 
 ## Styling
 
@@ -262,7 +276,12 @@ React에서는 기본 말풍선 렌더링을 더 깊게 바꿀 수 있습니다.
 <LeeChatWidget
   renderMessage={({ message, retryMessage }) => (
     <article data-status={message.status}>
-      <p>{message.parts.map((part) => part.text).join('')}</p>
+      <p>
+        {message.parts
+          .filter((part) => part.type === 'text')
+          .map((part) => part.text)
+          .join('')}
+      </p>
       {message.status === 'failed' ? (
         <button type="button" onClick={() => retryMessage(message.id)}>
           다시 보내기

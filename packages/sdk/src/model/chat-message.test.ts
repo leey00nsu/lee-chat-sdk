@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   collectTextFromMessageParts,
+  createFileMessagePart,
+  createImageMessagePart,
   createTextMessageParts,
   getChatMessageText,
   type ChatMessage,
@@ -41,6 +43,39 @@ describe('ChatMessage', () => {
       },
     ])
     expect(collectTextFromMessageParts(parts)).toBe('Hello')
+  })
+
+  it('파일과 이미지 attachment part를 만든다', () => {
+    expect(
+      createFileMessagePart({
+        url: 'https://example.com/report.pdf',
+        name: 'report.pdf',
+        size: 1024,
+        mediaType: 'application/pdf',
+      }),
+    ).toEqual({
+      type: 'file',
+      url: 'https://example.com/report.pdf',
+      name: 'report.pdf',
+      size: 1024,
+      mediaType: 'application/pdf',
+    })
+    expect(
+      createImageMessagePart({
+        url: 'https://example.com/screenshot.png',
+        alt: '상담 화면 캡처',
+        width: 640,
+        height: 360,
+        mediaType: 'image/png',
+      }),
+    ).toEqual({
+      type: 'image',
+      url: 'https://example.com/screenshot.png',
+      alt: '상담 화면 캡처',
+      width: 640,
+      height: 360,
+      mediaType: 'image/png',
+    })
   })
 
   it('message parts를 우선하여 표시 텍스트를 계산한다', () => {

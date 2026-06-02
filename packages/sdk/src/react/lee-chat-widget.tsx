@@ -2,7 +2,7 @@
 
 import * as Popover from '@radix-ui/react-popover'
 import { useEffect, useRef, type ReactNode } from 'react'
-import { getChatMessageText, type ChatMessage } from '../model/chat-message'
+import type { ChatMessage, ChatMessagePart } from '../model/chat-message'
 import { ChatComposer } from '../ui/chat-composer'
 import { ChatMessageList } from '../ui/chat-message-list'
 import { useLeeChat } from './use-lee-chat'
@@ -123,7 +123,9 @@ export function LeeChatWidget({
         )}
         data-status={message.status}
       >
-        <p>{getChatMessageText(message)}</p>
+        {message.parts.map((part, index) => {
+          return renderMessagePart(part, index)
+        })}
         {message.status === 'sending' ? (
           <small
             className={mergeClassNames(
@@ -166,6 +168,37 @@ export function LeeChatWidget({
         ) : null}
       </article>
     )
+  }
+
+  function renderMessagePart(part: ChatMessagePart, index: number): ReactNode {
+    if (part.type === 'image') {
+      return (
+        <img
+          key={`${part.type}-${part.url}-${index}`}
+          className="lee-chat-message-image"
+          src={part.url}
+          alt={part.alt ?? ''}
+          width={part.width}
+          height={part.height}
+        />
+      )
+    }
+
+    if (part.type === 'file') {
+      return (
+        <a
+          key={`${part.type}-${part.url}-${index}`}
+          className="lee-chat-message-file"
+          href={part.url}
+          target="_blank"
+          rel="noreferrer"
+        >
+          {part.name}
+        </a>
+      )
+    }
+
+    return <p key={`${part.type}-${index}`}>{part.text}</p>
   }
 
   function renderDefaultAssistantLoading(): ReactNode {

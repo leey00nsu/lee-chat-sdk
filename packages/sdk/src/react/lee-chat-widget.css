@@ -94,6 +94,9 @@
 }
 
 .lee-chat-message {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   max-width: 85%;
   padding: 10px 12px;
   border-radius: var(--lee-chat-radius);
@@ -103,6 +106,24 @@
 
 .lee-chat-message p {
   margin: 0;
+}
+
+.lee-chat-message-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: calc(var(--lee-chat-radius) - 4px);
+}
+
+.lee-chat-message-file {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  color: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .lee-chat-message-status {

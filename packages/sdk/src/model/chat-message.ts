@@ -7,7 +7,27 @@ export interface ChatTextMessagePart {
   text: string
 }
 
-export type ChatMessagePart = ChatTextMessagePart
+export interface ChatImageMessagePart {
+  type: 'image'
+  url: string
+  alt?: string
+  width?: number
+  height?: number
+  mediaType?: string
+}
+
+export interface ChatFileMessagePart {
+  type: 'file'
+  url: string
+  name: string
+  size?: number
+  mediaType?: string
+}
+
+export type ChatMessagePart =
+  | ChatTextMessagePart
+  | ChatImageMessagePart
+  | ChatFileMessagePart
 
 export interface ChatMessage<TMetadata = unknown> {
   id: string
@@ -30,10 +50,28 @@ export function createTextMessageParts(text: string): ChatMessagePart[] {
   ]
 }
 
+export function createImageMessagePart(
+  params: Omit<ChatImageMessagePart, 'type'>,
+): ChatImageMessagePart {
+  return {
+    type: 'image',
+    ...params,
+  }
+}
+
+export function createFileMessagePart(
+  params: Omit<ChatFileMessagePart, 'type'>,
+): ChatFileMessagePart {
+  return {
+    type: 'file',
+    ...params,
+  }
+}
+
 export function collectTextFromMessageParts(parts: ChatMessagePart[]): string {
   return parts
     .map((part) => {
-      return part.text
+      return part.type === 'text' ? part.text : ''
     })
     .join('')
 }

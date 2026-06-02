@@ -24,6 +24,9 @@ async function storybookFetch(
 ): Promise<Response> {
   const requestBody = JSON.parse(String(init?.body)) as LeeChatRequest
   const requestText = requestBody.message.parts
+    .filter((part) => {
+      return part.type === 'text'
+    })
     .map((part) => {
       return part.text
     })

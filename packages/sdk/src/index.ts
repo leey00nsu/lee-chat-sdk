@@ -29,10 +29,14 @@ export type {
 export { createChatMessageId } from './lib/create-chat-message-id'
 export {
   collectTextFromMessageParts,
+  createFileMessagePart,
+  createImageMessagePart,
   createTextMessageParts,
   getChatMessageText,
 } from './model/chat-message'
 export type {
+  ChatFileMessagePart,
+  ChatImageMessagePart,
   ChatMessage,
   ChatMessagePart,
   ChatMessageRole,
