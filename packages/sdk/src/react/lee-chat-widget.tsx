@@ -2,7 +2,7 @@
 
 import * as Popover from '@radix-ui/react-popover'
 import { useEffect, useRef, type ReactNode } from 'react'
-import type { ChatMessage } from '../model/chat-message'
+import { getChatMessageText, type ChatMessage } from '../model/chat-message'
 import { ChatComposer } from '../ui/chat-composer'
 import { ChatMessageList } from '../ui/chat-message-list'
 import { useLeeChat } from './use-lee-chat'
@@ -90,7 +90,7 @@ export function LeeChatWidget({
         )}
         data-status={message.status}
       >
-        <p>{message.content}</p>
+        <p>{getChatMessageText(message)}</p>
         {message.status === 'sending' ? (
           <small
             className={mergeClassNames(

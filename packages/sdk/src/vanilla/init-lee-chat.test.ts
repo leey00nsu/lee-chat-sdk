@@ -96,6 +96,27 @@ describe('vanilla initLeeChat', () => {
         method: 'POST',
       }),
     )
+    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual(
+      expect.objectContaining({
+        conversation: {
+          id: 'vanilla-app:conversation',
+          kind: 'support',
+        },
+        participant: expect.objectContaining({
+          id: 'vanilla-app-participant',
+          kind: 'user',
+        }),
+        message: expect.objectContaining({
+          senderId: 'vanilla-app-participant',
+          parts: [
+            {
+              type: 'text',
+              text: 'Hello from vanilla',
+            },
+          ],
+        }),
+      }),
+    )
   })
 
   it('사용자 메시지를 전송하면 최신 메시지로 스크롤한다', async () => {

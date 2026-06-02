@@ -2,7 +2,7 @@
 
 [한국어](./README.md) | English
 
-`lee-chat-sdk` is a drop-in chat widget kit for adding customer support chat UI to a website. The default UI starts as a floating button in the bottom-right corner and opens a chat panel when clicked. Use it as React components in React apps, or call `initLeeChat()` from plain JavaScript.
+`lee-chat-sdk` is a drop-in chat SDK for embedding chat experiences into websites. The default UI starts as a floating button in the bottom-right corner and opens a chat panel when clicked. It is built around a conversation model that can support customer support, AI assistants, direct conversations, and group-ready chat. Use it as React components in React apps, or call `initLeeChat()` from plain JavaScript.
 
 ## Quick Start
 
@@ -81,9 +81,13 @@ import type { LeeChatConfig } from 'lee-chat-sdk'
 const config: LeeChatConfig = {
   appId: 'commerce-web',
   endpoint: '/api/chat',
-  user: {
-    id: 'user-123',
-    name: 'Lee',
+  conversation: {
+    kind: 'support',
+  },
+  participant: {
+    id: 'participant-user-123',
+    kind: 'user',
+    displayName: 'Lee',
     email: 'lee@example.com',
   },
   metadata: {
@@ -119,21 +123,35 @@ The SDK sends the following request body to `endpoint`.
 ```ts
 interface LeeChatRequest {
   appId: string
-  conversationId: string
+  conversation: {
+    id: string
+    kind: 'direct' | 'support' | 'assistant' | 'group'
+  }
+  participant: {
+    id: string
+    kind: 'user' | 'operator' | 'bot' | 'system'
+    displayName?: string
+    metadata?: Record<string, unknown>
+  }
   message: {
     id: string
+    senderId: string
     content: string
+    parts: Array<{
+      type: 'text'
+      text: string
+    }>
     createdAt: string
-  }
-  user?: {
-    id: string
-    name?: string
-    email?: string
   }
   metadata?: Record<string, unknown>
   history: Array<{
     role: 'user' | 'assistant' | 'system' | 'agent'
+    senderId: string
     content: string
+    parts: Array<{
+      type: 'text'
+      text: string
+    }>
     createdAt: string
   }>
 }
@@ -146,6 +164,10 @@ interface LeeChatResponse {
   message: {
     id?: string
     content: string
+    parts?: Array<{
+      type: 'text'
+      text: string
+    }>
     createdAt?: string
     metadata?: Record<string, unknown>
   }
@@ -159,10 +181,14 @@ import type { LeeChatRequest, LeeChatResponse } from 'lee-chat-sdk'
 
 export async function POST(request: Request) {
   const body = (await request.json()) as LeeChatRequest
+  const text = body.message.parts
+    .filter((part) => part.type === 'text')
+    .map((part) => part.text)
+    .join('')
 
   const response: LeeChatResponse = {
     message: {
-      content: `Received: ${body.message.content}`,
+      content: `Received: ${text}`,
       metadata: {
         agentName: 'Mina',
       },
@@ -230,7 +256,7 @@ React apps can replace the default message rendering when deeper customization i
 <LeeChatWidget
   renderMessage={({ message, retryMessage }) => (
     <article data-status={message.status}>
-      <p>{message.content}</p>
+      <p>{message.parts.map((part) => part.text).join('')}</p>
       {message.status === 'failed' ? (
         <button type="button" onClick={() => retryMessage(message.id)}>
           Retry
@@ -333,7 +359,7 @@ Use the headless controller and primitives when you need deeper customization.
 
 ## Operator Console Model
 
-Use `ChatEvent` for operational tooling and internal consoles. It can model message creation, failed messages, assignment changes, closed conversations, internal notes, and customer events as a single event stream.
+Use `ChatEvent` for operational tooling and internal consoles. It can model message creation, failed messages, assignment changes, closed conversations, internal notes, and participant events as a single event stream.
 
 ```ts
 import {
@@ -416,6 +442,7 @@ pnpm publish --access public
 
 - Provide a no-React browser bundle.
 - Add WebSocket and SSE transport adapters.
+- Add participant, read receipt, typing, and presence models.
 - Add conversation list and operator-console controller APIs.
 - Add timeout, abort/cancel, and advanced retry policies.
 - Add Storybook examples.

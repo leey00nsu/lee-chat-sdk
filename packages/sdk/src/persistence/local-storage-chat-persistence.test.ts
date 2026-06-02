@@ -1,14 +1,16 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { LocalStorageChatPersistence } from './local-storage-chat-persistence'
-import type { ChatMessage } from '../model/chat-message'
+import { createTextMessageParts, type ChatMessage } from '../model/chat-message'
 
 const STORAGE_KEY = 'lee-chat-sdk:test-conversation'
 const STORAGE_VERSION = 1
 const MESSAGE: ChatMessage = {
   id: 'message',
   conversationId: 'conversation',
+  senderId: 'participant-user',
   role: 'user',
   content: '저장할 메시지',
+  parts: createTextMessageParts('저장할 메시지'),
   status: 'sent',
   createdAt: '2026-06-01T00:00:00.000Z',
 }

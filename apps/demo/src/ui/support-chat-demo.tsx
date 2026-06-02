@@ -5,7 +5,7 @@ import { LeeChatProvider, LeeChatWidget, type LeeChatRequest } from 'lee-chat-sd
 const SUPPORT_CHAT_DEMO = {
   APP_ID: 'support-demo',
   ENDPOINT: '/api/support-chat',
-  USER_ID: 'demo-user',
+  PARTICIPANT_ID: 'demo-user',
 } as const
 
 async function supportDemoFetch(
@@ -13,11 +13,16 @@ async function supportDemoFetch(
   init?: RequestInit,
 ): Promise<Response> {
   const requestBody = JSON.parse(String(init?.body)) as LeeChatRequest
+  const requestText = requestBody.message.parts
+    .map((part) => {
+      return part.text
+    })
+    .join('')
 
   return new Response(
     JSON.stringify({
       message: {
-        content: `Support received: ${requestBody.message.content}`,
+        content: `Support received: ${requestText}`,
         metadata: {
           agentName: 'Mina',
           assignmentStatus: 'assigned',
@@ -40,9 +45,13 @@ export function SupportChatDemo() {
       config={{
         appId: SUPPORT_CHAT_DEMO.APP_ID,
         endpoint: SUPPORT_CHAT_DEMO.ENDPOINT,
-        user: {
-          id: SUPPORT_CHAT_DEMO.USER_ID,
-          name: 'Demo User',
+        conversation: {
+          kind: 'support',
+        },
+        participant: {
+          id: SUPPORT_CHAT_DEMO.PARTICIPANT_ID,
+          kind: 'user',
+          displayName: 'Demo User',
         },
         texts: {
           title: 'Support Chat Demo',

@@ -7,7 +7,7 @@ import { MemoryChatPersistence } from '../persistence/memory-chat-persistence'
 import { LocalStorageChatPersistence } from '../persistence/local-storage-chat-persistence'
 import { HttpChatTransport } from '../transport/http-chat-transport'
 import { buildLeeChatRequest, parseLeeChatResponse, type LeeChatRequest, type LeeChatResponse } from '../request/lee-chat-request'
-import type { ChatMessage } from '../model/chat-message'
+import { createTextMessageParts, type ChatMessage } from '../model/chat-message'
 import { LeeChatContext } from './lee-chat-context'
 
 export interface LeeChatProviderProps {
@@ -36,7 +36,7 @@ export function LeeChatProvider({
 }: LeeChatProviderProps) {
   const resolvedConfig = useMemo(() => resolveLeeChatConfig(config), [config])
   const [isOpen, setIsOpen] = useState(resolvedConfig.initialOpen)
-  const conversationId = `${resolvedConfig.appId}:default`
+  const conversationId = resolvedConfig.conversation.id
   const transport = useMemo(() => {
     return new HttpChatTransport<LeeChatRequest, LeeChatResponse>({
       endpoint: resolvedConfig.endpoint,
@@ -66,15 +66,18 @@ export function LeeChatProvider({
       const userMessage: ChatMessage = {
         id: `${requestConversationId}:request`,
         conversationId: requestConversationId,
+        senderId: resolvedConfig.participant.id,
         role: 'user',
         content,
+        parts: createTextMessageParts(content),
         status: 'sent',
         createdAt: new Date().toISOString(),
       }
 
       return buildLeeChatRequest({
         appId: resolvedConfig.appId,
-        user: resolvedConfig.user,
+        conversation: resolvedConfig.conversation,
+        participant: resolvedConfig.participant,
         metadata: resolvedConfig.metadata,
         message: userMessage,
         history: messages,
@@ -85,9 +88,12 @@ export function LeeChatProvider({
 
       return {
         content: parsedResponse.message.content,
+        parts: parsedResponse.message.parts,
         metadata: parsedResponse.message.metadata,
       }
     },
+    senderId: resolvedConfig.participant.id,
+    assistantSenderId: `${resolvedConfig.appId}-assistant`,
   })
   const unreadCount = isOpen ? 0 : chat.messages.filter((message) => {
     return message.role !== 'user' && message.status === 'sent'

@@ -8,19 +8,36 @@ export type {
   LeeChatClassName,
   LeeChatColorScheme,
   LeeChatConfig,
+  LeeChatConversationConfig,
+  LeeChatParticipant,
   LeeChatPersistenceType,
   LeeChatPosition,
   LeeChatTheme,
-  LeeChatUser,
   LeeChatWidgetText,
   ResolvedLeeChatConfig,
 } from './config/lee-chat-config'
 export { createChatMessageId } from './lib/create-chat-message-id'
+export {
+  collectTextFromMessageParts,
+  createTextMessageParts,
+  getChatMessageText,
+} from './model/chat-message'
 export type {
   ChatMessage,
+  ChatMessagePart,
   ChatMessageRole,
   ChatMessageStatus,
+  ChatTextMessagePart,
 } from './model/chat-message'
+export type {
+  ChatConversation,
+  ChatConversationKind,
+  ChatConversationStatus,
+} from './model/chat-conversation'
+export type {
+  ChatParticipant,
+  ChatParticipantKind,
+} from './model/chat-participant'
 export {
   buildChatEvent,
   collectChatEventsByConversationId,

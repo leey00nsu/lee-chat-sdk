@@ -8,6 +8,7 @@ import {
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { LeeChatProvider } from './lee-chat-provider'
 import { LeeChatWidget } from './lee-chat-widget'
+import { getChatMessageText } from '../model/chat-message'
 
 const fetchMock = vi.fn()
 const scrollIntoViewMock = vi.fn()
@@ -94,6 +95,27 @@ describe('LeeChatWidget', () => {
       '/api/chat',
       expect.objectContaining({
         method: 'POST',
+      }),
+    )
+    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual(
+      expect.objectContaining({
+        conversation: {
+          id: 'app:conversation',
+          kind: 'support',
+        },
+        participant: expect.objectContaining({
+          id: 'app-participant',
+          kind: 'user',
+        }),
+        message: expect.objectContaining({
+          senderId: 'app-participant',
+          parts: [
+            {
+              type: 'text',
+              text: 'Hello',
+            },
+          ],
+        }),
       }),
     )
   })
@@ -310,7 +332,7 @@ describe('LeeChatWidget', () => {
         <LeeChatWidget
           renderMessage={({ message }) => (
             <article data-testid={`custom-${message.role}`}>
-              {message.role}: {message.content}
+              {message.role}: {getChatMessageText(message)}
             </article>
           )}
         />

@@ -3,6 +3,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import {
   LeeChatProvider,
   LeeChatWidget,
+  getChatMessageText,
   useLeeChat,
   type LeeChatConfig,
   type LeeChatRequest,
@@ -21,6 +22,11 @@ async function storybookFetch(
   init?: RequestInit,
 ): Promise<Response> {
   const requestBody = JSON.parse(String(init?.body)) as LeeChatRequest
+  const requestText = requestBody.message.parts
+    .map((part) => {
+      return part.text
+    })
+    .join('')
 
   if (requestBody.appId.includes('failure')) {
     throw new Error('Storybook failure response')
@@ -33,7 +39,7 @@ async function storybookFetch(
   return new Response(
     JSON.stringify({
       message: {
-        content: `Story response: ${requestBody.message.content}`,
+        content: `Story response: ${requestText}`,
         metadata: {
           endpoint: String(input),
         },
@@ -80,7 +86,7 @@ function WidgetStory({
             ? ({ message }) => (
                 <article className="lee-chat-message">
                   <strong>{message.role}</strong>
-                  <p>{message.content}</p>
+                  <p>{getChatMessageText(message)}</p>
                 </article>
               )
             : undefined

@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { buildLeeChatRequest, parseLeeChatResponse } from './lee-chat-request'
-import type { ChatMessage } from '../model/chat-message'
+import { createTextMessageParts, type ChatMessage } from '../model/chat-message'
 
 const MESSAGE: ChatMessage = {
   id: 'message',
   conversationId: 'conversation',
+  senderId: 'participant-user',
   role: 'user',
   content: 'Hello',
+  parts: createTextMessageParts('Hello'),
   status: 'sent',
   createdAt: '2026-06-01T00:00:00.000Z',
 }
@@ -15,9 +17,14 @@ describe('lee chat request contract', () => {
   it('config, message, history를 backend request shape으로 변환한다', () => {
     const request = buildLeeChatRequest({
       appId: 'app',
-      user: {
-        id: 'user',
-        name: 'Yoonsu',
+      conversation: {
+        id: 'conversation',
+        kind: 'support',
+      },
+      participant: {
+        id: 'participant-user',
+        kind: 'user',
+        displayName: 'Yoonsu',
       },
       metadata: {
         plan: 'pro',
@@ -28,15 +35,26 @@ describe('lee chat request contract', () => {
 
     expect(request).toEqual({
       appId: 'app',
-      conversationId: 'conversation',
+      conversation: {
+        id: 'conversation',
+        kind: 'support',
+      },
+      participant: {
+        id: 'participant-user',
+        kind: 'user',
+        displayName: 'Yoonsu',
+      },
       message: {
         id: 'message',
+        senderId: 'participant-user',
         content: 'Hello',
+        parts: [
+          {
+            type: 'text',
+            text: 'Hello',
+          },
+        ],
         createdAt: '2026-06-01T00:00:00.000Z',
-      },
-      user: {
-        id: 'user',
-        name: 'Yoonsu',
       },
       metadata: {
         plan: 'pro',
@@ -44,7 +62,14 @@ describe('lee chat request contract', () => {
       history: [
         {
           role: 'user',
+          senderId: 'participant-user',
           content: 'Hello',
+          parts: [
+            {
+              type: 'text',
+              text: 'Hello',
+            },
+          ],
           createdAt: '2026-06-01T00:00:00.000Z',
         },
       ],
@@ -55,10 +80,17 @@ describe('lee chat request contract', () => {
     const response = parseLeeChatResponse({
       message: {
         content: 'Received',
+        parts: createTextMessageParts('Received'),
       },
     })
 
     expect(response.message.content).toBe('Received')
+    expect(response.message.parts).toEqual([
+      {
+        type: 'text',
+        text: 'Received',
+      },
+    ])
     expect(response.message.id).toEqual(expect.any(String))
     expect(response.message.id.length).toBeGreaterThan(0)
     expect(response.message.createdAt).toEqual(expect.any(String))

@@ -2,7 +2,7 @@
 
 한국어 | [English](./README.en.md)
 
-`lee-chat-sdk`는 웹사이트에 고객상담 채팅 UI를 빠르게 붙이기 위한 drop-in chat widget kit입니다. 기본 UI는 페이지 오른쪽 아래의 플로팅 버튼으로 시작하고, 버튼을 누르면 채팅 패널이 열립니다. React 앱에서는 컴포넌트로, 일반 JavaScript 환경에서는 `initLeeChat()` 함수로 사용할 수 있습니다.
+`lee-chat-sdk`는 웹사이트에 채팅 경험을 빠르게 삽입하기 위한 drop-in chat SDK입니다. 기본 UI는 페이지 오른쪽 아래의 플로팅 버튼으로 시작하고, 버튼을 누르면 채팅 패널이 열립니다. 고객상담, AI assistant, 일반 대화, 그룹 대화로 확장 가능한 conversation 모델을 기반으로 하며 React 앱에서는 컴포넌트로, 일반 JavaScript 환경에서는 `initLeeChat()` 함수로 사용할 수 있습니다.
 
 ## 빠른 시작
 
@@ -81,9 +81,13 @@ import type { LeeChatConfig } from 'lee-chat-sdk'
 const config: LeeChatConfig = {
   appId: 'commerce-web',
   endpoint: '/api/chat',
-  user: {
-    id: 'user-123',
-    name: 'Lee',
+  conversation: {
+    kind: 'support',
+  },
+  participant: {
+    id: 'participant-user-123',
+    kind: 'user',
+    displayName: 'Lee',
     email: 'lee@example.com',
   },
   metadata: {
@@ -119,21 +123,35 @@ SDK는 `endpoint`로 다음 형태의 요청을 보냅니다.
 ```ts
 interface LeeChatRequest {
   appId: string
-  conversationId: string
+  conversation: {
+    id: string
+    kind: 'direct' | 'support' | 'assistant' | 'group'
+  }
+  participant: {
+    id: string
+    kind: 'user' | 'operator' | 'bot' | 'system'
+    displayName?: string
+    metadata?: Record<string, unknown>
+  }
   message: {
     id: string
+    senderId: string
     content: string
+    parts: Array<{
+      type: 'text'
+      text: string
+    }>
     createdAt: string
-  }
-  user?: {
-    id: string
-    name?: string
-    email?: string
   }
   metadata?: Record<string, unknown>
   history: Array<{
     role: 'user' | 'assistant' | 'system' | 'agent'
+    senderId: string
     content: string
+    parts: Array<{
+      type: 'text'
+      text: string
+    }>
     createdAt: string
   }>
 }
@@ -146,6 +164,10 @@ interface LeeChatResponse {
   message: {
     id?: string
     content: string
+    parts?: Array<{
+      type: 'text'
+      text: string
+    }>
     createdAt?: string
     metadata?: Record<string, unknown>
   }
@@ -159,10 +181,14 @@ import type { LeeChatRequest, LeeChatResponse } from 'lee-chat-sdk'
 
 export async function POST(request: Request) {
   const body = (await request.json()) as LeeChatRequest
+  const text = body.message.parts
+    .filter((part) => part.type === 'text')
+    .map((part) => part.text)
+    .join('')
 
   const response: LeeChatResponse = {
     message: {
-      content: `Received: ${body.message.content}`,
+      content: `Received: ${text}`,
       metadata: {
         agentName: 'Mina',
       },
@@ -230,7 +256,7 @@ React에서는 기본 말풍선 렌더링을 더 깊게 바꿀 수 있습니다.
 <LeeChatWidget
   renderMessage={({ message, retryMessage }) => (
     <article data-status={message.status}>
-      <p>{message.content}</p>
+      <p>{message.parts.map((part) => part.text).join('')}</p>
       {message.status === 'failed' ? (
         <button type="button" onClick={() => retryMessage(message.id)}>
           다시 보내기
@@ -333,7 +359,7 @@ if (container instanceof HTMLElement) {
 
 ## Operator Console Model
 
-운영 도구나 내부 콘솔에는 `ChatEvent` 모델을 사용할 수 있습니다. 메시지 생성, 실패, 배정 변경, 대화 종료, 내부 메모, 고객 이벤트를 하나의 event stream으로 다룰 수 있습니다.
+운영 도구나 내부 콘솔에는 `ChatEvent` 모델을 사용할 수 있습니다. 메시지 생성, 실패, 배정 변경, 대화 종료, 내부 메모, 사용자 이벤트를 하나의 event stream으로 다룰 수 있습니다.
 
 ```ts
 import {
@@ -416,6 +442,7 @@ pnpm publish --access public
 
 - no-React browser bundle 제공
 - WebSocket/SSE transport adapter 추가
+- participant/read receipt/typing/presence 모델 추가
 - conversation list와 operator-console controller API 추가
 - timeout, abort/cancel, 고급 retry 정책 추가
 - Storybook examples 추가

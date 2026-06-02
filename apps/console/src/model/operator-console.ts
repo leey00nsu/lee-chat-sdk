@@ -1,8 +1,10 @@
 import {
   buildChatEvent,
   collectChatEventsByConversationId,
+  createTextMessageParts,
   type ChatEvent,
   type ChatMessage,
+  type ChatMessageRole,
 } from 'lee-chat-sdk'
 
 export type OperatorConversationStatus = 'unassigned' | 'assigned' | 'closed'
@@ -35,6 +37,28 @@ export type OperatorEventPayload =
   | { content: string }
   | { customerEventId: string }
 
+function createOperatorMessage(params: {
+  id: string
+  conversationId: string
+  senderId: string
+  role: ChatMessageRole
+  content: string
+  createdAt: string
+  metadata?: OperatorMessageMetadata
+}): ChatMessage<OperatorMessageMetadata> {
+  return {
+    id: params.id,
+    conversationId: params.conversationId,
+    senderId: params.senderId,
+    role: params.role,
+    content: params.content,
+    parts: createTextMessageParts(params.content),
+    status: 'sent',
+    createdAt: params.createdAt,
+    metadata: params.metadata,
+  }
+}
+
 export const OPERATOR_CONSOLE_SEED: OperatorConsoleState = {
   selectedConversationId: 'conversation-pricing',
   conversations: [
@@ -47,37 +71,37 @@ export const OPERATOR_CONSOLE_SEED: OperatorConsoleState = {
       lastMessagePreview: '요금제를 알고 싶어요',
       customerEvents: ['pricing-page-opened', 'checkout-started'],
       messages: [
-        {
+        createOperatorMessage({
           id: 'message-user-pricing',
           conversationId: 'conversation-pricing',
+          senderId: 'participant-yujin',
           role: 'user',
           content: '요금제를 알고 싶어요',
-          status: 'sent',
           createdAt: '2026-06-01T00:00:00.000Z',
-        },
-        {
+        }),
+        createOperatorMessage({
           id: 'message-agent-pricing',
           conversationId: 'conversation-pricing',
+          senderId: 'participant-mina',
           role: 'agent',
           content: 'Mina가 확인 중입니다.',
-          status: 'sent',
           createdAt: '2026-06-01T00:01:00.000Z',
           metadata: {
             agentName: 'Mina',
             customerEventIds: ['pricing-page-opened'],
           },
-        },
-        {
+        }),
+        createOperatorMessage({
           id: 'note-pricing',
           conversationId: 'conversation-pricing',
+          senderId: 'participant-system',
           role: 'system',
           content: '결제 직전 이탈 가능성이 높음',
-          status: 'sent',
           createdAt: '2026-06-01T00:02:00.000Z',
           metadata: {
             internalNote: true,
           },
-        },
+        }),
       ],
     },
     {
@@ -88,14 +112,14 @@ export const OPERATOR_CONSOLE_SEED: OperatorConsoleState = {
       lastMessagePreview: '배송 상태를 확인하고 싶어요',
       customerEvents: ['order-detail-opened'],
       messages: [
-        {
+        createOperatorMessage({
           id: 'message-user-delivery',
           conversationId: 'conversation-delivery',
+          senderId: 'participant-alex',
           role: 'user',
           content: '배송 상태를 확인하고 싶어요',
-          status: 'sent',
           createdAt: '2026-06-01T00:03:00.000Z',
-        },
+        }),
       ],
     },
   ],

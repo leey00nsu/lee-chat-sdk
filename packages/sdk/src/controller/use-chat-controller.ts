@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { createChatMessageId } from '../lib/create-chat-message-id'
-import type { ChatMessage } from '../model/chat-message'
+import { createTextMessageParts, type ChatMessage, type ChatMessagePart } from '../model/chat-message'
 import type { ChatPersistence } from '../persistence/chat-persistence'
 import type { ChatTransport } from '../transport/chat-transport'
 
@@ -21,6 +21,7 @@ interface BuildAssistantMessageParams<TResponse, TMessageMetadata> {
 
 interface BuiltAssistantMessage<TMessageMetadata> {
   content: string
+  parts?: ChatMessagePart[]
   metadata?: TMessageMetadata
 }
 
@@ -36,6 +37,8 @@ export interface UseChatControllerParams<
     params: BuildAssistantMessageParams<TResponse, TMessageMetadata>,
   ) => BuiltAssistantMessage<TMessageMetadata>
   persistence?: ChatPersistence<ChatMessage<TMessageMetadata>>
+  senderId?: string
+  assistantSenderId?: string
   createMessageId?: () => string
   getCurrentDate?: () => Date
 }
@@ -73,6 +76,8 @@ export function useChatController<
   buildRequest,
   buildAssistantMessage,
   persistence,
+  senderId = 'participant-user',
+  assistantSenderId = 'participant-assistant',
   createMessageId = createChatMessageId,
   getCurrentDate = () => new Date(),
 }: UseChatControllerParams<
@@ -103,8 +108,10 @@ export function useChatController<
     const userMessage: ChatMessage<TMessageMetadata> = {
       id: userMessageId,
       conversationId,
+      senderId,
       role: 'user',
       content: trimmedContent,
+      parts: createTextMessageParts(trimmedContent),
       status: 'sending',
       createdAt,
     }
@@ -178,8 +185,12 @@ export function useChatController<
       const assistantMessage: ChatMessage<TMessageMetadata> = {
         id: createMessageId(),
         conversationId,
+        senderId: assistantSenderId,
         role: 'assistant',
         content: builtAssistantMessage.content,
+        parts:
+          builtAssistantMessage.parts ??
+          createTextMessageParts(builtAssistantMessage.content),
         status: 'sent',
         createdAt: getCurrentDate().toISOString(),
         metadata: builtAssistantMessage.metadata,

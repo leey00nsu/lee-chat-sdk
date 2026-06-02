@@ -1,11 +1,22 @@
+import type { ChatConversationKind } from '../model/chat-conversation'
+import type { ChatParticipant, ChatParticipantKind } from '../model/chat-participant'
+
 export type LeeChatPosition = 'bottom-right' | 'bottom-left'
 export type LeeChatPersistenceType = 'memory' | 'localStorage'
 export type LeeChatColorScheme = 'light' | 'dark' | 'system'
 
-export interface LeeChatUser {
+export interface LeeChatParticipant {
   id: string
-  name?: string
+  kind?: ChatParticipantKind
+  displayName?: string
   email?: string
+  metadata?: Record<string, unknown>
+}
+
+export interface LeeChatConversationConfig {
+  id?: string
+  kind?: ChatConversationKind
+  metadata?: Record<string, unknown>
 }
 
 export interface LeeChatWidgetText {
@@ -43,7 +54,8 @@ export interface LeeChatClassName {
 export interface LeeChatConfig {
   appId: string
   endpoint: string
-  user?: LeeChatUser
+  conversation?: LeeChatConversationConfig
+  participant?: LeeChatParticipant
   metadata?: Record<string, unknown>
   position?: LeeChatPosition
   initialOpen?: boolean
@@ -55,7 +67,13 @@ export interface LeeChatConfig {
 }
 
 export interface ResolvedLeeChatConfig
-  extends Omit<LeeChatConfig, 'texts' | 'theme' | 'position' | 'initialOpen' | 'persistence'> {
+  extends Omit<
+    LeeChatConfig,
+    'texts' | 'theme' | 'position' | 'initialOpen' | 'persistence' | 'conversation' | 'participant'
+  > {
+  conversation: Required<Pick<LeeChatConversationConfig, 'id' | 'kind'>> &
+    Pick<LeeChatConversationConfig, 'metadata'>
+  participant: ChatParticipant
   position: LeeChatPosition
   initialOpen: boolean
   persistence: LeeChatPersistenceType
@@ -85,8 +103,21 @@ const DEFAULT_LEE_CHAT_THEME: LeeChatTheme = {
 export function resolveLeeChatConfig(
   config: LeeChatConfig,
 ): ResolvedLeeChatConfig {
+  const conversationId = config.conversation?.id ?? `${config.appId}:conversation`
+
   return {
     ...config,
+    conversation: {
+      id: conversationId,
+      kind: config.conversation?.kind ?? 'support',
+      metadata: config.conversation?.metadata,
+    },
+    participant: {
+      id: config.participant?.id ?? `${config.appId}-participant`,
+      kind: config.participant?.kind ?? 'user',
+      displayName: config.participant?.displayName,
+      metadata: config.participant?.metadata,
+    },
     position: config.position ?? 'bottom-right',
     initialOpen: config.initialOpen ?? false,
     persistence: config.persistence ?? 'memory',

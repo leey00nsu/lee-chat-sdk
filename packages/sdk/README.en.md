@@ -2,7 +2,7 @@
 
 [한국어](./README.md) | English
 
-A drop-in chat widget kit for adding customer support chat UI to websites. Use `LeeChatProvider` and `LeeChatWidget` in React apps, or call `initLeeChat()` from plain JavaScript.
+A drop-in chat SDK for embedding chat experiences into websites. It provides a default floating widget and uses a conversation model that can support customer support, AI assistants, direct conversations, and group-ready chat. Use `LeeChatProvider` and `LeeChatWidget` in React apps, or call `initLeeChat()` from plain JavaScript.
 
 ## Installation
 
@@ -47,6 +47,14 @@ import { initLeeChat } from 'lee-chat-sdk/vanilla'
 const leeChat = initLeeChat({
   appId: 'my-service',
   endpoint: '/api/chat',
+  conversation: {
+    kind: 'support',
+  },
+  participant: {
+    id: 'participant-user-123',
+    kind: 'user',
+    displayName: 'Lee',
+  },
 })
 
 leeChat.open()

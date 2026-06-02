@@ -1,22 +1,36 @@
 import { createChatMessageId } from '../lib/create-chat-message-id'
-import type { ChatMessage, ChatMessageRole } from '../model/chat-message'
-import type { LeeChatUser } from '../config/lee-chat-config'
+import {
+  collectTextFromMessageParts,
+  createTextMessageParts,
+  type ChatMessage,
+  type ChatMessagePart,
+  type ChatMessageRole,
+} from '../model/chat-message'
+import type { ChatConversationKind } from '../model/chat-conversation'
+import type { ChatParticipant } from '../model/chat-participant'
 
 export interface LeeChatHistoryItem {
   role: ChatMessageRole
+  senderId: string
   content: string
+  parts: ChatMessagePart[]
   createdAt: string
 }
 
 export interface LeeChatRequest {
   appId: string
-  conversationId: string
+  conversation: {
+    id: string
+    kind: ChatConversationKind
+  }
+  participant: ChatParticipant
   message: {
     id: string
+    senderId: string
     content: string
+    parts: ChatMessagePart[]
     createdAt: string
   }
-  user?: LeeChatUser
   metadata?: Record<string, unknown>
   history: LeeChatHistoryItem[]
 }
@@ -25,6 +39,7 @@ export interface LeeChatResponse {
   message: {
     id?: string
     content: string
+    parts?: ChatMessagePart[]
     createdAt?: string
     metadata?: Record<string, unknown>
   }
@@ -34,6 +49,7 @@ export interface ResolvedLeeChatResponse {
   message: {
     id: string
     content: string
+    parts: ChatMessagePart[]
     createdAt: string
     metadata?: Record<string, unknown>
   }
@@ -41,32 +57,41 @@ export interface ResolvedLeeChatResponse {
 
 interface BuildLeeChatRequestParams {
   appId: string
+  conversation: {
+    id: string
+    kind: ChatConversationKind
+  }
+  participant: ChatParticipant
   message: ChatMessage
   history: ChatMessage[]
-  user?: LeeChatUser
   metadata?: Record<string, unknown>
 }
 
 export function buildLeeChatRequest({
   appId,
+  conversation,
+  participant,
   message,
   history,
-  user,
   metadata,
 }: BuildLeeChatRequestParams): LeeChatRequest {
   return {
     appId,
-    conversationId: message.conversationId,
+    conversation,
+    participant,
     message: {
       id: message.id,
-      content: message.content,
+      senderId: message.senderId,
+      content: getMessageContent(message),
+      parts: message.parts,
       createdAt: message.createdAt,
     },
-    user,
     metadata,
     history: history.map((historyMessage) => ({
       role: historyMessage.role,
-      content: historyMessage.content,
+      senderId: historyMessage.senderId,
+      content: getMessageContent(historyMessage),
+      parts: historyMessage.parts,
       createdAt: historyMessage.createdAt,
     })),
   }
@@ -79,8 +104,17 @@ export function parseLeeChatResponse(
     message: {
       id: response.message.id ?? createChatMessageId(),
       content: response.message.content,
+      parts: response.message.parts ?? createTextMessageParts(response.message.content),
       createdAt: response.message.createdAt ?? new Date().toISOString(),
       metadata: response.message.metadata,
     },
   }
+}
+
+function getMessageContent(message: ChatMessage): string {
+  if (message.parts.length > 0) {
+    return collectTextFromMessageParts(message.parts)
+  }
+
+  return message.content
 }

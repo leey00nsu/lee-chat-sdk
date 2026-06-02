@@ -12,6 +12,13 @@ describe('resolveLeeChatConfig', () => {
       expect.objectContaining({
         appId: 'app',
         endpoint: '/api/chat',
+        conversation: expect.objectContaining({
+          kind: 'support',
+        }),
+        participant: expect.objectContaining({
+          id: 'app-participant',
+          kind: 'user',
+        }),
         position: 'bottom-right',
         initialOpen: false,
         persistence: 'memory',
@@ -40,6 +47,14 @@ describe('resolveLeeChatConfig', () => {
     const config = resolveLeeChatConfig({
       appId: 'app',
       endpoint: '/api/chat',
+      conversation: {
+        kind: 'assistant',
+      },
+      participant: {
+        id: 'participant-custom',
+        kind: 'bot',
+        displayName: 'Assistant',
+      },
       texts: {
         title: 'Support',
       },
@@ -51,6 +66,10 @@ describe('resolveLeeChatConfig', () => {
       },
     })
 
+    expect(config.conversation.kind).toBe('assistant')
+    expect(config.participant.id).toBe('participant-custom')
+    expect(config.participant.kind).toBe('bot')
+    expect(config.participant.displayName).toBe('Assistant')
     expect(config.texts.title).toBe('Support')
     expect(config.texts.send).toBe('Send')
     expect(config.texts.retry).toBe('Retry')

@@ -2,7 +2,7 @@
 
 한국어 | [English](./README.en.md)
 
-웹사이트에 고객상담 채팅 UI를 붙이기 위한 drop-in chat widget kit입니다. React 앱에서는 `LeeChatProvider`와 `LeeChatWidget`을 사용하고, 일반 JavaScript 환경에서는 `initLeeChat()`을 호출합니다.
+웹사이트에 채팅 경험을 삽입하기 위한 drop-in chat SDK입니다. 기본 floating widget을 제공하고, 고객상담, AI assistant, 일반 대화, 그룹 대화로 확장 가능한 conversation 모델을 사용합니다. React 앱에서는 `LeeChatProvider`와 `LeeChatWidget`을 사용하고, 일반 JavaScript 환경에서는 `initLeeChat()`을 호출합니다.
 
 ## 설치
 
@@ -47,6 +47,14 @@ import { initLeeChat } from 'lee-chat-sdk/vanilla'
 const leeChat = initLeeChat({
   appId: 'my-service',
   endpoint: '/api/chat',
+  conversation: {
+    kind: 'support',
+  },
+  participant: {
+    id: 'participant-user-123',
+    kind: 'user',
+    displayName: 'Lee',
+  },
 })
 
 leeChat.open()

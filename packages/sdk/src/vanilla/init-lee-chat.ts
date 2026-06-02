@@ -1,6 +1,6 @@
 import { resolveLeeChatConfig, type LeeChatConfig } from '../config/lee-chat-config'
 import { createChatMessageId } from '../lib/create-chat-message-id'
-import type { ChatMessage } from '../model/chat-message'
+import { createTextMessageParts, getChatMessageText, type ChatMessage } from '../model/chat-message'
 import {
   buildLeeChatRequest,
   parseLeeChatResponse,
@@ -55,7 +55,7 @@ function resolvePositionClassName(position: string): string {
 }
 
 function resolveConversationId(config: LeeChatConfig): string {
-  return `${config.appId}-${LEE_CHAT_CONVERSATION_SUFFIX}`
+  return resolveLeeChatConfig(config).conversation.id
 }
 
 function resolveStorageKey(config: LeeChatConfig): string {
@@ -135,7 +135,7 @@ function renderMessage(message: ChatMessage<Record<string, unknown>>): HTMLEleme
     ),
   )
   const paragraph = document.createElement('p')
-  paragraph.textContent = message.content
+  paragraph.textContent = getChatMessageText(message)
   article.append(paragraph)
 
   if (message.status === 'sending') {
@@ -393,11 +393,14 @@ async function submitMessage(
 ): Promise<void> {
   const fetchImplementation = activeConfig?.fetchImplementation ?? fetch
   const createdAt = new Date().toISOString()
+  const resolvedConfig = resolveLeeChatConfig(config)
   const userMessage: ChatMessage<Record<string, unknown>> = {
     id: createChatMessageId(),
     conversationId: resolveConversationId(config),
+    senderId: resolvedConfig.participant.id,
     role: 'user',
     content,
+    parts: createTextMessageParts(content),
     status: 'sending',
     createdAt,
   }
@@ -455,6 +458,7 @@ async function sendMessageToEndpoint({
   previousMessages: ChatMessage<Record<string, unknown>>[]
 }): Promise<void> {
   const fetchImplementation = activeConfig?.fetchImplementation ?? fetch
+  const resolvedConfig = resolveLeeChatConfig(config)
 
   try {
     const response = await fetchImplementation(config.endpoint, {
@@ -465,9 +469,10 @@ async function sendMessageToEndpoint({
       body: JSON.stringify(
         buildLeeChatRequest({
           appId: config.appId,
+          conversation: resolvedConfig.conversation,
+          participant: resolvedConfig.participant,
           message: userMessage,
           history: previousMessages,
-          user: config.user,
           metadata: config.metadata,
         }),
       ),
@@ -481,8 +486,10 @@ async function sendMessageToEndpoint({
     const assistantMessage: ChatMessage<Record<string, unknown>> = {
       id: parsedResponse.message.id,
       conversationId: userMessage.conversationId,
+      senderId: `${resolvedConfig.appId}-assistant`,
       role: 'assistant',
       content: parsedResponse.message.content,
+      parts: parsedResponse.message.parts,
       status: 'sent',
       createdAt: parsedResponse.message.createdAt,
       metadata: parsedResponse.message.metadata,
