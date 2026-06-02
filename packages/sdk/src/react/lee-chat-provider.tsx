@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { resolveLeeChatConfig, type LeeChatConfig } from '../config/lee-chat-config'
 import { useChatController } from '../controller/use-chat-controller'
 import { MemoryChatPersistence } from '../persistence/memory-chat-persistence'
@@ -8,12 +8,14 @@ import { LocalStorageChatPersistence } from '../persistence/local-storage-chat-p
 import { HttpChatTransport } from '../transport/http-chat-transport'
 import { buildLeeChatRequest, parseLeeChatResponse, type LeeChatRequest, type LeeChatResponse } from '../request/lee-chat-request'
 import { createTextMessageParts, type ChatMessage } from '../model/chat-message'
+import type { ChatEventTransport } from '../transport/sse-chat-event-transport'
 import { LeeChatContext } from './lee-chat-context'
 
 export interface LeeChatProviderProps {
   config: LeeChatConfig
   children?: ReactNode
   fetchImplementation?: typeof fetch
+  eventTransport?: ChatEventTransport
 }
 
 const LEE_CHAT_STORAGE = {
@@ -33,6 +35,7 @@ export function LeeChatProvider({
   config,
   children,
   fetchImplementation,
+  eventTransport,
 }: LeeChatProviderProps) {
   const resolvedConfig = useMemo(() => resolveLeeChatConfig(config), [config])
   const [isOpen, setIsOpen] = useState(resolvedConfig.initialOpen)
@@ -98,6 +101,14 @@ export function LeeChatProvider({
   const unreadCount = isOpen ? 0 : chat.messages.filter((message) => {
     return message.role !== 'user' && message.status === 'sent'
   }).length
+
+  useEffect(() => {
+    if (!eventTransport) {
+      return undefined
+    }
+
+    return eventTransport.subscribe(chat.applyEvent)
+  }, [chat.applyEvent, eventTransport])
 
   return (
     <LeeChatContext.Provider

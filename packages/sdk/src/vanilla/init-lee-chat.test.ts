@@ -6,6 +6,7 @@ import {
   initLeeChat,
   openLeeChat,
 } from './init-lee-chat'
+import type { ChatEventTransport } from '../transport/sse-chat-event-transport'
 
 const fetchMock = vi.fn()
 const scrollIntoViewMock = vi.fn()
@@ -440,5 +441,39 @@ describe('vanilla initLeeChat', () => {
     })
 
     expect(document.body.textContent).toContain('Read')
+  })
+
+  it('eventTransport를 구독하고 destroy 시 해제한다', () => {
+    const unsubscribe = vi.fn()
+    let listener: Parameters<ChatEventTransport['subscribe']>[0] | undefined
+    const eventTransport: ChatEventTransport = {
+      subscribe: (nextListener) => {
+        listener = nextListener
+
+        return unsubscribe
+      },
+    }
+    const instance = initLeeChat({
+      appId: 'vanilla-app',
+      endpoint: '/api/chat',
+      fetchImplementation: fetchMock,
+      eventTransport,
+      initialOpen: true,
+    })
+
+    listener?.({
+      type: 'participant.presence_changed',
+      presence: {
+        participantId: 'vanilla-app-assistant',
+        status: 'online',
+        updatedAt: '2026-06-01T00:00:00.000Z',
+      },
+    })
+
+    expect(document.body.textContent).toContain('Online')
+
+    instance.destroy()
+
+    expect(unsubscribe).toHaveBeenCalledTimes(1)
   })
 })

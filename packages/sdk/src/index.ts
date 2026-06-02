@@ -69,6 +69,15 @@ export { LocalStorageChatPersistence } from './persistence/local-storage-chat-pe
 export { MemoryChatPersistence } from './persistence/memory-chat-persistence'
 export type { ChatTransport } from './transport/chat-transport'
 export { HttpChatTransport } from './transport/http-chat-transport'
+export { SseChatEventTransport } from './transport/sse-chat-event-transport'
+export type {
+  ChatEventListener,
+  ChatEventTransport,
+  ChatEventUnsubscribe,
+  CreateEventSource,
+  EventSourceLike,
+  SseChatEventTransportParams,
+} from './transport/sse-chat-event-transport'
 export {
   buildLeeChatRequest,
   parseLeeChatResponse,

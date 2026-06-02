@@ -279,7 +279,15 @@ React apps can replace the default message rendering when deeper customization i
 In React apps, compose the provider and widget.
 
 ```tsx
-import { LeeChatProvider, LeeChatWidget } from 'lee-chat-sdk'
+import {
+  LeeChatProvider,
+  LeeChatWidget,
+  SseChatEventTransport,
+} from 'lee-chat-sdk'
+
+const eventTransport = new SseChatEventTransport({
+  endpoint: '/api/support-chat/events',
+})
 
 export function SupportWidget() {
   return (
@@ -292,6 +300,7 @@ export function SupportWidget() {
           subtitle: 'We usually reply in a few minutes.',
         },
       }}
+      eventTransport={eventTransport}
     >
       <LeeChatWidget />
     </LeeChatProvider>
@@ -326,10 +335,16 @@ import {
   initLeeChat,
   openLeeChat,
 } from 'lee-chat-sdk/vanilla'
+import { SseChatEventTransport } from 'lee-chat-sdk'
+
+const eventTransport = new SseChatEventTransport({
+  endpoint: '/api/chat/events',
+})
 
 const leeChat = initLeeChat({
   appId: 'landing-page',
   endpoint: '/api/chat',
+  eventTransport,
   initialOpen: true,
 })
 
@@ -371,6 +386,7 @@ Use the headless controller and primitives when you need deeper customization.
 - `useChatController`: manages input state, submission state, messages, transport calls, and persistence.
 - `ChatTransport`: adapter interface for HTTP, mock, WebSocket, SSE, or any custom transport.
 - `HttpChatTransport`: default HTTP POST transport.
+- `SseChatEventTransport`: browser `EventSource`-based SSE adapter. It parses server events as `ConversationClientEvent` and connects them to the React Provider or Vanilla widget.
 - `MemoryChatPersistence`: in-memory conversation storage.
 - `LocalStorageChatPersistence`: browser localStorage conversation storage.
 - `ChatParticipantPresence`, `ChatTypingIndicator`, `ChatReadReceipt`: core participant-state models for presence, typing, and read state.
@@ -452,7 +468,8 @@ pnpm publish --access public
 ## Current Limitations
 
 - The current Vanilla JS API does not require writing React code, but its internal renderer is React-based.
-- WebSocket and SSE transport adapters are not included yet.
+- A WebSocket transport adapter is not included yet.
+- SSE reconnect/backoff, auth header refresh, and session refresh policies are not included yet.
 - Advanced retry policies, timeout, and abort/cancel policies are not included yet.
 - Storybook documentation is not included yet.
 - Package export paths are currently limited to the root export.
@@ -460,8 +477,8 @@ pnpm publish --access public
 ## Roadmap
 
 - Provide a no-React browser bundle.
-- Add WebSocket and SSE transport adapters.
-- Connect read receipt, typing, and presence to transport events and widget UI.
+- Add a WebSocket transport adapter.
+- Add SSE reconnect/backoff, auth header refresh, and session refresh policies.
 - Add conversation list and operator-console controller APIs.
 - Add timeout, abort/cancel, and advanced retry policies.
 - Add Storybook examples.

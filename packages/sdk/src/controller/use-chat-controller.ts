@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import {
   ConversationClient,
   type BuildConversationAssistantMessageParams,
@@ -145,7 +145,7 @@ export function useChatController<
     setMessages(clientRef.current?.clearMessages() ?? [])
   }
 
-  function applyEvent(event: ConversationClientEvent): void {
+  const applyEvent = useCallback((event: ConversationClientEvent): void => {
     setParticipantState(
       clientRef.current?.applyEvent(event) ?? {
         presences: [],
@@ -153,7 +153,7 @@ export function useChatController<
         readReceipts: [],
       },
     )
-  }
+  }, [])
 
   return {
     messages,

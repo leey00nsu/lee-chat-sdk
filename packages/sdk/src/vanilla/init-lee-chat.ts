@@ -11,11 +11,16 @@ import {
   parseLeeChatResponse,
   type LeeChatResponse,
 } from '../request/lee-chat-request'
+import type {
+  ChatEventTransport,
+  ChatEventUnsubscribe,
+} from '../transport/sse-chat-event-transport'
 import '../react/lee-chat-widget.css'
 
 export interface InitLeeChatConfig extends LeeChatConfig {
   container?: HTMLElement
   fetchImplementation?: typeof fetch
+  eventTransport?: ChatEventTransport
 }
 
 export interface LeeChatInstance {
@@ -72,6 +77,7 @@ let activeConfig: InitLeeChatConfig | null = null
 let activeIsOpen = false
 let activeIsSubmitting = false
 let activeMessages: ChatMessage<Record<string, unknown>>[] = []
+let activeEventUnsubscribe: ChatEventUnsubscribe | null = null
 let activeParticipantState: LeeChatVanillaParticipantState = {
   presences: [],
   typingIndicators: [],
@@ -683,6 +689,7 @@ export function initLeeChat(config: InitLeeChatConfig): LeeChatInstance {
   activeContainer.setAttribute(LEE_CHAT_CONTAINER_ATTRIBUTE, 'true')
   activeIsOpen = Boolean(config.initialOpen)
   activeMessages = loadMessages(config)
+  activeEventUnsubscribe = config.eventTransport?.subscribe(applyLeeChatEvent) ?? null
 
   renderActiveWidget()
 
@@ -705,6 +712,9 @@ export function closeLeeChat(): void {
 }
 
 export function destroyLeeChat(): void {
+  activeEventUnsubscribe?.()
+  activeEventUnsubscribe = null
+
   if (activeContainer?.getAttribute(LEE_CHAT_CONTAINER_ATTRIBUTE) === 'true') {
     activeContainer.remove()
   }
