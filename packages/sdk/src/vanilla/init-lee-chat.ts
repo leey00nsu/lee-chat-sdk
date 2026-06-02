@@ -53,6 +53,7 @@ const LEE_CHAT_SUBMIT_CLASS_NAME = 'lee-chat-vanilla-submit'
 const LEE_CHAT_SCROLL_ANCHOR_CLASS_NAME = 'lee-chat-scroll-anchor'
 const LEE_CHAT_MESSAGE_STATUS_CLASS_NAME = 'lee-chat-message-status'
 const LEE_CHAT_RETRY_CLASS_NAME = 'lee-chat-retry'
+const LEE_CHAT_READ_RECEIPT_CLASS_NAME = 'lee-chat-read-receipt'
 const LEE_CHAT_ASSISTANT_LOADING_CLASS_NAME = 'lee-chat-assistant-loading'
 const LEE_CHAT_PARTICIPANT_STATUS_CLASS_NAME = 'lee-chat-participant-status'
 const LEE_CHAT_TYPING_INDICATOR_CLASS_NAME = 'lee-chat-typing-indicator'
@@ -180,7 +181,29 @@ function hasTypingParticipant(config: LeeChatConfig): boolean {
   })
 }
 
-function renderMessage(message: ChatMessage<Record<string, unknown>>): HTMLElement {
+function isMessageReadByAnotherParticipant(
+  config: LeeChatConfig,
+  message: ChatMessage<Record<string, unknown>>,
+): boolean {
+  const resolvedConfig = resolveLeeChatConfig(config)
+
+  if (message.senderId !== resolvedConfig.participant.id) {
+    return false
+  }
+
+  return activeParticipantState.readReceipts.some((readReceipt) => {
+    return (
+      readReceipt.conversationId === message.conversationId &&
+      readReceipt.messageId === message.id &&
+      readReceipt.participantId !== resolvedConfig.participant.id
+    )
+  })
+}
+
+function renderMessage(
+  config: LeeChatConfig,
+  message: ChatMessage<Record<string, unknown>>,
+): HTMLElement {
   const article = createElementWithClassName(
     'article',
     mergeClassNames(
@@ -233,6 +256,19 @@ function renderMessage(message: ChatMessage<Record<string, unknown>>): HTMLEleme
     article.append(status)
   }
 
+  if (isMessageReadByAnotherParticipant(config, message)) {
+    const readReceipt = createElementWithClassName(
+      'small',
+      mergeClassNames(
+        LEE_CHAT_READ_RECEIPT_CLASS_NAME,
+        activeConfig?.className?.readReceipt,
+      ),
+    )
+
+    readReceipt.textContent = activeConfig?.texts?.messageRead ?? 'Read'
+    article.append(readReceipt)
+  }
+
   return article
 }
 
@@ -250,7 +286,7 @@ function renderMessageList(config: LeeChatConfig): HTMLElement {
 
   activeMessages.forEach((message) => {
     const item = document.createElement('li')
-    item.append(renderMessage(message))
+    item.append(renderMessage(config, message))
     list.append(item)
   })
 

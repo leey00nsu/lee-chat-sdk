@@ -30,6 +30,7 @@ export interface LeeChatWidgetText {
   assistantLoading: string
   participantOnline: string
   participantTyping: string
+  messageRead: string
   error: string
   retry: string
 }
@@ -52,6 +53,7 @@ export interface LeeChatClassName {
   assistantLoading?: string
   participantStatus?: string
   typingIndicator?: string
+  readReceipt?: string
   composer?: string
 }
 
@@ -96,6 +98,7 @@ const DEFAULT_LEE_CHAT_TEXTS: LeeChatWidgetText = {
   assistantLoading: 'Assistant is typing...',
   participantOnline: 'Online',
   participantTyping: 'Participant is typing...',
+  messageRead: 'Read',
   error: 'Message failed. Please try again.',
   retry: 'Retry',
 }

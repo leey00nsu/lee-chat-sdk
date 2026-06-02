@@ -389,4 +389,56 @@ describe('vanilla initLeeChat', () => {
     expect(document.body.textContent).toContain('Online')
     expect(document.body.textContent).toContain('Participant is typing...')
   })
+
+  it('내가 보낸 메시지의 read receipt를 표시한다', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          message: {
+            content: 'Receipt vanilla response',
+          },
+        }),
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        },
+      ),
+    )
+    const instance = initLeeChat({
+      appId: 'vanilla-app',
+      endpoint: '/api/chat',
+      fetchImplementation: fetchMock,
+      initialOpen: true,
+    })
+    const input = document.querySelector('textarea')
+
+    if (!(input instanceof HTMLTextAreaElement)) {
+      throw new Error('textarea not found')
+    }
+
+    fireEvent.change(input, {
+      target: {
+        value: 'Receipt vanilla question',
+      },
+    })
+    fireEvent.submit(input.form as HTMLFormElement)
+
+    await waitFor(() => {
+      expect(document.body.textContent).toContain('Receipt vanilla response')
+    })
+
+    const requestBody = JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)
+    instance.applyEvent({
+      type: 'message.read',
+      readReceipt: {
+        conversationId: 'vanilla-app:conversation',
+        messageId: requestBody.message.id,
+        participantId: 'vanilla-app-assistant',
+        readAt: '2026-06-01T00:02:00.000Z',
+      },
+    })
+
+    expect(document.body.textContent).toContain('Read')
+  })
 })

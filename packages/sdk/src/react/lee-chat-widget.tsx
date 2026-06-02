@@ -94,6 +94,22 @@ export function LeeChatWidget({
     void chat.retryMessage(messageId)
   }
 
+  function isMessageReadByAnotherParticipant(
+    message: ChatMessage<Record<string, unknown>>,
+  ): boolean {
+    if (message.senderId !== config.participant.id) {
+      return false
+    }
+
+    return leeChat.participantState.readReceipts.some((readReceipt) => {
+      return (
+        readReceipt.conversationId === message.conversationId &&
+        readReceipt.messageId === message.id &&
+        readReceipt.participantId !== config.participant.id
+      )
+    })
+  }
+
   function renderDefaultMessage(
     message: ChatMessage<Record<string, unknown>>,
   ): ReactNode {
@@ -137,6 +153,16 @@ export function LeeChatWidget({
               {config.texts.retry}
             </button>
           </div>
+        ) : null}
+        {isMessageReadByAnotherParticipant(message) ? (
+          <small
+            className={mergeClassNames(
+              'lee-chat-read-receipt',
+              config.className?.readReceipt,
+            )}
+          >
+            {config.texts.messageRead}
+          </small>
         ) : null}
       </article>
     )

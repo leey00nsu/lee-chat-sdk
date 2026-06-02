@@ -76,6 +76,7 @@ function SeedMessages({ messages }: { messages: string[] }) {
 function SeedParticipantState() {
   const leeChat = useLeeChat()
   const didSeedParticipantStateRef = useRef(false)
+  const didApplyReadReceiptRef = useRef(false)
 
   useEffect(() => {
     if (didSeedParticipantStateRef.current) {
@@ -98,6 +99,32 @@ function SeedParticipantState() {
         participantId: `${leeChat.config.appId}-assistant`,
         isTyping: true,
         updatedAt: new Date().toISOString(),
+      },
+    })
+    return
+  }, [leeChat])
+
+  useEffect(() => {
+    if (didApplyReadReceiptRef.current) {
+      return
+    }
+
+    const firstUserMessage = leeChat.messages.find((message) => {
+      return message.senderId === leeChat.config.participant.id
+    })
+
+    if (!firstUserMessage) {
+      return
+    }
+
+    didApplyReadReceiptRef.current = true
+    leeChat.applyEvent({
+      type: 'message.read',
+      readReceipt: {
+        conversationId: leeChat.config.conversation.id,
+        messageId: firstUserMessage.id,
+        participantId: `${leeChat.config.appId}-assistant`,
+        readAt: new Date().toISOString(),
       },
     })
   }, [leeChat])
@@ -238,6 +265,7 @@ export const ParticipantState: Story = {
       },
     },
     seedParticipantState: true,
+    seededMessages: ['This message is marked as read.'],
   },
 }
 

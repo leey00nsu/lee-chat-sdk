@@ -57,6 +57,37 @@ function ApplyParticipantStateEvents() {
   )
 }
 
+function MarkFirstMessageRead() {
+  const leeChat = useLeeChat()
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        const firstUserMessage = leeChat.messages.find((message) => {
+          return message.senderId === leeChat.config.participant.id
+        })
+
+        if (!firstUserMessage) {
+          return
+        }
+
+        leeChat.applyEvent({
+          type: 'message.read',
+          readReceipt: {
+            conversationId: leeChat.config.conversation.id,
+            messageId: firstUserMessage.id,
+            participantId: `${leeChat.config.appId}-assistant`,
+            readAt: '2026-06-01T00:02:00.000Z',
+          },
+        })
+      }}
+    >
+      Mark first message read
+    </button>
+  )
+}
+
 afterEach(() => {
   cleanup()
   vi.clearAllMocks()
@@ -407,5 +438,43 @@ describe('LeeChatWidget', () => {
       expect(screen.getByText('Online')).toBeTruthy()
       expect(screen.getByText('Participant is typing...')).toBeTruthy()
     })
+  })
+
+  it('내가 보낸 메시지의 read receipt를 표시한다', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        message: {
+          content: 'Read receipt response',
+        },
+      }),
+    })
+
+    render(
+      <LeeChatProvider
+        config={{
+          appId: 'app',
+          endpoint: '/api/chat',
+          initialOpen: true,
+        }}
+        fetchImplementation={fetchMock}
+      >
+        <MarkFirstMessageRead />
+        <LeeChatWidget />
+      </LeeChatProvider>,
+    )
+
+    fireEvent.change(screen.getByLabelText('Message'), {
+      target: { value: 'Read receipt question' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Read receipt response')).toBeTruthy()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mark first message read' }))
+
+    expect(screen.getByText('Read')).toBeTruthy()
   })
 })

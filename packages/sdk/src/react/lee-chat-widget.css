@@ -114,6 +114,15 @@
   line-height: 1.4;
 }
 
+.lee-chat-read-receipt {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  opacity: 0.72;
+  text-align: right;
+}
+
 .lee-chat-message--user {
   align-self: flex-end;
   margin-left: auto;

@@ -33,6 +33,7 @@ describe('resolveLeeChatConfig', () => {
           assistantLoading: 'Assistant is typing...',
           participantOnline: 'Online',
           participantTyping: 'Participant is typing...',
+          messageRead: 'Read',
           error: 'Message failed. Please try again.',
           retry: 'Retry',
         }),
@@ -77,6 +78,7 @@ describe('resolveLeeChatConfig', () => {
     expect(config.texts.retry).toBe('Retry')
     expect(config.texts.participantOnline).toBe('Online')
     expect(config.texts.participantTyping).toBe('Participant is typing...')
+    expect(config.texts.messageRead).toBe('Read')
     expect(config.theme.primaryColor).toBe('#2563eb')
     expect(config.theme.radius).toBe('12px')
     expect(config.className?.trigger).toBe('custom-trigger')
