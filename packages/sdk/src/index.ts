@@ -54,6 +54,19 @@ export type {
   ChatConversationSummary,
   ChatConversationSummaryStatus,
 } from './model/chat-conversation-summary'
+export {
+  assignChatOperatorConversation,
+  buildChatOperatorConsoleState,
+  closeChatOperatorConversation,
+  selectChatOperatorConversationSummary,
+  selectChatOperatorConsoleConversation,
+} from './model/chat-operator-console'
+export type {
+  AssignChatOperatorConversationParams,
+  BuildChatOperatorConsoleStateParams,
+  ChatOperatorConsoleState,
+  CloseChatOperatorConversationParams,
+} from './model/chat-operator-console'
 export type {
   ChatParticipant,
   ChatParticipantKind,

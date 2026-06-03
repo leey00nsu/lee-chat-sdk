@@ -478,8 +478,11 @@ initLeeChat({
 
 ```ts
 import {
+  assignChatOperatorConversation,
   buildChatConversationSummaries,
+  buildChatOperatorConsoleState,
   buildChatEvent,
+  closeChatOperatorConversation,
   collectChatEventsByConversationId,
   type ChatEvent,
   type ChatConversation,
@@ -507,6 +510,26 @@ const conversationSummaries = buildChatConversationSummaries({
   messages,
   events,
   currentParticipantId: 'operator-1',
+})
+const operatorState = buildChatOperatorConsoleState({
+  conversations,
+  messages,
+  events,
+  selectedConversationId: 'conversation-1',
+  currentParticipantId: 'operator-1',
+})
+const assignedState = assignChatOperatorConversation({
+  state: operatorState,
+  conversationId: 'conversation-1',
+  agentName: 'Jin',
+  eventId: 'event-2',
+  createdAt: new Date().toISOString(),
+})
+const closedState = closeChatOperatorConversation({
+  state: assignedState,
+  conversationId: 'conversation-1',
+  eventId: 'event-3',
+  createdAt: new Date().toISOString(),
 })
 ```
 
@@ -570,7 +593,7 @@ pnpm publish --access public
 - no-React browser bundle 제공
 - SSE reconnect/backoff 정책 추가
 - WebSocket auth header 갱신, session refresh 정책 추가
-- operator-console controller API 추가
+- operator-console UI adapter 추가
 - timeout, abort/cancel, 고급 retry 정책 추가
 - Storybook examples 추가
 - npm release workflow 준비

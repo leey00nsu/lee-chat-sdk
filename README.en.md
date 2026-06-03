@@ -478,8 +478,11 @@ Use `ChatEvent` for operational tooling and internal consoles. It can model mess
 
 ```ts
 import {
+  assignChatOperatorConversation,
   buildChatConversationSummaries,
+  buildChatOperatorConsoleState,
   buildChatEvent,
+  closeChatOperatorConversation,
   collectChatEventsByConversationId,
   type ChatEvent,
   type ChatConversation,
@@ -507,6 +510,26 @@ const conversationSummaries = buildChatConversationSummaries({
   messages,
   events,
   currentParticipantId: 'operator-1',
+})
+const operatorState = buildChatOperatorConsoleState({
+  conversations,
+  messages,
+  events,
+  selectedConversationId: 'conversation-1',
+  currentParticipantId: 'operator-1',
+})
+const assignedState = assignChatOperatorConversation({
+  state: operatorState,
+  conversationId: 'conversation-1',
+  agentName: 'Jin',
+  eventId: 'event-2',
+  createdAt: new Date().toISOString(),
+})
+const closedState = closeChatOperatorConversation({
+  state: assignedState,
+  conversationId: 'conversation-1',
+  eventId: 'event-3',
+  createdAt: new Date().toISOString(),
 })
 ```
 
@@ -570,7 +593,7 @@ pnpm publish --access public
 - Provide a no-React browser bundle.
 - Add SSE reconnect/backoff policies.
 - Add WebSocket auth header refresh and session refresh policies.
-- Add operator-console controller APIs.
+- Add operator-console UI adapters.
 - Add timeout, abort/cancel, and advanced retry policies.
 - Add Storybook examples.
 - Prepare an npm release workflow.
