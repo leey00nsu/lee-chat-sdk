@@ -268,6 +268,48 @@ export async function POST(request: Request) {
 
 응답 `parts`에는 텍스트뿐 아니라 이미지와 파일 attachment를 함께 넣을 수 있습니다. 기본 React/Vanilla UI는 `image` part를 이미지로, `file` part를 링크로 렌더링합니다.
 
+## Server Sync Contract
+
+`ConversationSyncClient`는 서버에 저장된 대화와 메시지를 조회하고 read receipt를 동기화하는 headless client입니다. 기본 `endpoint`가 `/api/chat`이면 다음 REST endpoint를 사용합니다.
+
+- `GET /api/chat/conversations?appId=...&visitorId=...&participantId=...&cursor=...&limit=...`
+- `GET /api/chat/conversations/:conversationId/messages?cursor=...&limit=...`
+- `PUT /api/chat/conversations/:conversationId/read`
+
+```ts
+import { ConversationSyncClient } from 'lee-chat-sdk'
+
+const syncClient = new ConversationSyncClient({
+  endpoint: '/api/chat',
+  headers: () => ({
+    Authorization: `Bearer ${authStore.accessToken}`,
+  }),
+  auth: {
+    refresh: async () => {
+      await authStore.refresh()
+    },
+  },
+})
+
+const conversations = await syncClient.listConversations({
+  appId: 'commerce-web',
+  visitorId: 'visitor-123',
+})
+
+const messages = await syncClient.listMessages({
+  conversationId: conversations.conversations[0]?.id ?? '',
+  limit: 30,
+})
+
+await syncClient.markMessageRead({
+  conversationId: 'conversation-1',
+  messageId: 'message-1',
+  participantId: 'visitor-123',
+})
+```
+
+`listConversations` 응답은 `{ conversations, nextCursor }`, `listMessages` 응답은 `{ messages, nextCursor }`, `markMessageRead` 응답은 `{ readReceipt }` 형태를 기대합니다. 모델 타입은 SDK의 `ChatConversation`, `ChatMessage`, `ChatReadReceipt`를 그대로 사용합니다.
+
 ## Styling
 
 기본 UI는 CSS custom properties와 class hook을 노출합니다.

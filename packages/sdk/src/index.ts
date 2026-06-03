@@ -8,6 +8,16 @@ export type {
   ConversationClientParams,
   ConversationParticipantState,
 } from './client/conversation-client'
+export { ConversationSyncClient } from './client/conversation-sync-client'
+export type {
+  ConversationSyncClientParams,
+  ListConversationsParams,
+  ListConversationsResponse,
+  ListMessagesParams,
+  ListMessagesResponse,
+  MarkMessageReadParams,
+  MarkMessageReadResponse,
+} from './client/conversation-sync-client'
 export { useChatController } from './controller/use-chat-controller'
 export type {
   UseChatControllerParams,

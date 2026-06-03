@@ -268,6 +268,48 @@ export async function POST(request: Request) {
 
 Response `parts` can include image and file attachments as well as text. The default React and Vanilla UI renders `image` parts as images and `file` parts as links.
 
+## Server Sync Contract
+
+`ConversationSyncClient` is a headless client for loading stored conversations, loading stored messages, and syncing read receipts. When the base `endpoint` is `/api/chat`, it uses these REST endpoints.
+
+- `GET /api/chat/conversations?appId=...&visitorId=...&participantId=...&cursor=...&limit=...`
+- `GET /api/chat/conversations/:conversationId/messages?cursor=...&limit=...`
+- `PUT /api/chat/conversations/:conversationId/read`
+
+```ts
+import { ConversationSyncClient } from 'lee-chat-sdk'
+
+const syncClient = new ConversationSyncClient({
+  endpoint: '/api/chat',
+  headers: () => ({
+    Authorization: `Bearer ${authStore.accessToken}`,
+  }),
+  auth: {
+    refresh: async () => {
+      await authStore.refresh()
+    },
+  },
+})
+
+const conversations = await syncClient.listConversations({
+  appId: 'commerce-web',
+  visitorId: 'visitor-123',
+})
+
+const messages = await syncClient.listMessages({
+  conversationId: conversations.conversations[0]?.id ?? '',
+  limit: 30,
+})
+
+await syncClient.markMessageRead({
+  conversationId: 'conversation-1',
+  messageId: 'message-1',
+  participantId: 'visitor-123',
+})
+```
+
+`listConversations` expects `{ conversations, nextCursor }`, `listMessages` expects `{ messages, nextCursor }`, and `markMessageRead` expects `{ readReceipt }`. The model types are the SDK `ChatConversation`, `ChatMessage`, and `ChatReadReceipt`.
+
 ## Styling
 
 The default UI exposes CSS custom properties and class hooks.
