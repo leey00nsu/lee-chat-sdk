@@ -109,6 +109,7 @@ export type {
   CreateEventSource,
   EventSourceLike,
   SseChatEventTransportParams,
+  SseReconnectOptions,
 } from './transport/sse-chat-event-transport'
 export { WebSocketChatEventTransport } from './transport/web-socket-chat-event-transport'
 export type {

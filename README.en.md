@@ -473,7 +473,7 @@ Use the headless controller and primitives when you need deeper customization.
 - `useChatOperatorConsole`: React adapter for selected conversation state, summary lists, and assignment/close event creation in operator consoles.
 - `ChatTransport`: adapter interface for HTTP, mock, WebSocket, SSE, or any custom transport.
 - `HttpChatTransport`: default HTTP POST transport with `timeoutMs`, per-call `AbortSignal`, and 5xx/network retry policy support.
-- `SseChatEventTransport`: browser `EventSource`-based SSE adapter. It parses server events as `ConversationClientEvent` and connects them to the React Provider or Vanilla widget.
+- `SseChatEventTransport`: browser `EventSource`-based SSE adapter. It parses server events as `ConversationClientEvent`, connects them to the React Provider or Vanilla widget, and provides reconnect/backoff options.
 - `WebSocketChatEventTransport`: browser `WebSocket`-based realtime adapter. It parses server message payloads as `ConversationClientEvent`, connects them to the React Provider or Vanilla widget, and provides reconnect/backoff options.
 - `MemoryChatPersistence`: in-memory conversation storage.
 - `LocalStorageChatPersistence`: browser localStorage conversation storage.
@@ -604,13 +604,12 @@ pnpm publish --access public
 
 ## Current Limitations
 
-- SSE reconnect/backoff, auth header refresh, and session refresh policies are not included yet.
+- SSE auth header refresh and session refresh policies are not included yet.
 - WebSocket auth header refresh and session refresh policies are not included yet.
 - Storybook includes default widget and operator-console state examples, but documentation-style guides are still limited.
 - Package export paths are currently limited to the root export.
 
 ## Roadmap
 
-- Add SSE reconnect/backoff policies.
 - Add WebSocket auth header refresh and session refresh policies.
 - Add Storybook interaction/play scenarios.
