@@ -478,11 +478,16 @@ Use `ChatEvent` for operational tooling and internal consoles. It can model mess
 
 ```ts
 import {
+  buildChatConversationSummaries,
   buildChatEvent,
   collectChatEventsByConversationId,
   type ChatEvent,
+  type ChatConversation,
+  type ChatMessage,
 } from 'lee-chat-sdk'
 
+const conversations: ChatConversation[] = []
+const messages: ChatMessage[] = []
 const events: ChatEvent[] = [
   buildChatEvent({
     id: 'event-1',
@@ -496,6 +501,12 @@ const events: ChatEvent[] = [
 const conversationEvents = collectChatEventsByConversationId({
   events,
   conversationId: 'conversation-1',
+})
+const conversationSummaries = buildChatConversationSummaries({
+  conversations,
+  messages,
+  events,
+  currentParticipantId: 'operator-1',
 })
 ```
 
@@ -559,7 +570,7 @@ pnpm publish --access public
 - Provide a no-React browser bundle.
 - Add SSE reconnect/backoff policies.
 - Add WebSocket auth header refresh and session refresh policies.
-- Add conversation list and operator-console controller APIs.
+- Add operator-console controller APIs.
 - Add timeout, abort/cancel, and advanced retry policies.
 - Add Storybook examples.
 - Prepare an npm release workflow.

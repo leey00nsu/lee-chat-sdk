@@ -478,11 +478,16 @@ initLeeChat({
 
 ```ts
 import {
+  buildChatConversationSummaries,
   buildChatEvent,
   collectChatEventsByConversationId,
   type ChatEvent,
+  type ChatConversation,
+  type ChatMessage,
 } from 'lee-chat-sdk'
 
+const conversations: ChatConversation[] = []
+const messages: ChatMessage[] = []
 const events: ChatEvent[] = [
   buildChatEvent({
     id: 'event-1',
@@ -496,6 +501,12 @@ const events: ChatEvent[] = [
 const conversationEvents = collectChatEventsByConversationId({
   events,
   conversationId: 'conversation-1',
+})
+const conversationSummaries = buildChatConversationSummaries({
+  conversations,
+  messages,
+  events,
+  currentParticipantId: 'operator-1',
 })
 ```
 
@@ -559,7 +570,7 @@ pnpm publish --access public
 - no-React browser bundle 제공
 - SSE reconnect/backoff 정책 추가
 - WebSocket auth header 갱신, session refresh 정책 추가
-- conversation list와 operator-console controller API 추가
+- operator-console controller API 추가
 - timeout, abort/cancel, 고급 retry 정책 추가
 - Storybook examples 추가
 - npm release workflow 준비

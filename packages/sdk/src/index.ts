@@ -48,6 +48,12 @@ export type {
   ChatConversationKind,
   ChatConversationStatus,
 } from './model/chat-conversation'
+export { buildChatConversationSummaries } from './model/chat-conversation-summary'
+export type {
+  BuildChatConversationSummariesParams,
+  ChatConversationSummary,
+  ChatConversationSummaryStatus,
+} from './model/chat-conversation-summary'
 export type {
   ChatParticipant,
   ChatParticipantKind,
