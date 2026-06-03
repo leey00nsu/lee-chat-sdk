@@ -25,7 +25,7 @@ describe('OperatorConsoleApp', () => {
 
     expect(within(messageThread).getByText('요금제를 알고 싶어요')).toBeTruthy()
     expect(screen.getByText('pricing-page-opened')).toBeTruthy()
-    expect(screen.getByText('결제 직전 이탈 가능성이 높음')).toBeTruthy()
+    expect(within(messageThread).getByText('결제 직전 이탈 가능성이 높음')).toBeTruthy()
   })
 
   it('다른 대화를 선택하고 상담자에게 배정한다', () => {

@@ -1,24 +1,53 @@
 'use client'
 
-import { useState } from 'react'
+import {
+  useChatOperatorConsole,
+  type ChatConversation,
+  type ChatConversationSummary,
+  type ChatMessage,
+} from 'lee-chat-sdk'
 import {
   OPERATOR_CONSOLE_SEED,
-  assignOperatorConversation,
-  selectOperatorConversation,
-  type OperatorConsoleState,
-  type OperatorConversation,
+  collectOperatorConversationEvents,
+  type OperatorMessageMetadata,
 } from '../model/operator-console'
 
 const OPERATOR_CONSOLE = {
   DEFAULT_ASSIGN_AGENT_NAME: 'Jin',
+  DEFAULT_CREATED_AT: '2026-06-01T00:00:00.000Z',
 } as const
+
+const OPERATOR_CONVERSATIONS: ChatConversation[] =
+  OPERATOR_CONSOLE_SEED.conversations.map((conversation) => ({
+    id: conversation.id,
+    kind: 'support',
+    status: conversation.status === 'closed' ? 'closed' : 'open',
+    participants: [
+      {
+        id: `participant-${conversation.id}`,
+        kind: 'user',
+        displayName: conversation.customerName,
+      },
+    ],
+    createdAt:
+      conversation.messages[0]?.createdAt ?? OPERATOR_CONSOLE.DEFAULT_CREATED_AT,
+  }))
+const OPERATOR_MESSAGES: Array<ChatMessage<OperatorMessageMetadata>> =
+  OPERATOR_CONSOLE_SEED.conversations.flatMap((conversation) => {
+    return conversation.messages
+  })
+const OPERATOR_EVENTS = OPERATOR_CONSOLE_SEED.conversations.flatMap(
+  (conversation) => {
+    return collectOperatorConversationEvents(conversation)
+  },
+)
 
 function ConversationList({
   conversations,
   selectedConversationId,
   onSelectConversation,
 }: {
-  conversations: OperatorConversation[]
+  conversations: ChatConversationSummary[]
   selectedConversationId: string
   onSelectConversation: (conversationId: string) => void
 }) {
@@ -32,7 +61,7 @@ function ConversationList({
           aria-pressed={conversation.id === selectedConversationId}
           onClick={() => onSelectConversation(conversation.id)}
         >
-          <strong>{conversation.customerName}</strong>
+          <strong>{conversation.title}</strong>
           <span>{conversation.lastMessagePreview}</span>
           <span>{conversation.status}</span>
           {conversation.unreadCount > 0 ? (
@@ -45,19 +74,21 @@ function ConversationList({
 }
 
 function MessageThread({
-  conversation,
+  conversationSummary,
+  messages,
   onAssign,
 }: {
-  conversation: OperatorConversation
+  conversationSummary: ChatConversationSummary
+  messages: Array<ChatMessage<OperatorMessageMetadata>>
   onAssign: () => void
 }) {
   return (
     <main aria-label="메시지 스레드">
       <header>
-        <h1>{conversation.customerName}</h1>
-        <p>{conversation.status}</p>
-        {conversation.assignedAgentName ? (
-          <p>{conversation.assignedAgentName}</p>
+        <h1>{conversationSummary.title}</h1>
+        <p>{conversationSummary.status}</p>
+        {conversationSummary.assignedAgentName ? (
+          <p>{conversationSummary.assignedAgentName}</p>
         ) : (
           <button type="button" onClick={onAssign}>
             {OPERATOR_CONSOLE.DEFAULT_ASSIGN_AGENT_NAME}에게 배정
@@ -65,7 +96,7 @@ function MessageThread({
         )}
       </header>
       <ol>
-        {conversation.messages.map((message) => (
+        {messages.map((message) => (
           <li key={message.id}>
             <article>
               <strong>{message.metadata?.internalNote ? 'internal note' : message.role}</strong>
@@ -80,18 +111,18 @@ function MessageThread({
 }
 
 function CustomerContextPanel({
-  conversation,
+  conversationSummary,
 }: {
-  conversation: OperatorConversation
+  conversationSummary: ChatConversationSummary
 }) {
   return (
     <aside aria-label="고객 컨텍스트">
       <h2>고객 컨텍스트</h2>
-      <p>{conversation.customerName}</p>
-      <p>{conversation.assignedAgentName ?? '미배정'}</p>
+      <p>{conversationSummary.title}</p>
+      <p>{conversationSummary.assignedAgentName ?? '미배정'}</p>
       <ul>
-        {conversation.customerEvents.map((customerEvent) => (
-          <li key={customerEvent}>{customerEvent}</li>
+        {conversationSummary.customerEventIds.map((customerEventId) => (
+          <li key={customerEventId}>{customerEventId}</li>
         ))}
       </ul>
     </aside>
@@ -99,38 +130,49 @@ function CustomerContextPanel({
 }
 
 export function OperatorConsoleApp() {
-  const [state, setState] = useState<OperatorConsoleState>(OPERATOR_CONSOLE_SEED)
-  const selectedConversation = selectOperatorConversation(state)
+  const operatorConsole = useChatOperatorConsole<OperatorMessageMetadata>({
+    conversations: OPERATOR_CONVERSATIONS,
+    messages: OPERATOR_MESSAGES,
+    initialEvents: OPERATOR_EVENTS,
+    initialSelectedConversationId: OPERATOR_CONSOLE_SEED.selectedConversationId,
+  })
+  const selectedConversationSummary =
+    operatorConsole.selectedConversationSummary ??
+    operatorConsole.state.conversationSummaries[0]
+  const selectedMessages = operatorConsole.state.messages.filter((message) => {
+    return message.conversationId === selectedConversationSummary?.id
+  })
+
+  if (!selectedConversationSummary) {
+    return <div>대화가 없습니다.</div>
+  }
+
+  const selectedConversationId = selectedConversationSummary.id
 
   function handleSelectConversation(conversationId: string): void {
-    setState((previousState) => ({
-      ...previousState,
-      selectedConversationId: conversationId,
-    }))
+    operatorConsole.selectConversation(conversationId)
   }
 
   function handleAssignConversation(): void {
-    setState((previousState) =>
-      assignOperatorConversation({
-        state: previousState,
-        conversationId: selectedConversation.id,
-        agentName: OPERATOR_CONSOLE.DEFAULT_ASSIGN_AGENT_NAME,
-      }),
+    operatorConsole.assignConversation(
+      selectedConversationId,
+      OPERATOR_CONSOLE.DEFAULT_ASSIGN_AGENT_NAME,
     )
   }
 
   return (
     <div>
       <ConversationList
-        conversations={state.conversations}
-        selectedConversationId={state.selectedConversationId}
+        conversations={operatorConsole.state.conversationSummaries}
+        selectedConversationId={operatorConsole.state.selectedConversationId}
         onSelectConversation={handleSelectConversation}
       />
       <MessageThread
-        conversation={selectedConversation}
+        conversationSummary={selectedConversationSummary}
+        messages={selectedMessages}
         onAssign={handleAssignConversation}
       />
-      <CustomerContextPanel conversation={selectedConversation} />
+      <CustomerContextPanel conversationSummary={selectedConversationSummary} />
     </div>
   )
 }

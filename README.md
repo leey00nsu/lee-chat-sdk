@@ -386,7 +386,7 @@ export function CustomOpenButton() {
 
 React 코드를 작성하지 않는 앱에서는 `lee-chat-sdk/vanilla`에서 `initLeeChat()`을 가져옵니다. 이 subpath는 React를 import하지 않는 DOM 기반 엔트리입니다.
 
-```ts
+```tsx
 import {
   closeLeeChat,
   destroyLeeChat,
@@ -463,6 +463,7 @@ initLeeChat({
 - `ConversationClient`: React와 무관하게 메시지 전송, 실패 처리, retry, persistence 저장을 처리하는 core client입니다.
 - `ConversationClient.applyEvent`: transport나 realtime adapter에서 받은 presence, typing, read event를 core state에 적용합니다.
 - `useChatController`: 입력 상태, 제출 상태, 메시지 목록, transport 호출, persistence 저장을 관리합니다.
+- `useChatOperatorConsole`: 운영 콘솔의 선택 대화, summary 목록, 배정/종료 event 생성을 관리하는 React adapter입니다.
 - `ChatTransport`: HTTP, mock, WebSocket, SSE 같은 전송 방식을 교체하기 위한 adapter interface입니다.
 - `HttpChatTransport`: 기본 HTTP POST transport입니다.
 - `SseChatEventTransport`: browser `EventSource` 기반 SSE adapter입니다. 서버 event를 `ConversationClientEvent`로 파싱해 React Provider나 Vanilla widget에 연결합니다.
@@ -484,6 +485,7 @@ import {
   buildChatEvent,
   closeChatOperatorConversation,
   collectChatEventsByConversationId,
+  useChatOperatorConsole,
   type ChatEvent,
   type ChatConversation,
   type ChatMessage,
@@ -531,6 +533,20 @@ const closedState = closeChatOperatorConversation({
   eventId: 'event-3',
   createdAt: new Date().toISOString(),
 })
+
+function OperatorConsolePanel() {
+  const operatorConsole = useChatOperatorConsole({
+    conversations,
+    messages,
+    initialEvents: events,
+    initialSelectedConversationId: 'conversation-1',
+    currentParticipantId: 'operator-1',
+  })
+
+  return operatorConsole.state.conversationSummaries.map((summary) => {
+    return <button key={summary.id}>{summary.title}</button>
+  })
+}
 ```
 
 ## 예제 앱

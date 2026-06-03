@@ -386,7 +386,7 @@ export function CustomOpenButton() {
 
 For apps that do not write React code, import `initLeeChat()` from `lee-chat-sdk/vanilla`. This subpath is a DOM-based entry that does not import React.
 
-```ts
+```tsx
 import {
   closeLeeChat,
   destroyLeeChat,
@@ -463,6 +463,7 @@ Use the headless controller and primitives when you need deeper customization.
 - `ConversationClient`: framework-agnostic core client for message sending, failure handling, retry, and persistence.
 - `ConversationClient.applyEvent`: applies presence, typing, and read events from transports or realtime adapters to core state.
 - `useChatController`: manages input state, submission state, messages, transport calls, and persistence.
+- `useChatOperatorConsole`: React adapter for selected conversation state, summary lists, and assignment/close event creation in operator consoles.
 - `ChatTransport`: adapter interface for HTTP, mock, WebSocket, SSE, or any custom transport.
 - `HttpChatTransport`: default HTTP POST transport.
 - `SseChatEventTransport`: browser `EventSource`-based SSE adapter. It parses server events as `ConversationClientEvent` and connects them to the React Provider or Vanilla widget.
@@ -484,6 +485,7 @@ import {
   buildChatEvent,
   closeChatOperatorConversation,
   collectChatEventsByConversationId,
+  useChatOperatorConsole,
   type ChatEvent,
   type ChatConversation,
   type ChatMessage,
@@ -531,6 +533,20 @@ const closedState = closeChatOperatorConversation({
   eventId: 'event-3',
   createdAt: new Date().toISOString(),
 })
+
+function OperatorConsolePanel() {
+  const operatorConsole = useChatOperatorConsole({
+    conversations,
+    messages,
+    initialEvents: events,
+    initialSelectedConversationId: 'conversation-1',
+    currentParticipantId: 'operator-1',
+  })
+
+  return operatorConsole.state.conversationSummaries.map((summary) => {
+    return <button key={summary.id}>{summary.title}</button>
+  })
+}
 ```
 
 ## Example Apps

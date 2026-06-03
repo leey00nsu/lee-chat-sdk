@@ -132,6 +132,11 @@ export type {
 } from './react/lee-chat-widget'
 export { useLeeChat } from './react/use-lee-chat'
 export type { LeeChatContextValue } from './react/lee-chat-context'
+export { useChatOperatorConsole } from './react/use-chat-operator-console'
+export type {
+  UseChatOperatorConsoleParams,
+  UseChatOperatorConsoleResult,
+} from './react/use-chat-operator-console'
 export {
   closeLeeChat,
   destroyLeeChat,

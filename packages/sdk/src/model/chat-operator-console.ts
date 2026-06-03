@@ -6,45 +6,51 @@ import {
   type ChatConversationSummary,
 } from './chat-conversation-summary'
 
-export interface ChatOperatorConsoleState {
+export interface ChatOperatorConsoleState<TMessageMetadata = unknown> {
   conversations: ChatConversation[]
-  messages: ChatMessage[]
+  messages: Array<ChatMessage<TMessageMetadata>>
   events: ChatEvent[]
   conversationSummaries: ChatConversationSummary[]
   selectedConversationId: string
   currentParticipantId?: string
 }
 
-export interface BuildChatOperatorConsoleStateParams {
+export interface BuildChatOperatorConsoleStateParams<
+  TMessageMetadata = unknown,
+> {
   conversations: ChatConversation[]
-  messages: ChatMessage[]
+  messages: Array<ChatMessage<TMessageMetadata>>
   events?: ChatEvent[]
   selectedConversationId?: string
   currentParticipantId?: string
 }
 
-export interface AssignChatOperatorConversationParams {
-  state: ChatOperatorConsoleState
+export interface AssignChatOperatorConversationParams<
+  TMessageMetadata = unknown,
+> {
+  state: ChatOperatorConsoleState<TMessageMetadata>
   conversationId: string
   agentName: string
   eventId: string
   createdAt: string
 }
 
-export interface CloseChatOperatorConversationParams {
-  state: ChatOperatorConsoleState
+export interface CloseChatOperatorConversationParams<
+  TMessageMetadata = unknown,
+> {
+  state: ChatOperatorConsoleState<TMessageMetadata>
   conversationId: string
   eventId: string
   createdAt: string
 }
 
-export function buildChatOperatorConsoleState({
+export function buildChatOperatorConsoleState<TMessageMetadata = unknown>({
   conversations,
   messages,
   events = [],
   selectedConversationId = conversations[0]?.id ?? '',
   currentParticipantId,
-}: BuildChatOperatorConsoleStateParams): ChatOperatorConsoleState {
+}: BuildChatOperatorConsoleStateParams<TMessageMetadata>): ChatOperatorConsoleState<TMessageMetadata> {
   return {
     conversations,
     messages,
@@ -76,13 +82,13 @@ export function selectChatOperatorConversationSummary(
   })
 }
 
-export function assignChatOperatorConversation({
+export function assignChatOperatorConversation<TMessageMetadata = unknown>({
   state,
   conversationId,
   agentName,
   eventId,
   createdAt,
-}: AssignChatOperatorConversationParams): ChatOperatorConsoleState {
+}: AssignChatOperatorConversationParams<TMessageMetadata>): ChatOperatorConsoleState<TMessageMetadata> {
   return rebuildChatOperatorConsoleState({
     state,
     events: [
@@ -100,12 +106,12 @@ export function assignChatOperatorConversation({
   })
 }
 
-export function closeChatOperatorConversation({
+export function closeChatOperatorConversation<TMessageMetadata = unknown>({
   state,
   conversationId,
   eventId,
   createdAt,
-}: CloseChatOperatorConversationParams): ChatOperatorConsoleState {
+}: CloseChatOperatorConversationParams<TMessageMetadata>): ChatOperatorConsoleState<TMessageMetadata> {
   return rebuildChatOperatorConsoleState({
     state,
     events: [
@@ -121,13 +127,13 @@ export function closeChatOperatorConversation({
   })
 }
 
-function rebuildChatOperatorConsoleState({
+function rebuildChatOperatorConsoleState<TMessageMetadata = unknown>({
   state,
   events,
 }: {
-  state: ChatOperatorConsoleState
+  state: ChatOperatorConsoleState<TMessageMetadata>
   events: ChatEvent[]
-}): ChatOperatorConsoleState {
+}): ChatOperatorConsoleState<TMessageMetadata> {
   return buildChatOperatorConsoleState({
     conversations: state.conversations,
     messages: state.messages,
