@@ -175,4 +175,45 @@ describe('SseChatEventTransport', () => {
     expect(createEventSource).toHaveBeenCalledTimes(1)
     expect(firstEventSource.close).toHaveBeenCalledTimes(1)
   })
+
+  it('auth refresh 후 동적 endpoint를 다시 평가해 reconnect한다', async () => {
+    vi.useFakeTimers()
+    let accessToken = 'expired-token'
+    const refresh = vi.fn(async () => {
+      accessToken = 'fresh-token'
+    })
+    const firstEventSource = new TestEventSource()
+    const secondEventSource = new TestEventSource()
+    const createEventSource = vi
+      .fn()
+      .mockReturnValueOnce(firstEventSource)
+      .mockReturnValueOnce(secondEventSource)
+    const transport = new SseChatEventTransport({
+      endpoint: () => `/api/chat/events?token=${accessToken}`,
+      createEventSource,
+      auth: {
+        refresh,
+      },
+      reconnect: {
+        enabled: true,
+        initialDelayMs: 1000,
+        maxAttempts: 1,
+      },
+    })
+
+    transport.subscribe(() => {})
+    firstEventSource.emitError()
+
+    await vi.advanceTimersByTimeAsync(1000)
+
+    expect(refresh).toHaveBeenCalledTimes(1)
+    expect(createEventSource).toHaveBeenNthCalledWith(
+      1,
+      '/api/chat/events?token=expired-token',
+    )
+    expect(createEventSource).toHaveBeenNthCalledWith(
+      2,
+      '/api/chat/events?token=fresh-token',
+    )
+  })
 })

@@ -418,6 +418,22 @@ const eventTransport = new WebSocketChatEventTransport({
 })
 ```
 
+Realtime transports do not inject arbitrary auth headers directly because browser `EventSource` and `WebSocket` APIs are constrained. Instead, pass `endpoint` as a function so every connection and reconnect can compute a fresh URL, and use `auth.refresh` to refresh tokens before reconnecting.
+
+```ts
+const eventTransport = new SseChatEventTransport({
+  endpoint: () => `/api/support-chat/events?token=${authStore.accessToken}`,
+  auth: {
+    refresh: async () => {
+      await authStore.refresh()
+    },
+  },
+  reconnect: {
+    enabled: true,
+  },
+})
+```
+
 Use `useLeeChat()` when you need direct access to open state and the controller.
 
 ```tsx
@@ -649,12 +665,10 @@ pnpm publish --access public
 
 ## Current Limitations
 
-- SSE auth header refresh and session refresh policies are not included yet.
-- WebSocket auth header refresh and session refresh policies are not included yet.
+- SSE/WebSocket provide endpoint-factory based auth refresh instead of direct arbitrary auth-header injection because of browser API constraints.
 - Storybook includes default widget and operator-console state examples, but documentation-style guides are still limited.
 - Package export paths are currently limited to the root export.
 
 ## Roadmap
 
-- Add WebSocket auth header refresh and session refresh policies.
 - Add Storybook interaction/play scenarios.

@@ -418,6 +418,22 @@ const eventTransport = new WebSocketChatEventTransport({
 })
 ```
 
+Realtime transport는 브라우저 `EventSource`/`WebSocket` 제약 때문에 임의 auth header를 직접 주입하지 않습니다. 대신 `endpoint`를 함수로 넘기면 매 연결과 reconnect마다 URL을 다시 계산할 수 있고, `auth.refresh`로 토큰 갱신 후 새 URL로 재연결할 수 있습니다.
+
+```ts
+const eventTransport = new SseChatEventTransport({
+  endpoint: () => `/api/support-chat/events?token=${authStore.accessToken}`,
+  auth: {
+    refresh: async () => {
+      await authStore.refresh()
+    },
+  },
+  reconnect: {
+    enabled: true,
+  },
+})
+```
+
 `useLeeChat()`으로 열림 상태와 controller에 직접 접근할 수 있습니다.
 
 ```tsx
@@ -649,12 +665,10 @@ pnpm publish --access public
 
 ## 현재 한계
 
-- SSE auth header 갱신, session refresh 정책은 아직 포함되어 있지 않습니다.
-- WebSocket auth header 갱신, session refresh 정책은 아직 포함되어 있지 않습니다.
+- SSE/WebSocket은 브라우저 API 제약상 임의 auth header 직접 주입 대신 endpoint factory 기반 auth refresh를 제공합니다.
 - Storybook은 기본 위젯과 운영 콘솔 상태 예제를 포함하지만, 문서형 가이드는 아직 부족합니다.
 - package export path는 현재 root export로 제한되어 있습니다.
 
 ## Roadmap
 
-- WebSocket auth header 갱신, session refresh 정책 추가
 - Storybook interaction/play 시나리오 추가

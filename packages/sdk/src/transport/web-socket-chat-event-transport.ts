@@ -15,11 +15,24 @@ export type CreateWebSocket = (
   protocols?: string | string[],
 ) => WebSocketLike
 
+export type WebSocketEndpoint =
+  | string
+  | (() => string)
+
+export interface WebSocketAuthRefreshParams {
+  reason: 'close'
+}
+
+export interface WebSocketAuthOptions {
+  refresh?: (params: WebSocketAuthRefreshParams) => void | Promise<void>
+}
+
 export interface WebSocketChatEventTransportParams {
-  endpoint: string
+  endpoint: WebSocketEndpoint
   protocols?: string | string[]
   createWebSocket?: CreateWebSocket
   reconnect?: WebSocketReconnectOptions
+  auth?: WebSocketAuthOptions
 }
 
 export interface WebSocketReconnectOptions {
@@ -46,20 +59,23 @@ function createDefaultWebSocket(
 }
 
 export class WebSocketChatEventTransport implements ChatEventTransport {
-  private readonly endpoint: string
+  private readonly endpoint: WebSocketEndpoint
   private readonly protocols?: string | string[]
   private readonly createWebSocket: CreateWebSocket
   private readonly reconnect: Required<WebSocketReconnectOptions>
+  private readonly auth?: WebSocketAuthOptions
 
   constructor({
     endpoint,
     protocols,
     createWebSocket = createDefaultWebSocket,
     reconnect,
+    auth,
   }: WebSocketChatEventTransportParams) {
     this.endpoint = endpoint
     this.protocols = protocols
     this.createWebSocket = createWebSocket
+    this.auth = auth
     this.reconnect = {
       enabled: reconnect?.enabled ?? false,
       initialDelayMs:
@@ -88,8 +104,15 @@ export class WebSocketChatEventTransport implements ChatEventTransport {
       }
     }
 
+    const refreshAuthAndConnect = async (): Promise<void> => {
+      await this.auth?.refresh?.({
+        reason: 'close',
+      })
+      connect()
+    }
+
     const connect = (): void => {
-      const webSocket = this.createWebSocket(this.endpoint, this.protocols)
+      const webSocket = this.createWebSocket(this.resolveEndpoint(), this.protocols)
       activeWebSocket = webSocket
 
       const handleMessage = (event: Event): void => {
@@ -123,7 +146,12 @@ export class WebSocketChatEventTransport implements ChatEventTransport {
 
         reconnectTimeout = setTimeout(() => {
           reconnectTimeout = null
-          connect()
+          if (typeof this.auth?.refresh !== 'function') {
+            connect()
+            return
+          }
+
+          void refreshAuthAndConnect()
         }, delayMs)
       }
 
@@ -145,5 +173,13 @@ export class WebSocketChatEventTransport implements ChatEventTransport {
       activeWebSocket?.close()
       activeWebSocket = null
     }
+  }
+
+  private resolveEndpoint(): string {
+    if (typeof this.endpoint === 'function') {
+      return this.endpoint()
+    }
+
+    return this.endpoint
   }
 }

@@ -11,12 +11,24 @@ export interface EventSourceLike {
 }
 
 export type CreateEventSource = (endpoint: string) => EventSourceLike
+export type SseEndpoint =
+  | string
+  | (() => string)
+
+export interface SseAuthRefreshParams {
+  reason: 'error'
+}
+
+export interface SseAuthOptions {
+  refresh?: (params: SseAuthRefreshParams) => void | Promise<void>
+}
 
 export interface SseChatEventTransportParams {
-  endpoint: string
+  endpoint: SseEndpoint
   eventName?: string
   createEventSource?: CreateEventSource
   reconnect?: SseReconnectOptions
+  auth?: SseAuthOptions
 }
 
 export interface SseReconnectOptions {
@@ -40,20 +52,23 @@ function createDefaultEventSource(endpoint: string): EventSourceLike {
 }
 
 export class SseChatEventTransport implements ChatEventTransport {
-  private readonly endpoint: string
+  private readonly endpoint: SseEndpoint
   private readonly eventName: string
   private readonly createEventSource: CreateEventSource
   private readonly reconnect: Required<SseReconnectOptions>
+  private readonly auth?: SseAuthOptions
 
   constructor({
     endpoint,
     eventName = SSE_CHAT_EVENT_TRANSPORT.DEFAULT_EVENT_NAME,
     createEventSource = createDefaultEventSource,
     reconnect,
+    auth,
   }: SseChatEventTransportParams) {
     this.endpoint = endpoint
     this.eventName = eventName
     this.createEventSource = createEventSource
+    this.auth = auth
     this.reconnect = {
       enabled: reconnect?.enabled ?? false,
       initialDelayMs:
@@ -96,8 +111,15 @@ export class SseChatEventTransport implements ChatEventTransport {
       )
     }
 
+    const refreshAuthAndConnect = async (): Promise<void> => {
+      await this.auth?.refresh?.({
+        reason: 'error',
+      })
+      connect()
+    }
+
     const connect = (): void => {
-      const eventSource = this.createEventSource(this.endpoint)
+      const eventSource = this.createEventSource(this.resolveEndpoint())
       activeEventSource = eventSource
 
       const handleMessage = (event: Event): void => {
@@ -128,7 +150,12 @@ export class SseChatEventTransport implements ChatEventTransport {
 
         reconnectTimeout = setTimeout(() => {
           reconnectTimeout = null
-          connect()
+          if (typeof this.auth?.refresh !== 'function') {
+            connect()
+            return
+          }
+
+          void refreshAuthAndConnect()
         }, delayMs)
       }
 
@@ -147,5 +174,13 @@ export class SseChatEventTransport implements ChatEventTransport {
       activeEventSource?.close()
       activeEventSource = null
     }
+  }
+
+  private resolveEndpoint(): string {
+    if (typeof this.endpoint === 'function') {
+      return this.endpoint()
+    }
+
+    return this.endpoint
   }
 }

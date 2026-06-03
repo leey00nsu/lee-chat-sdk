@@ -159,4 +159,52 @@ describe('WebSocketChatEventTransport', () => {
       vi.useRealTimers()
     }
   })
+
+  it('auth refresh 후 동적 endpoint를 다시 평가해 reconnect한다', async () => {
+    vi.useFakeTimers()
+
+    try {
+      let accessToken = 'expired-token'
+      const refresh = vi.fn(async () => {
+        accessToken = 'fresh-token'
+      })
+      const webSockets = [new TestWebSocket(), new TestWebSocket()]
+      const createWebSocket = vi.fn(() => {
+        return webSockets[
+          createWebSocket.mock.calls.length - 1
+        ] as TestWebSocket
+      })
+      const transport = new WebSocketChatEventTransport({
+        endpoint: () => `wss://example.com/chat/events?token=${accessToken}`,
+        createWebSocket,
+        auth: {
+          refresh,
+        },
+        reconnect: {
+          enabled: true,
+          initialDelayMs: 100,
+          maxAttempts: 1,
+        },
+      })
+
+      transport.subscribe(() => {})
+      webSockets[0]?.emitClose()
+
+      await vi.advanceTimersByTimeAsync(100)
+
+      expect(refresh).toHaveBeenCalledTimes(1)
+      expect(createWebSocket).toHaveBeenNthCalledWith(
+        1,
+        'wss://example.com/chat/events?token=expired-token',
+        undefined,
+      )
+      expect(createWebSocket).toHaveBeenNthCalledWith(
+        2,
+        'wss://example.com/chat/events?token=fresh-token',
+        undefined,
+      )
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })
