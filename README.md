@@ -601,7 +601,7 @@ pnpm publish --access public
 - SSE reconnect/backoff, auth header 갱신, session refresh 정책은 아직 포함되어 있지 않습니다.
 - WebSocket auth header 갱신, session refresh 정책은 아직 포함되어 있지 않습니다.
 - 고급 retry 정책, timeout, abort/cancel 정책은 아직 포함되어 있지 않습니다.
-- Storybook 문서화는 아직 없습니다.
+- Storybook은 기본 위젯과 운영 콘솔 상태 예제를 포함하지만, 문서형 가이드는 아직 부족합니다.
 - package export path는 현재 root export로 제한되어 있습니다.
 
 ## Roadmap
@@ -609,7 +609,6 @@ pnpm publish --access public
 - no-React browser bundle 제공
 - SSE reconnect/backoff 정책 추가
 - WebSocket auth header 갱신, session refresh 정책 추가
-- operator-console UI adapter 추가
 - timeout, abort/cancel, 고급 retry 정책 추가
-- Storybook examples 추가
+- Storybook interaction/play 시나리오 추가
 - npm release workflow 준비

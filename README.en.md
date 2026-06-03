@@ -601,7 +601,7 @@ pnpm publish --access public
 - SSE reconnect/backoff, auth header refresh, and session refresh policies are not included yet.
 - WebSocket auth header refresh and session refresh policies are not included yet.
 - Advanced retry policies, timeout, and abort/cancel policies are not included yet.
-- Storybook documentation is not included yet.
+- Storybook includes default widget and operator-console state examples, but documentation-style guides are still limited.
 - Package export paths are currently limited to the root export.
 
 ## Roadmap
@@ -609,7 +609,6 @@ pnpm publish --access public
 - Provide a no-React browser bundle.
 - Add SSE reconnect/backoff policies.
 - Add WebSocket auth header refresh and session refresh policies.
-- Add operator-console UI adapters.
 - Add timeout, abort/cancel, and advanced retry policies.
-- Add Storybook examples.
+- Add Storybook interaction/play scenarios.
 - Prepare an npm release workflow.

@@ -6,6 +6,8 @@
   "scripts": {
     "storybook": "pnpm --filter lee-chat-sdk build && storybook dev -p 6006",
     "build": "pnpm --filter lee-chat-sdk build && storybook build",
+    "test": "vitest",
+    "test:run": "vitest run",
     "typecheck": "pnpm --filter lee-chat-sdk build && tsc --noEmit"
   },
   "dependencies": {
