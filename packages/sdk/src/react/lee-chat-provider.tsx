@@ -44,12 +44,16 @@ export function LeeChatProvider({
     return new HttpChatTransport<LeeChatRequest, LeeChatResponse>({
       endpoint: resolvedConfig.endpoint,
       fetchImplementation,
+      headers: resolvedConfig.requestHeaders,
+      auth: resolvedConfig.requestAuth,
       timeoutMs: resolvedConfig.requestTimeoutMs,
       retry: resolvedConfig.requestRetry,
     })
   }, [
     fetchImplementation,
     resolvedConfig.endpoint,
+    resolvedConfig.requestAuth,
+    resolvedConfig.requestHeaders,
     resolvedConfig.requestRetry,
     resolvedConfig.requestTimeoutMs,
   ])

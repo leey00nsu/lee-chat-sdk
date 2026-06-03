@@ -102,6 +102,9 @@ export type {
 } from './transport/chat-event-transport'
 export { HttpChatTransport } from './transport/http-chat-transport'
 export type {
+  HttpChatTransportAuthOptions,
+  HttpChatTransportAuthRefreshParams,
+  HttpChatTransportHeaders,
   HttpChatTransportParams,
   HttpChatTransportRetryOptions,
 } from './transport/http-chat-transport'

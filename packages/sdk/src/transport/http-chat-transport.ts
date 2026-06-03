@@ -6,10 +6,15 @@ import type {
 export interface HttpChatTransportParams {
   endpoint: string
   fetchImplementation?: typeof fetch
-  headers?: Record<string, string>
+  headers?: HttpChatTransportHeaders
   timeoutMs?: number
   retry?: HttpChatTransportRetryOptions
+  auth?: HttpChatTransportAuthOptions
 }
+
+export type HttpChatTransportHeaders =
+  | Record<string, string>
+  | (() => Record<string, string> | Promise<Record<string, string>>)
 
 export interface HttpChatTransportRetryOptions {
   maxAttempts?: number
@@ -19,6 +24,18 @@ export interface HttpChatTransportRetryOptions {
     from: number
     to: number
   }>
+}
+
+export interface HttpChatTransportAuthRefreshParams {
+  status: number
+}
+
+export interface HttpChatTransportAuthOptions {
+  refresh?: (
+    params: HttpChatTransportAuthRefreshParams,
+  ) => void | Promise<void>
+  refreshStatusCodes?: number[]
+  maxRefreshAttempts?: number
 }
 
 const HTTP_CHAT_TRANSPORT_HEADERS = {
@@ -41,14 +58,23 @@ const HTTP_CHAT_TRANSPORT_RETRY = {
   SERVER_ERROR_STATUS_TO: 599,
 } as const
 
+const HTTP_CHAT_TRANSPORT_AUTH = {
+  DEFAULT_REFRESH_STATUS_CODE: 401,
+  DEFAULT_MAX_REFRESH_ATTEMPTS: 1,
+} as const
+
 export class HttpChatTransport<TRequest, TResponse>
   implements ChatTransport<TRequest, TResponse>
 {
   private readonly endpoint: string
   private readonly fetchImplementation: typeof fetch
-  private readonly headers: Record<string, string>
+  private readonly headers: HttpChatTransportHeaders
   private readonly timeoutMs: number
   private readonly retry: Required<HttpChatTransportRetryOptions>
+  private readonly auth: Required<
+    Pick<HttpChatTransportAuthOptions, 'refreshStatusCodes' | 'maxRefreshAttempts'>
+  > &
+    Pick<HttpChatTransportAuthOptions, 'refresh'>
 
   constructor({
     endpoint,
@@ -56,6 +82,7 @@ export class HttpChatTransport<TRequest, TResponse>
     headers = {},
     timeoutMs = HTTP_CHAT_TRANSPORT_TIMEOUT.DISABLED_MS,
     retry = {},
+    auth = {},
   }: HttpChatTransportParams) {
     this.endpoint = endpoint
     this.fetchImplementation = fetchImplementation
@@ -73,6 +100,16 @@ export class HttpChatTransport<TRequest, TResponse>
             to: HTTP_CHAT_TRANSPORT_RETRY.SERVER_ERROR_STATUS_TO,
           },
         ],
+    }
+    this.auth = {
+      refresh: auth.refresh,
+      refreshStatusCodes:
+        auth.refreshStatusCodes ?? [
+          HTTP_CHAT_TRANSPORT_AUTH.DEFAULT_REFRESH_STATUS_CODE,
+        ],
+      maxRefreshAttempts:
+        auth.maxRefreshAttempts ??
+        HTTP_CHAT_TRANSPORT_AUTH.DEFAULT_MAX_REFRESH_ATTEMPTS,
     }
   }
 
@@ -111,9 +148,17 @@ export class HttpChatTransport<TRequest, TResponse>
       HTTP_CHAT_TRANSPORT_RETRY.DEFAULT_MAX_ATTEMPTS,
       this.retry.maxAttempts,
     )
+    const maxRefreshAttempts = Math.max(
+      0,
+      this.auth.maxRefreshAttempts,
+    )
     let latestError: unknown
+    let attempt = 0
+    let refreshAttempt = 0
 
-    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    while (true) {
+      attempt += 1
+
       try {
         return await this.sendMessageOnce({
           request,
@@ -121,6 +166,16 @@ export class HttpChatTransport<TRequest, TResponse>
         })
       } catch (error) {
         latestError = error
+
+        if (
+          !signal.aborted &&
+          refreshAttempt < maxRefreshAttempts &&
+          this.shouldRefreshAuth(error)
+        ) {
+          refreshAttempt += 1
+          await this.refreshAuth(error)
+          continue
+        }
 
         if (
           signal.aborted ||
@@ -144,12 +199,21 @@ export class HttpChatTransport<TRequest, TResponse>
     request: TRequest
     signal: AbortSignal
   }): Promise<TResponse> {
+    const resolvedHeaders = this.resolveHeaders()
+    const headers = isPromiseLike(resolvedHeaders)
+      ? await resolvedHeaders
+      : resolvedHeaders
+
+    if (signal.aborted) {
+      throw new DOMException('The operation was aborted.', 'AbortError')
+    }
+
     const response = await this.fetchImplementation(this.endpoint, {
       method: 'POST',
       headers: {
         [HTTP_CHAT_TRANSPORT_HEADERS.CONTENT_TYPE]:
           HTTP_CHAT_TRANSPORT_HEADERS.APPLICATION_JSON,
-        ...this.headers,
+        ...headers,
       },
       body: JSON.stringify(request),
       signal,
@@ -209,6 +273,35 @@ export class HttpChatTransport<TRequest, TResponse>
     return true
   }
 
+  private shouldRefreshAuth(error: unknown): boolean {
+    return (
+      error instanceof HttpChatTransportRequestError &&
+      typeof this.auth.refresh === 'function' &&
+      this.auth.refreshStatusCodes.includes(error.status)
+    )
+  }
+
+  private async refreshAuth(error: unknown): Promise<void> {
+    if (
+      !(error instanceof HttpChatTransportRequestError) ||
+      typeof this.auth.refresh !== 'function'
+    ) {
+      return
+    }
+
+    await this.auth.refresh({
+      status: error.status,
+    })
+  }
+
+  private resolveHeaders(): Record<string, string> | Promise<Record<string, string>> {
+    if (typeof this.headers === 'function') {
+      return this.headers()
+    }
+
+    return this.headers
+  }
+
   private shouldRetryStatusCode(statusCode: number): boolean {
     if (this.retry.retryStatusCodes.includes(statusCode)) {
       return true
@@ -243,6 +336,17 @@ export class HttpChatTransport<TRequest, TResponse>
       signal.addEventListener('abort', handleAbort, { once: true })
     })
   }
+}
+
+function isPromiseLike<TValue>(
+  value: TValue | Promise<TValue>,
+): value is Promise<TValue> {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'then' in value &&
+    typeof value.then === 'function'
+  )
 }
 
 class HttpChatTransportRequestError extends Error {

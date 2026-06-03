@@ -153,7 +153,7 @@ describe('LeeChatProvider', () => {
   })
 
   it('requestRetry 설정으로 기본 HTTP 요청을 재시도한다', async () => {
-    const fetchImplementation = vi
+    const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
         new Response(JSON.stringify({ message: { content: 'temporary' } }), {
@@ -177,7 +177,8 @@ describe('LeeChatProvider', () => {
             },
           },
         ),
-      ) as typeof fetch
+      )
+    const fetchImplementation = fetchMock as typeof fetch
     const { result } = renderHook(() => useLeeChat(), {
       wrapper: ({ children }: { children?: ReactNode }) => (
         <LeeChatProvider
@@ -204,6 +205,81 @@ describe('LeeChatProvider', () => {
       expect.arrayContaining([
         expect.objectContaining({
           content: 'retried response',
+          status: 'sent',
+        }),
+      ]),
+    )
+  })
+
+  it('requestAuth refresh 후 새 requestHeaders로 기본 HTTP 요청을 재시도한다', async () => {
+    let accessToken = 'expired-token'
+    const refresh = vi.fn(async () => {
+      accessToken = 'fresh-token'
+    })
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ message: { content: 'unauthorized' } }), {
+          status: 401,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            message: {
+              content: 'authorized response',
+            },
+          }),
+          {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          },
+        ),
+      )
+    const fetchImplementation = fetchMock as typeof fetch
+    const { result } = renderHook(() => useLeeChat(), {
+      wrapper: ({ children }: { children?: ReactNode }) => (
+        <LeeChatProvider
+          config={{
+            appId: 'app',
+            endpoint: '/api/chat',
+            requestHeaders: () => ({
+              Authorization: `Bearer ${accessToken}`,
+            }),
+            requestAuth: {
+              refresh,
+            },
+          }}
+          fetchImplementation={fetchImplementation}
+        >
+          {children}
+        </LeeChatProvider>
+      ),
+    })
+
+    await act(async () => {
+      await result.current.submitMessage('authorized request')
+    })
+
+    expect(refresh).toHaveBeenCalledTimes(1)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock.mock.calls[0]?.[1]?.headers).toEqual({
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer expired-token',
+    })
+    expect(fetchMock.mock.calls[1]?.[1]?.headers).toEqual({
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer fresh-token',
+    })
+    expect(result.current.messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          content: 'authorized response',
           status: 'sent',
         }),
       ]),

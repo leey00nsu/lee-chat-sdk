@@ -730,6 +730,8 @@ async function sendMessageToEndpoint({
   const transport = new HttpChatTransport<LeeChatRequest, LeeChatResponse>({
     endpoint: config.endpoint,
     fetchImplementation: activeConfig?.fetchImplementation ?? fetch,
+    headers: config.requestHeaders,
+    auth: config.requestAuth,
     timeoutMs: config.requestTimeoutMs,
     retry: config.requestRetry,
   })

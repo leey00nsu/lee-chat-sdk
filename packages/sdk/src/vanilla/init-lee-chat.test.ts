@@ -127,6 +127,55 @@ describe('vanilla initLeeChat', () => {
     )
   })
 
+  it('requestHeaders를 endpoint 요청에 포함한다', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          message: {
+            content: 'Header response',
+          },
+        }),
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        },
+      ),
+    )
+
+    initLeeChat({
+      appId: 'vanilla-app',
+      endpoint: '/api/chat',
+      fetchImplementation: fetchMock,
+      initialOpen: true,
+      requestHeaders: {
+        Authorization: 'Bearer vanilla-token',
+      },
+    })
+
+    const input = document.querySelector('textarea')
+
+    if (!(input instanceof HTMLTextAreaElement)) {
+      throw new Error('textarea not found')
+    }
+
+    fireEvent.change(input, {
+      target: {
+        value: 'Header vanilla question',
+      },
+    })
+    fireEvent.submit(input.form as HTMLFormElement)
+
+    await waitFor(() => {
+      expect(document.body.textContent).toContain('Header response')
+    })
+
+    expect(fetchMock.mock.calls[0]?.[1]?.headers).toEqual({
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer vanilla-token',
+    })
+  })
+
   it('assistant 응답의 image와 file part를 기본 UI로 렌더링한다', async () => {
     fetchMock.mockResolvedValue(
       new Response(

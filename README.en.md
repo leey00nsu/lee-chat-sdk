@@ -72,6 +72,8 @@ pnpm add lee-chat-sdk@file:../lee-chat-sdk/packages/sdk
 - Derives the default `conversation.id` per visitor or participant.
 - Sends user messages to `endpoint` with POST.
 - Adds the response as an assistant message.
+- Can attach static or dynamic auth headers with `requestHeaders`.
+- Can refresh expired auth with `requestAuth.refresh` and retry the request after responses such as 401.
 - Can abort delayed requests with `requestTimeoutMs` and show them as failed messages.
 - Can retry temporary 5xx/network failures with `requestRetry`.
 - Supports `memory` or `localStorage` persistence.
@@ -110,6 +112,14 @@ const config: LeeChatConfig = {
     maxAttempts: 2,
     delayMs: 300,
   },
+  requestHeaders: () => ({
+    Authorization: `Bearer ${getAccessToken()}`,
+  }),
+  requestAuth: {
+    refresh: async () => {
+      await refreshAccessToken()
+    },
+  },
   persistence: 'localStorage',
   texts: {
     title: 'Support',
@@ -132,6 +142,29 @@ const config: LeeChatConfig = {
     radius: '12px',
   },
 }
+```
+
+## Authentication
+
+`requestHeaders` accepts an object or a function. Functions are evaluated for every request, so refreshed tokens can be used immediately.
+
+```ts
+initLeeChat({
+  appId: 'commerce-web',
+  endpoint: '/api/chat',
+  requestHeaders: () => ({
+    Authorization: `Bearer ${authStore.accessToken}`,
+  }),
+  requestAuth: {
+    refresh: async ({ status }) => {
+      if (status === 401) {
+        await authStore.refresh()
+      }
+    },
+    refreshStatusCodes: [401],
+    maxRefreshAttempts: 1,
+  },
+})
 ```
 
 ## Backend Contract

@@ -72,6 +72,8 @@ pnpm add lee-chat-sdk@file:../lee-chat-sdk/packages/sdk
 - 기본 `conversation.id`는 visitor 또는 participant 단위로 분리됩니다.
 - 사용자가 보낸 메시지를 `endpoint`로 POST 전송합니다.
 - 응답 메시지를 assistant 메시지로 추가합니다.
+- `requestHeaders`로 정적/동적 인증 헤더를 붙일 수 있습니다.
+- `requestAuth.refresh`로 401 같은 인증 만료 응답 후 토큰을 갱신하고 재요청할 수 있습니다.
 - `requestTimeoutMs`로 지연된 요청을 중단하고 실패 메시지로 표시할 수 있습니다.
 - `requestRetry`로 일시적인 5xx/network 실패를 재시도할 수 있습니다.
 - `memory` 또는 `localStorage` persistence를 선택할 수 있습니다.
@@ -110,6 +112,14 @@ const config: LeeChatConfig = {
     maxAttempts: 2,
     delayMs: 300,
   },
+  requestHeaders: () => ({
+    Authorization: `Bearer ${getAccessToken()}`,
+  }),
+  requestAuth: {
+    refresh: async () => {
+      await refreshAccessToken()
+    },
+  },
   persistence: 'localStorage',
   texts: {
     title: '상담',
@@ -132,6 +142,29 @@ const config: LeeChatConfig = {
     radius: '12px',
   },
 }
+```
+
+## Authentication
+
+`requestHeaders`는 객체 또는 함수를 받을 수 있습니다. 함수는 매 요청마다 다시 평가되므로 토큰 갱신 후 새 값을 사용할 수 있습니다.
+
+```ts
+initLeeChat({
+  appId: 'commerce-web',
+  endpoint: '/api/chat',
+  requestHeaders: () => ({
+    Authorization: `Bearer ${authStore.accessToken}`,
+  }),
+  requestAuth: {
+    refresh: async ({ status }) => {
+      if (status === 401) {
+        await authStore.refresh()
+      }
+    },
+    refreshStatusCodes: [401],
+    maxRefreshAttempts: 1,
+  },
+})
 ```
 
 ## Backend Contract

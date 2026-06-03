@@ -203,4 +203,79 @@ describe('HttpChatTransport', () => {
       true,
     )
   })
+
+  it('요청마다 동적 headers를 평가한다', async () => {
+    let accessToken = 'token-a'
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ answer: '첫 응답' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ answer: '두 번째 응답' }),
+      })
+    const transport = new HttpChatTransport<RequestBody, ResponseBody>({
+      endpoint: '/api/chat',
+      headers: () => ({
+        Authorization: `Bearer ${accessToken}`,
+      }),
+    })
+
+    await transport.sendMessage({ question: '첫 질문' })
+    accessToken = 'token-b'
+    await transport.sendMessage({ question: '두 번째 질문' })
+
+    expect(fetchMock.mock.calls[0]?.[1]?.headers).toEqual({
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer token-a',
+    })
+    expect(fetchMock.mock.calls[1]?.[1]?.headers).toEqual({
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer token-b',
+    })
+  })
+
+  it('auth refresh 대상 응답이면 refresh 후 새 headers로 재요청한다', async () => {
+    let accessToken = 'expired-token'
+    const refresh = vi.fn(async () => {
+      accessToken = 'fresh-token'
+    })
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ message: 'unauthorized' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ answer: '갱신 후 응답' }),
+      })
+    const transport = new HttpChatTransport<RequestBody, ResponseBody>({
+      endpoint: '/api/chat',
+      headers: () => ({
+        Authorization: `Bearer ${accessToken}`,
+      }),
+      auth: {
+        refresh,
+      },
+    })
+
+    const response = await transport.sendMessage({ question: '질문' })
+
+    expect(response).toEqual({ answer: '갱신 후 응답' })
+    expect(refresh).toHaveBeenCalledTimes(1)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock.mock.calls[0]?.[1]?.headers).toEqual({
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer expired-token',
+    })
+    expect(fetchMock.mock.calls[1]?.[1]?.headers).toEqual({
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer fresh-token',
+    })
+  })
 })
