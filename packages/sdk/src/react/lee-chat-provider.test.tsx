@@ -1,4 +1,4 @@
-import { act, renderHook } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { LeeChatProvider } from './lee-chat-provider'
@@ -108,5 +108,47 @@ describe('LeeChatProvider', () => {
       },
     ])
     expect(subscribe).toHaveBeenCalledTimes(1)
+  })
+
+  it('requestTimeoutMs가 지나면 기본 HTTP 요청을 실패 메시지로 처리한다', async () => {
+    const fetchImplementation = vi.fn((_endpoint, init?: RequestInit) => {
+      return new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => {
+          reject(new DOMException('The operation was aborted.', 'AbortError'))
+        })
+      })
+    }) as typeof fetch
+    const { result } = renderHook(() => useLeeChat(), {
+      wrapper: ({ children }: { children?: ReactNode }) => (
+        <LeeChatProvider
+          config={{
+            appId: 'app',
+            endpoint: '/api/chat',
+            requestTimeoutMs: 10,
+          }}
+          fetchImplementation={fetchImplementation}
+        >
+          {children}
+        </LeeChatProvider>
+      ),
+    })
+    await act(async () => {
+      await result.current.submitMessage('timeout request')
+    })
+
+    await waitFor(() => {
+      expect(result.current.messages[0]).toEqual(
+        expect.objectContaining({
+          content: 'timeout request',
+          status: 'failed',
+        }),
+      )
+    })
+    expect(fetchImplementation).toHaveBeenCalledWith(
+      '/api/chat',
+      expect.objectContaining({
+        signal: expect.any(AbortSignal),
+      }),
+    )
   })
 })

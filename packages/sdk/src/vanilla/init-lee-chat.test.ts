@@ -184,6 +184,50 @@ describe('vanilla initLeeChat', () => {
     })
   })
 
+  it('requestTimeoutMs가 지나면 Vanilla 요청을 실패 메시지로 처리한다', async () => {
+    fetchMock.mockImplementation((_endpoint, init?: RequestInit) => {
+      return new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => {
+          reject(new DOMException('The operation was aborted.', 'AbortError'))
+        })
+      })
+    })
+
+    initLeeChat({
+      appId: 'vanilla-app',
+      endpoint: '/api/chat',
+      fetchImplementation: fetchMock,
+      initialOpen: true,
+      requestTimeoutMs: 10,
+    })
+
+    const input = document.querySelector('textarea')
+
+    if (!(input instanceof HTMLTextAreaElement)) {
+      throw new Error('textarea not found')
+    }
+
+    fireEvent.change(input, {
+      target: {
+        value: 'timeout please',
+      },
+    })
+    fireEvent.submit(input.form as HTMLFormElement)
+
+    await waitFor(() => {
+      expect(document.body.textContent).toContain('timeout please')
+      expect(document.body.textContent).toContain(
+        'Message failed. Please try again.',
+      )
+    })
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/chat',
+      expect.objectContaining({
+        signal: expect.any(AbortSignal),
+      }),
+    )
+  })
+
   it('renderHeader로 header를 교체하고 close 액션을 사용할 수 있다', () => {
     initLeeChat({
       appId: 'vanilla-app',

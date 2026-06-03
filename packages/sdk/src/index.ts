@@ -90,13 +90,17 @@ export type { ChatEvent, ChatEventType } from './model/chat-event'
 export type { ChatPersistence } from './persistence/chat-persistence'
 export { LocalStorageChatPersistence } from './persistence/local-storage-chat-persistence'
 export { MemoryChatPersistence } from './persistence/memory-chat-persistence'
-export type { ChatTransport } from './transport/chat-transport'
+export type {
+  ChatTransport,
+  ChatTransportSendMessageOptions,
+} from './transport/chat-transport'
 export type {
   ChatEventListener,
   ChatEventTransport,
   ChatEventUnsubscribe,
 } from './transport/chat-event-transport'
 export { HttpChatTransport } from './transport/http-chat-transport'
+export type { HttpChatTransportParams } from './transport/http-chat-transport'
 export { SseChatEventTransport } from './transport/sse-chat-event-transport'
 export type {
   CreateEventSource,

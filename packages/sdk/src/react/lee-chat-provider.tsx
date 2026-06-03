@@ -44,8 +44,9 @@ export function LeeChatProvider({
     return new HttpChatTransport<LeeChatRequest, LeeChatResponse>({
       endpoint: resolvedConfig.endpoint,
       fetchImplementation,
+      timeoutMs: resolvedConfig.requestTimeoutMs,
     })
-  }, [fetchImplementation, resolvedConfig.endpoint])
+  }, [fetchImplementation, resolvedConfig.endpoint, resolvedConfig.requestTimeoutMs])
   const persistence = useMemo(() => {
     if (resolvedConfig.persistence === 'localStorage') {
       return new LocalStorageChatPersistence<ChatMessage<Record<string, unknown>>>({

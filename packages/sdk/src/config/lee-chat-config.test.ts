@@ -83,4 +83,14 @@ describe('resolveLeeChatConfig', () => {
     expect(config.theme.radius).toBe('12px')
     expect(config.className?.trigger).toBe('custom-trigger')
   })
+
+  it('requestTimeoutMs 설정을 보존한다', () => {
+    const config = resolveLeeChatConfig({
+      appId: 'app',
+      endpoint: '/api/chat',
+      requestTimeoutMs: 3000,
+    })
+
+    expect(config.requestTimeoutMs).toBe(3000)
+  })
 })

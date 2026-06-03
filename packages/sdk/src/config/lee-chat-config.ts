@@ -66,6 +66,7 @@ export interface LeeChatConfig {
   position?: LeeChatPosition
   initialOpen?: boolean
   initialMessage?: string
+  requestTimeoutMs?: number
   persistence?: LeeChatPersistenceType
   texts?: Partial<LeeChatWidgetText>
   theme?: Partial<LeeChatTheme>

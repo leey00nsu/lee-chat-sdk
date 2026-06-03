@@ -70,6 +70,7 @@ pnpm add lee-chat-sdk@file:../lee-chat-sdk/packages/sdk
 - 버튼을 누르면 채팅 패널, 메시지 목록, 입력창, 전송 버튼이 표시됩니다.
 - 사용자가 보낸 메시지를 `endpoint`로 POST 전송합니다.
 - 응답 메시지를 assistant 메시지로 추가합니다.
+- `requestTimeoutMs`로 지연된 요청을 중단하고 실패 메시지로 표시할 수 있습니다.
 - `memory` 또는 `localStorage` persistence를 선택할 수 있습니다.
 - CSS custom properties와 class hook으로 스타일을 조정할 수 있습니다.
 
@@ -95,6 +96,7 @@ const config: LeeChatConfig = {
   },
   position: 'bottom-right',
   initialOpen: false,
+  requestTimeoutMs: 15000,
   persistence: 'localStorage',
   texts: {
     title: '상담',
@@ -465,7 +467,7 @@ initLeeChat({
 - `useChatController`: 입력 상태, 제출 상태, 메시지 목록, transport 호출, persistence 저장을 관리합니다.
 - `useChatOperatorConsole`: 운영 콘솔의 선택 대화, summary 목록, 배정/종료 event 생성을 관리하는 React adapter입니다.
 - `ChatTransport`: HTTP, mock, WebSocket, SSE 같은 전송 방식을 교체하기 위한 adapter interface입니다.
-- `HttpChatTransport`: 기본 HTTP POST transport입니다.
+- `HttpChatTransport`: 기본 HTTP POST transport입니다. `timeoutMs`와 호출별 `AbortSignal`로 timeout/abort를 제어할 수 있습니다.
 - `SseChatEventTransport`: browser `EventSource` 기반 SSE adapter입니다. 서버 event를 `ConversationClientEvent`로 파싱해 React Provider나 Vanilla widget에 연결합니다.
 - `WebSocketChatEventTransport`: browser `WebSocket` 기반 realtime adapter입니다. 서버 message payload를 `ConversationClientEvent`로 파싱해 React Provider나 Vanilla widget에 연결하며, reconnect/backoff 옵션을 제공합니다.
 - `MemoryChatPersistence`: 메모리 기반 대화 저장소입니다.
@@ -600,7 +602,7 @@ pnpm publish --access public
 
 - SSE reconnect/backoff, auth header 갱신, session refresh 정책은 아직 포함되어 있지 않습니다.
 - WebSocket auth header 갱신, session refresh 정책은 아직 포함되어 있지 않습니다.
-- 고급 retry 정책, timeout, abort/cancel 정책은 아직 포함되어 있지 않습니다.
+- 고급 retry 정책은 아직 포함되어 있지 않습니다.
 - Storybook은 기본 위젯과 운영 콘솔 상태 예제를 포함하지만, 문서형 가이드는 아직 부족합니다.
 - package export path는 현재 root export로 제한되어 있습니다.
 
@@ -608,6 +610,6 @@ pnpm publish --access public
 
 - SSE reconnect/backoff 정책 추가
 - WebSocket auth header 갱신, session refresh 정책 추가
-- timeout, abort/cancel, 고급 retry 정책 추가
+- 고급 retry 정책 추가
 - Storybook interaction/play 시나리오 추가
 - npm release workflow 준비

@@ -70,6 +70,7 @@ pnpm add lee-chat-sdk@file:../lee-chat-sdk/packages/sdk
 - Opens a chat panel, message list, composer, and send button.
 - Sends user messages to `endpoint` with POST.
 - Adds the response as an assistant message.
+- Can abort delayed requests with `requestTimeoutMs` and show them as failed messages.
 - Supports `memory` or `localStorage` persistence.
 - Exposes CSS custom properties and class hooks for styling.
 
@@ -95,6 +96,7 @@ const config: LeeChatConfig = {
   },
   position: 'bottom-right',
   initialOpen: false,
+  requestTimeoutMs: 15000,
   persistence: 'localStorage',
   texts: {
     title: 'Support',
@@ -465,7 +467,7 @@ Use the headless controller and primitives when you need deeper customization.
 - `useChatController`: manages input state, submission state, messages, transport calls, and persistence.
 - `useChatOperatorConsole`: React adapter for selected conversation state, summary lists, and assignment/close event creation in operator consoles.
 - `ChatTransport`: adapter interface for HTTP, mock, WebSocket, SSE, or any custom transport.
-- `HttpChatTransport`: default HTTP POST transport.
+- `HttpChatTransport`: default HTTP POST transport with `timeoutMs` and per-call `AbortSignal` support for timeout/abort control.
 - `SseChatEventTransport`: browser `EventSource`-based SSE adapter. It parses server events as `ConversationClientEvent` and connects them to the React Provider or Vanilla widget.
 - `WebSocketChatEventTransport`: browser `WebSocket`-based realtime adapter. It parses server message payloads as `ConversationClientEvent`, connects them to the React Provider or Vanilla widget, and provides reconnect/backoff options.
 - `MemoryChatPersistence`: in-memory conversation storage.
@@ -600,7 +602,7 @@ pnpm publish --access public
 
 - SSE reconnect/backoff, auth header refresh, and session refresh policies are not included yet.
 - WebSocket auth header refresh and session refresh policies are not included yet.
-- Advanced retry policies, timeout, and abort/cancel policies are not included yet.
+- Advanced retry policies are not included yet.
 - Storybook includes default widget and operator-console state examples, but documentation-style guides are still limited.
 - Package export paths are currently limited to the root export.
 
@@ -608,6 +610,6 @@ pnpm publish --access public
 
 - Add SSE reconnect/backoff policies.
 - Add WebSocket auth header refresh and session refresh policies.
-- Add timeout, abort/cancel, and advanced retry policies.
+- Add advanced retry policies.
 - Add Storybook interaction/play scenarios.
 - Prepare an npm release workflow.
