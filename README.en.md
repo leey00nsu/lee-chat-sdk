@@ -68,6 +68,8 @@ pnpm add lee-chat-sdk@file:../lee-chat-sdk/packages/sdk
 
 - Renders a floating chat button in the bottom-right corner.
 - Opens a chat panel, message list, composer, and send button.
+- Creates and stores `visitor.id` in localStorage when `participant.id` is not provided, so the same browser visitor can be identified again.
+- Derives the default `conversation.id` per visitor or participant.
 - Sends user messages to `endpoint` with POST.
 - Adds the response as an assistant message.
 - Can abort delayed requests with `requestTimeoutMs` and show them as failed messages.
@@ -85,6 +87,12 @@ const config: LeeChatConfig = {
   endpoint: '/api/chat',
   conversation: {
     kind: 'support',
+  },
+  visitor: {
+    id: 'visitor-123',
+    metadata: {
+      source: 'pricing-page',
+    },
   },
   participant: {
     id: 'participant-user-123',
@@ -162,6 +170,10 @@ interface LeeChatRequest {
     id: string
     kind: 'user' | 'operator' | 'bot' | 'system'
     displayName?: string
+    metadata?: Record<string, unknown>
+  }
+  visitor: {
+    id: string
     metadata?: Record<string, unknown>
   }
   message: {

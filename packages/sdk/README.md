@@ -50,6 +50,9 @@ const leeChat = initLeeChat({
   conversation: {
     kind: 'support',
   },
+  visitor: {
+    id: 'visitor-123',
+  },
   participant: {
     id: 'participant-user-123',
     kind: 'user',
@@ -84,7 +87,7 @@ import 'lee-chat-sdk/style.css'
 }
 ```
 
-기본 UI는 `sending`, `failed`, retry, assistant loading, presence, typing, read receipt 상태와 text/image/file message part 렌더링을 포함합니다. `requestTimeoutMs`와 `requestRetry`로 기본 요청의 timeout과 retry를 설정할 수 있습니다. 문구는 `config.texts`, class hook은 `config.className`으로 조정할 수 있습니다. React에서는 `LeeChatWidget`의 `renderMessage`, `renderAssistantLoading`, `renderHeader`, `renderTrigger`, `renderComposerFooter`로 주요 UI slot을 교체할 수 있습니다. Vanilla API에서는 `initLeeChat()`의 `renderHeader`, `renderTrigger`, `renderMessage`, `renderComposerFooter`가 DOM renderer hook으로 동작합니다.
+기본 UI는 `sending`, `failed`, retry, assistant loading, presence, typing, read receipt 상태와 text/image/file message part 렌더링을 포함합니다. `participant.id`를 직접 주지 않으면 SDK가 `visitor.id`를 localStorage에 생성/저장해 같은 브라우저 방문자를 재식별하고, 기본 `conversation.id`도 visitor 또는 participant 단위로 분리합니다. `requestTimeoutMs`와 `requestRetry`로 기본 요청의 timeout과 retry를 설정할 수 있습니다. 문구는 `config.texts`, class hook은 `config.className`으로 조정할 수 있습니다. React에서는 `LeeChatWidget`의 `renderMessage`, `renderAssistantLoading`, `renderHeader`, `renderTrigger`, `renderComposerFooter`로 주요 UI slot을 교체할 수 있습니다. Vanilla API에서는 `initLeeChat()`의 `renderHeader`, `renderTrigger`, `renderMessage`, `renderComposerFooter`가 DOM renderer hook으로 동작합니다.
 
 ## Headless
 

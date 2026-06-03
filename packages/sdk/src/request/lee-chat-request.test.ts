@@ -26,6 +26,12 @@ describe('lee chat request contract', () => {
         kind: 'user',
         displayName: 'Yoonsu',
       },
+      visitor: {
+        id: 'visitor-user',
+        metadata: {
+          source: 'pricing-page',
+        },
+      },
       metadata: {
         plan: 'pro',
       },
@@ -43,6 +49,12 @@ describe('lee chat request contract', () => {
         id: 'participant-user',
         kind: 'user',
         displayName: 'Yoonsu',
+      },
+      visitor: {
+        id: 'visitor-user',
+        metadata: {
+          source: 'pricing-page',
+        },
       },
       message: {
         id: 'message',

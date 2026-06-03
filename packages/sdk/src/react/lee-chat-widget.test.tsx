@@ -44,7 +44,7 @@ function ApplyParticipantStateEvents() {
         leeChat.applyEvent({
           type: 'participant.typing_changed',
           typingIndicator: {
-            conversationId: 'app:conversation',
+            conversationId: leeChat.config.conversation.id,
             participantId: 'app-assistant',
             isTyping: true,
             updatedAt: '2026-06-01T00:01:00.000Z',
@@ -90,6 +90,7 @@ function MarkFirstMessageRead() {
 
 afterEach(() => {
   cleanup()
+  localStorage.clear()
   vi.clearAllMocks()
 })
 
@@ -138,6 +139,9 @@ describe('LeeChatWidget', () => {
           appId: 'app',
           endpoint: '/api/chat',
           initialOpen: true,
+          visitor: {
+            id: 'visitor-test',
+          },
         }}
         fetchImplementation={fetchMock}
       >
@@ -163,15 +167,19 @@ describe('LeeChatWidget', () => {
     expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual(
       expect.objectContaining({
         conversation: {
-          id: 'app:conversation',
+          id: 'app:conversation:visitor-test',
           kind: 'support',
         },
         participant: expect.objectContaining({
-          id: 'app-participant',
+          id: 'visitor-test',
           kind: 'user',
         }),
+        visitor: {
+          id: 'visitor-test',
+          metadata: undefined,
+        },
         message: expect.objectContaining({
-          senderId: 'app-participant',
+          senderId: 'visitor-test',
           parts: [
             {
               type: 'text',
@@ -569,6 +577,64 @@ describe('LeeChatWidget', () => {
     )
 
     expect(screen.getByText('Custom footer')).toBeTruthy()
+  })
+
+  it('localStorage persistence를 visitor별 conversation으로 분리한다', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        message: {
+          content: 'Persisted response',
+        },
+      }),
+    })
+    const { unmount } = render(
+      <LeeChatProvider
+        config={{
+          appId: 'app',
+          endpoint: '/api/chat',
+          initialOpen: true,
+          persistence: 'localStorage',
+          visitor: {
+            id: 'visitor-a',
+          },
+        }}
+        fetchImplementation={fetchMock}
+      >
+        <LeeChatWidget />
+      </LeeChatProvider>,
+    )
+
+    fireEvent.change(screen.getByLabelText('Message'), {
+      target: { value: 'Visitor A question' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Persisted response')).toBeTruthy()
+    })
+
+    unmount()
+
+    render(
+      <LeeChatProvider
+        config={{
+          appId: 'app',
+          endpoint: '/api/chat',
+          initialOpen: true,
+          persistence: 'localStorage',
+          visitor: {
+            id: 'visitor-b',
+          },
+        }}
+        fetchImplementation={fetchMock}
+      >
+        <LeeChatWidget />
+      </LeeChatProvider>,
+    )
+
+    expect(screen.queryByText('Visitor A question')).toBeNull()
+    expect(screen.queryByText('Persisted response')).toBeNull()
   })
 
   it('participant presence와 typing 상태를 표시한다', async () => {

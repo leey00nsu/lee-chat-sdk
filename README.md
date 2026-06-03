@@ -68,6 +68,8 @@ pnpm add lee-chat-sdk@file:../lee-chat-sdk/packages/sdk
 
 - 페이지 오른쪽 아래에 플로팅 채팅 버튼을 렌더링합니다.
 - 버튼을 누르면 채팅 패널, 메시지 목록, 입력창, 전송 버튼이 표시됩니다.
+- `participant.id`를 직접 주지 않으면 `visitor.id`를 localStorage에 생성/저장해 같은 브라우저 방문자를 재식별합니다.
+- 기본 `conversation.id`는 visitor 또는 participant 단위로 분리됩니다.
 - 사용자가 보낸 메시지를 `endpoint`로 POST 전송합니다.
 - 응답 메시지를 assistant 메시지로 추가합니다.
 - `requestTimeoutMs`로 지연된 요청을 중단하고 실패 메시지로 표시할 수 있습니다.
@@ -85,6 +87,12 @@ const config: LeeChatConfig = {
   endpoint: '/api/chat',
   conversation: {
     kind: 'support',
+  },
+  visitor: {
+    id: 'visitor-123',
+    metadata: {
+      source: 'pricing-page',
+    },
   },
   participant: {
     id: 'participant-user-123',
@@ -162,6 +170,10 @@ interface LeeChatRequest {
     id: string
     kind: 'user' | 'operator' | 'bot' | 'system'
     displayName?: string
+    metadata?: Record<string, unknown>
+  }
+  visitor: {
+    id: string
     metadata?: Record<string, unknown>
   }
   message: {

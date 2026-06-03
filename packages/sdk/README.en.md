@@ -50,6 +50,9 @@ const leeChat = initLeeChat({
   conversation: {
     kind: 'support',
   },
+  visitor: {
+    id: 'visitor-123',
+  },
   participant: {
     id: 'participant-user-123',
     kind: 'user',
@@ -84,7 +87,7 @@ Main CSS custom properties:
 }
 ```
 
-The default UI includes `sending`, `failed`, retry, assistant loading, presence, typing, read receipt states, and text/image/file message part rendering. Configure default request timeout and retry behavior with `requestTimeoutMs` and `requestRetry`. Customize copy through `config.texts`, class hooks through `config.className`, and replace key React UI slots with `LeeChatWidget` `renderMessage`, `renderAssistantLoading`, `renderHeader`, `renderTrigger`, and `renderComposerFooter`. In the Vanilla API, `initLeeChat()` `renderHeader`, `renderTrigger`, `renderMessage`, and `renderComposerFooter` act as DOM renderer hooks.
+The default UI includes `sending`, `failed`, retry, assistant loading, presence, typing, read receipt states, and text/image/file message part rendering. When `participant.id` is not provided, the SDK creates and stores `visitor.id` in localStorage so the same browser visitor can be identified again, and the default `conversation.id` is derived per visitor or participant. Configure default request timeout and retry behavior with `requestTimeoutMs` and `requestRetry`. Customize copy through `config.texts`, class hooks through `config.className`, and replace key React UI slots with `LeeChatWidget` `renderMessage`, `renderAssistantLoading`, `renderHeader`, `renderTrigger`, and `renderComposerFooter`. In the Vanilla API, `initLeeChat()` `renderHeader`, `renderTrigger`, `renderMessage`, and `renderComposerFooter` act as DOM renderer hooks.
 
 ## Headless
 

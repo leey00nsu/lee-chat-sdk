@@ -56,14 +56,18 @@ export function LeeChatProvider({
   const persistence = useMemo(() => {
     if (resolvedConfig.persistence === 'localStorage') {
       return new LocalStorageChatPersistence<ChatMessage<Record<string, unknown>>>({
-        storageKey: `${LEE_CHAT_STORAGE.KEY_PREFIX}:${resolvedConfig.appId}`,
+        storageKey: `${LEE_CHAT_STORAGE.KEY_PREFIX}:${resolvedConfig.appId}:${resolvedConfig.conversation.id}`,
         storageVersion: LEE_CHAT_STORAGE.VERSION,
         validateMessages: validatePersistedMessages,
       })
     }
 
     return new MemoryChatPersistence<ChatMessage<Record<string, unknown>>>()
-  }, [resolvedConfig.appId, resolvedConfig.persistence])
+  }, [
+    resolvedConfig.appId,
+    resolvedConfig.conversation.id,
+    resolvedConfig.persistence,
+  ])
   const chat = useChatController<
     LeeChatRequest,
     LeeChatResponse,
@@ -88,6 +92,7 @@ export function LeeChatProvider({
         appId: resolvedConfig.appId,
         conversation: resolvedConfig.conversation,
         participant: resolvedConfig.participant,
+        visitor: resolvedConfig.visitor,
         metadata: resolvedConfig.metadata,
         message: userMessage,
         history: messages,

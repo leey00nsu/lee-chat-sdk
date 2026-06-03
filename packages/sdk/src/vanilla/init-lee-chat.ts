@@ -130,11 +130,11 @@ function resolvePositionClassName(position: string): string {
 }
 
 function resolveConversationId(config: LeeChatConfig): string {
-  return resolveLeeChatConfig(config).conversation.id
+  return config.conversation?.id ?? resolveLeeChatConfig(config).conversation.id
 }
 
 function resolveStorageKey(config: LeeChatConfig): string {
-  return `lee-chat:${config.appId}:${LEE_CHAT_CONVERSATION_SUFFIX}:v${LEE_CHAT_STORAGE_VERSION}`
+  return `lee-chat:${config.appId}:${resolveConversationId(config)}:${LEE_CHAT_CONVERSATION_SUFFIX}:v${LEE_CHAT_STORAGE_VERSION}`
 }
 
 function createDefaultContainer(): HTMLElement {
@@ -740,6 +740,7 @@ async function sendMessageToEndpoint({
         appId: config.appId,
         conversation: resolvedConfig.conversation,
         participant: resolvedConfig.participant,
+        visitor: resolvedConfig.visitor,
         message: userMessage,
         history: previousMessages,
         metadata: config.metadata,

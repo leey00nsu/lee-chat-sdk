@@ -6,6 +6,11 @@ export type LeeChatPosition = 'bottom-right' | 'bottom-left'
 export type LeeChatPersistenceType = 'memory' | 'localStorage'
 export type LeeChatColorScheme = 'light' | 'dark' | 'system'
 
+export interface LeeChatVisitor {
+  id?: string
+  metadata?: Record<string, unknown>
+}
+
 export interface LeeChatParticipant {
   id: string
   kind?: ChatParticipantKind
@@ -61,6 +66,7 @@ export interface LeeChatClassName {
 export interface LeeChatConfig {
   appId: string
   endpoint: string
+  visitor?: LeeChatVisitor
   conversation?: LeeChatConversationConfig
   participant?: LeeChatParticipant
   metadata?: Record<string, unknown>
@@ -80,6 +86,7 @@ export interface ResolvedLeeChatConfig
     LeeChatConfig,
     'texts' | 'theme' | 'position' | 'initialOpen' | 'persistence' | 'conversation' | 'participant'
   > {
+  visitor: Required<Pick<LeeChatVisitor, 'id'>> & Pick<LeeChatVisitor, 'metadata'>
   conversation: Required<Pick<LeeChatConversationConfig, 'id' | 'kind'>> &
     Pick<LeeChatConversationConfig, 'metadata'>
   participant: ChatParticipant
@@ -112,20 +119,32 @@ const DEFAULT_LEE_CHAT_THEME: LeeChatTheme = {
   radius: '12px',
 }
 
+const LEE_CHAT_VISITOR_STORAGE = {
+  KEY_PREFIX: 'lee-chat',
+  KEY_SUFFIX: 'visitor',
+} as const
+
 export function resolveLeeChatConfig(
   config: LeeChatConfig,
 ): ResolvedLeeChatConfig {
-  const conversationId = config.conversation?.id ?? `${config.appId}:conversation`
+  const visitorId = resolveVisitorId(config)
+  const participantId = config.participant?.id ?? visitorId
+  const conversationId =
+    config.conversation?.id ?? `${config.appId}:conversation:${participantId}`
 
   return {
     ...config,
+    visitor: {
+      id: visitorId,
+      metadata: config.visitor?.metadata,
+    },
     conversation: {
       id: conversationId,
       kind: config.conversation?.kind ?? 'support',
       metadata: config.conversation?.metadata,
     },
     participant: {
-      id: config.participant?.id ?? `${config.appId}-participant`,
+      id: participantId,
       kind: config.participant?.kind ?? 'user',
       displayName: config.participant?.displayName,
       metadata: config.participant?.metadata,
@@ -142,4 +161,50 @@ export function resolveLeeChatConfig(
       ...config.theme,
     },
   }
+}
+
+function resolveVisitorId(config: LeeChatConfig): string {
+  if (config.visitor?.id) {
+    return config.visitor.id
+  }
+
+  const storageKey = createVisitorStorageKey(config.appId)
+  const persistedVisitorId = readVisitorId(storageKey)
+
+  if (persistedVisitorId) {
+    return persistedVisitorId
+  }
+
+  const nextVisitorId = createVisitorId()
+  writeVisitorId(storageKey, nextVisitorId)
+
+  return nextVisitorId
+}
+
+function createVisitorStorageKey(appId: string): string {
+  return `${LEE_CHAT_VISITOR_STORAGE.KEY_PREFIX}:${appId}:${LEE_CHAT_VISITOR_STORAGE.KEY_SUFFIX}`
+}
+
+function readVisitorId(storageKey: string): string | undefined {
+  if (globalThis.window === undefined) {
+    return undefined
+  }
+
+  return globalThis.localStorage.getItem(storageKey) ?? undefined
+}
+
+function writeVisitorId(storageKey: string, visitorId: string): void {
+  if (globalThis.window === undefined) {
+    return
+  }
+
+  globalThis.localStorage.setItem(storageKey, visitorId)
+}
+
+function createVisitorId(): string {
+  if (typeof globalThis.crypto?.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID()
+  }
+
+  return `visitor-${Date.now().toString(36)}`
 }

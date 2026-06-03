@@ -23,6 +23,7 @@ export type {
   LeeChatPersistenceType,
   LeeChatPosition,
   LeeChatTheme,
+  LeeChatVisitor,
   LeeChatWidgetText,
   ResolvedLeeChatConfig,
 } from './config/lee-chat-config'

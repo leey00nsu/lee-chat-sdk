@@ -1,7 +1,14 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { resolveLeeChatConfig } from './lee-chat-config'
 
 describe('resolveLeeChatConfig', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue(
+      '00000000-0000-4000-8000-000000000001',
+    )
+  })
+
   it('required config에 기본 widget 설정을 병합한다', () => {
     const config = resolveLeeChatConfig({
       appId: 'app',
@@ -13,10 +20,11 @@ describe('resolveLeeChatConfig', () => {
         appId: 'app',
         endpoint: '/api/chat',
         conversation: expect.objectContaining({
+          id: 'app:conversation:00000000-0000-4000-8000-000000000001',
           kind: 'support',
         }),
         participant: expect.objectContaining({
-          id: 'app-participant',
+          id: '00000000-0000-4000-8000-000000000001',
           kind: 'user',
         }),
         position: 'bottom-right',
@@ -108,5 +116,69 @@ describe('resolveLeeChatConfig', () => {
       maxAttempts: 2,
       delayMs: 100,
     })
+  })
+
+  it('visitor id를 localStorage에 저장하고 같은 appId에서 재사용한다', () => {
+    const firstConfig = resolveLeeChatConfig({
+      appId: 'app',
+      endpoint: '/api/chat',
+    })
+
+    vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue(
+      '00000000-0000-4000-8000-000000000002',
+    )
+
+    const secondConfig = resolveLeeChatConfig({
+      appId: 'app',
+      endpoint: '/api/chat',
+    })
+
+    expect(firstConfig.visitor.id).toBe('00000000-0000-4000-8000-000000000001')
+    expect(secondConfig.visitor.id).toBe('00000000-0000-4000-8000-000000000001')
+    expect(secondConfig.participant.id).toBe('00000000-0000-4000-8000-000000000001')
+    expect(secondConfig.conversation.id).toBe(
+      'app:conversation:00000000-0000-4000-8000-000000000001',
+    )
+  })
+
+  it('명시적 visitor id는 저장된 anonymous visitor id보다 우선한다', () => {
+    localStorage.setItem('lee-chat:app:visitor', 'visitor-persisted')
+
+    const config = resolveLeeChatConfig({
+      appId: 'app',
+      endpoint: '/api/chat',
+      visitor: {
+        id: 'visitor-explicit',
+        metadata: {
+          plan: 'enterprise',
+        },
+      },
+    })
+
+    expect(config.visitor).toEqual({
+      id: 'visitor-explicit',
+      metadata: {
+        plan: 'enterprise',
+      },
+    })
+    expect(config.participant.id).toBe('visitor-explicit')
+    expect(config.conversation.id).toBe('app:conversation:visitor-explicit')
+  })
+
+  it('명시적 participant id는 visitor id보다 우선한다', () => {
+    const config = resolveLeeChatConfig({
+      appId: 'app',
+      endpoint: '/api/chat',
+      visitor: {
+        id: 'visitor-explicit',
+      },
+      participant: {
+        id: 'participant-explicit',
+      },
+    })
+
+    expect(config.visitor.id).toBe('visitor-explicit')
+    expect(config.participant.id).toBe('participant-explicit')
+    expect(config.conversation.id).toBe('app:conversation:participant-explicit')
   })
 })

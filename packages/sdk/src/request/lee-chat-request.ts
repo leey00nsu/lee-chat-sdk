@@ -8,6 +8,7 @@ import {
 } from '../model/chat-message'
 import type { ChatConversationKind } from '../model/chat-conversation'
 import type { ChatParticipant } from '../model/chat-participant'
+import type { LeeChatVisitor } from '../config/lee-chat-config'
 
 export interface LeeChatHistoryItem {
   role: ChatMessageRole
@@ -24,6 +25,7 @@ export interface LeeChatRequest {
     kind: ChatConversationKind
   }
   participant: ChatParticipant
+  visitor: Required<Pick<LeeChatVisitor, 'id'>> & Pick<LeeChatVisitor, 'metadata'>
   message: {
     id: string
     senderId: string
@@ -62,6 +64,7 @@ interface BuildLeeChatRequestParams {
     kind: ChatConversationKind
   }
   participant: ChatParticipant
+  visitor: Required<Pick<LeeChatVisitor, 'id'>> & Pick<LeeChatVisitor, 'metadata'>
   message: ChatMessage
   history: ChatMessage[]
   metadata?: Record<string, unknown>
@@ -71,6 +74,7 @@ export function buildLeeChatRequest({
   appId,
   conversation,
   participant,
+  visitor,
   message,
   history,
   metadata,
@@ -79,6 +83,7 @@ export function buildLeeChatRequest({
     appId,
     conversation,
     participant,
+    visitor,
     message: {
       id: message.id,
       senderId: message.senderId,

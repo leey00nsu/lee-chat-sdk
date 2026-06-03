@@ -13,6 +13,7 @@ const scrollIntoViewMock = vi.fn()
 
 afterEach(() => {
   destroyLeeChat()
+  localStorage.clear()
   vi.clearAllMocks()
 })
 
@@ -72,6 +73,9 @@ describe('vanilla initLeeChat', () => {
       endpoint: '/api/chat',
       fetchImplementation: fetchMock,
       initialOpen: true,
+      visitor: {
+        id: 'visitor-vanilla',
+      },
     })
 
     const input = document.querySelector('textarea')
@@ -100,15 +104,18 @@ describe('vanilla initLeeChat', () => {
     expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual(
       expect.objectContaining({
         conversation: {
-          id: 'vanilla-app:conversation',
+          id: 'vanilla-app:conversation:visitor-vanilla',
           kind: 'support',
         },
         participant: expect.objectContaining({
-          id: 'vanilla-app-participant',
+          id: 'visitor-vanilla',
           kind: 'user',
         }),
+        visitor: {
+          id: 'visitor-vanilla',
+        },
         message: expect.objectContaining({
-          senderId: 'vanilla-app-participant',
+          senderId: 'visitor-vanilla',
           parts: [
             {
               type: 'text',
@@ -157,6 +164,9 @@ describe('vanilla initLeeChat', () => {
       endpoint: '/api/chat',
       fetchImplementation: fetchMock,
       initialOpen: true,
+      visitor: {
+        id: 'visitor-vanilla',
+      },
     })
 
     const input = document.querySelector('textarea')
@@ -430,6 +440,9 @@ describe('vanilla initLeeChat', () => {
       endpoint: '/api/chat',
       fetchImplementation: fetchMock,
       initialOpen: true,
+      visitor: {
+        id: 'visitor-vanilla',
+      },
     })
 
     const input = document.querySelector('textarea')
@@ -656,6 +669,9 @@ describe('vanilla initLeeChat', () => {
       endpoint: '/api/chat',
       fetchImplementation: fetchMock,
       initialOpen: true,
+      visitor: {
+        id: 'visitor-vanilla',
+      },
     })
 
     instance.applyEvent({
@@ -669,7 +685,7 @@ describe('vanilla initLeeChat', () => {
     instance.applyEvent({
       type: 'participant.typing_changed',
       typingIndicator: {
-        conversationId: 'vanilla-app:conversation',
+        conversationId: 'vanilla-app:conversation:visitor-vanilla',
         participantId: 'vanilla-app-assistant',
         isTyping: true,
         updatedAt: '2026-06-01T00:01:00.000Z',
@@ -678,6 +694,66 @@ describe('vanilla initLeeChat', () => {
 
     expect(document.body.textContent).toContain('Online')
     expect(document.body.textContent).toContain('Participant is typing...')
+  })
+
+  it('localStorage persistence를 visitor별 conversation으로 분리한다', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          message: {
+            content: 'Persisted vanilla response',
+          },
+        }),
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        },
+      ),
+    )
+    initLeeChat({
+      appId: 'vanilla-app',
+      endpoint: '/api/chat',
+      fetchImplementation: fetchMock,
+      initialOpen: true,
+      persistence: 'localStorage',
+      visitor: {
+        id: 'visitor-a',
+      },
+    })
+
+    const input = document.querySelector('textarea')
+
+    if (!(input instanceof HTMLTextAreaElement)) {
+      throw new Error('textarea not found')
+    }
+
+    fireEvent.change(input, {
+      target: {
+        value: 'Visitor A vanilla question',
+      },
+    })
+    fireEvent.submit(input.form as HTMLFormElement)
+
+    await waitFor(() => {
+      expect(document.body.textContent).toContain('Persisted vanilla response')
+    })
+
+    destroyLeeChat()
+
+    initLeeChat({
+      appId: 'vanilla-app',
+      endpoint: '/api/chat',
+      fetchImplementation: fetchMock,
+      initialOpen: true,
+      persistence: 'localStorage',
+      visitor: {
+        id: 'visitor-b',
+      },
+    })
+
+    expect(document.body.textContent).not.toContain('Visitor A vanilla question')
+    expect(document.body.textContent).not.toContain('Persisted vanilla response')
   })
 
   it('내가 보낸 메시지의 read receipt를 표시한다', async () => {
@@ -700,6 +776,9 @@ describe('vanilla initLeeChat', () => {
       endpoint: '/api/chat',
       fetchImplementation: fetchMock,
       initialOpen: true,
+      visitor: {
+        id: 'visitor-vanilla',
+      },
     })
     const input = document.querySelector('textarea')
 
@@ -722,7 +801,7 @@ describe('vanilla initLeeChat', () => {
     instance.applyEvent({
       type: 'message.read',
       readReceipt: {
-        conversationId: 'vanilla-app:conversation',
+        conversationId: requestBody.conversation.id,
         messageId: requestBody.message.id,
         participantId: 'vanilla-app-assistant',
         readAt: '2026-06-01T00:02:00.000Z',
