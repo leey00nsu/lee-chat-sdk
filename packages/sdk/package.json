@@ -48,7 +48,9 @@
   },
   "scripts": {
     "build": "tsup src/index.ts src/vanilla.ts --format esm,cjs --dts --clean",
+    "pack:dry-run": "npm pack --dry-run",
     "prepare": "pnpm build",
+    "release:check": "pnpm typecheck && pnpm test:run && pnpm build && pnpm pack:dry-run",
     "test": "vitest",
     "test:run": "vitest run",
     "typecheck": "tsc --noEmit"

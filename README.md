@@ -593,12 +593,11 @@ pnpm --filter lee-chat-sdk-console test:run
 - `lee-chat-sdk/vanilla` subpath와 React optional peer dependency 확인
 - `lee-chat-sdk/vanilla` bundle이 React 런타임을 포함하지 않는지 확인
 - npm 패키지 이름 사용 가능 여부 확인
-- `pnpm --filter lee-chat-sdk typecheck` 실행
-- `pnpm --filter lee-chat-sdk test:run` 실행
-- `pnpm --filter lee-chat-sdk build` 실행
+- `pnpm release:check` 실행
 - `packages/sdk`에서 publish
 
 ```bash
+pnpm release:check
 cd packages/sdk
 pnpm publish --access public
 ```
@@ -615,4 +614,3 @@ pnpm publish --access public
 - SSE reconnect/backoff 정책 추가
 - WebSocket auth header 갱신, session refresh 정책 추가
 - Storybook interaction/play 시나리오 추가
-- npm release workflow 준비

@@ -593,12 +593,11 @@ pnpm --filter lee-chat-sdk-console test:run
 - Confirm the `lee-chat-sdk/vanilla` subpath and optional React peer dependency policy.
 - Confirm that the `lee-chat-sdk/vanilla` bundle does not include the React runtime.
 - Confirm that the package name is available on npm.
-- Run `pnpm --filter lee-chat-sdk typecheck`.
-- Run `pnpm --filter lee-chat-sdk test:run`.
-- Run `pnpm --filter lee-chat-sdk build`.
+- Run `pnpm release:check`.
 - Publish from `packages/sdk`.
 
 ```bash
+pnpm release:check
 cd packages/sdk
 pnpm publish --access public
 ```
@@ -615,4 +614,3 @@ pnpm publish --access public
 - Add SSE reconnect/backoff policies.
 - Add WebSocket auth header refresh and session refresh policies.
 - Add Storybook interaction/play scenarios.
-- Prepare an npm release workflow.
