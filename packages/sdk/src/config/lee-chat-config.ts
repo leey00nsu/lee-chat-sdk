@@ -1,5 +1,6 @@
 import type { ChatConversationKind } from '../model/chat-conversation'
 import type { ChatParticipant, ChatParticipantKind } from '../model/chat-participant'
+import type { HttpChatTransportRetryOptions } from '../transport/http-chat-transport'
 
 export type LeeChatPosition = 'bottom-right' | 'bottom-left'
 export type LeeChatPersistenceType = 'memory' | 'localStorage'
@@ -67,6 +68,7 @@ export interface LeeChatConfig {
   initialOpen?: boolean
   initialMessage?: string
   requestTimeoutMs?: number
+  requestRetry?: HttpChatTransportRetryOptions
   persistence?: LeeChatPersistenceType
   texts?: Partial<LeeChatWidgetText>
   theme?: Partial<LeeChatTheme>

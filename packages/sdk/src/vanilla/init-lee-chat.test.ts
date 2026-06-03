@@ -228,6 +228,62 @@ describe('vanilla initLeeChat', () => {
     )
   })
 
+  it('requestRetry 설정으로 Vanilla 요청을 재시도한다', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ message: { content: 'temporary' } }), {
+          status: 503,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            message: {
+              content: 'Vanilla retried response',
+            },
+          }),
+          {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          },
+        ),
+      )
+
+    initLeeChat({
+      appId: 'vanilla-app',
+      endpoint: '/api/chat',
+      fetchImplementation: fetchMock,
+      initialOpen: true,
+      requestRetry: {
+        maxAttempts: 2,
+      },
+    })
+
+    const input = document.querySelector('textarea')
+
+    if (!(input instanceof HTMLTextAreaElement)) {
+      throw new Error('textarea not found')
+    }
+
+    fireEvent.change(input, {
+      target: {
+        value: 'retry please',
+      },
+    })
+    fireEvent.submit(input.form as HTMLFormElement)
+
+    await waitFor(() => {
+      expect(document.body.textContent).toContain('retry please')
+      expect(document.body.textContent).toContain('Vanilla retried response')
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
   it('renderHeader로 header를 교체하고 close 액션을 사용할 수 있다', () => {
     initLeeChat({
       appId: 'vanilla-app',

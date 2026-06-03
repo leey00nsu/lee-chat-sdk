@@ -13,12 +13,14 @@ import type {
 import {
   buildLeeChatRequest,
   parseLeeChatResponse,
+  type LeeChatRequest,
   type LeeChatResponse,
 } from '../request/lee-chat-request'
 import type {
   ChatEventTransport,
   ChatEventUnsubscribe,
 } from '../transport/chat-event-transport'
+import { HttpChatTransport } from '../transport/http-chat-transport'
 import '../style/lee-chat-widget.css'
 
 export interface LeeChatVanillaHeaderRenderParams {
@@ -100,13 +102,7 @@ const LEE_CHAT_PARTICIPANT_STATUS_CLASS_NAME = 'lee-chat-participant-status'
 const LEE_CHAT_TYPING_INDICATOR_CLASS_NAME = 'lee-chat-typing-indicator'
 const LEE_CHAT_CLOSE_LABEL = 'Close chat'
 const LEE_CHAT_INPUT_LABEL = 'Message'
-const LEE_CHAT_CONTENT_TYPE_HEADER = 'Content-Type'
-const LEE_CHAT_JSON_CONTENT_TYPE = 'application/json'
-const LEE_CHAT_POST_METHOD = 'POST'
 const LEE_CHAT_CONVERSATION_SUFFIX = 'conversation'
-const LEE_CHAT_REQUEST_TIMEOUT = {
-  DISABLED_MS: 0,
-} as const
 const LEE_CHAT_KEY = {
   ENTER: 'Enter',
 } as const
@@ -730,33 +726,25 @@ async function sendMessageToEndpoint({
   userMessage: ChatMessage<Record<string, unknown>>
   previousMessages: ChatMessage<Record<string, unknown>>[]
 }): Promise<void> {
-  const fetchImplementation = activeConfig?.fetchImplementation ?? fetch
   const resolvedConfig = resolveLeeChatConfig(config)
-  const abortController = new AbortController()
-  const timeoutId = createRequestTimeout({
-    config,
-    abortController,
+  const transport = new HttpChatTransport<LeeChatRequest, LeeChatResponse>({
+    endpoint: config.endpoint,
+    fetchImplementation: activeConfig?.fetchImplementation ?? fetch,
+    timeoutMs: config.requestTimeoutMs,
+    retry: config.requestRetry,
   })
 
   try {
-    const response = await fetchImplementation(config.endpoint, {
-      method: LEE_CHAT_POST_METHOD,
-      headers: {
-        [LEE_CHAT_CONTENT_TYPE_HEADER]: LEE_CHAT_JSON_CONTENT_TYPE,
-      },
-      body: JSON.stringify(
-        buildLeeChatRequest({
-          appId: config.appId,
-          conversation: resolvedConfig.conversation,
-          participant: resolvedConfig.participant,
-          message: userMessage,
-          history: previousMessages,
-          metadata: config.metadata,
-        }),
-      ),
-      signal: abortController.signal,
-    })
-    const responseBody = (await response.json()) as LeeChatResponse
+    const responseBody = await transport.sendMessage(
+      buildLeeChatRequest({
+        appId: config.appId,
+        conversation: resolvedConfig.conversation,
+        participant: resolvedConfig.participant,
+        message: userMessage,
+        history: previousMessages,
+        metadata: config.metadata,
+      }),
+    )
     const parsedResponse = parseLeeChatResponse(responseBody)
     const sentUserMessage: ChatMessage<Record<string, unknown>> = {
       ...userMessage,
@@ -784,32 +772,10 @@ async function sendMessageToEndpoint({
       status: 'failed',
     })
   } finally {
-    if (timeoutId) {
-      clearTimeout(timeoutId)
-    }
     activeIsSubmitting = false
     persistMessages(config)
     renderActiveWidget()
   }
-}
-
-function createRequestTimeout({
-  config,
-  abortController,
-}: {
-  config: LeeChatConfig
-  abortController: AbortController
-}): ReturnType<typeof setTimeout> | undefined {
-  if (
-    !config.requestTimeoutMs ||
-    config.requestTimeoutMs <= LEE_CHAT_REQUEST_TIMEOUT.DISABLED_MS
-  ) {
-    return undefined
-  }
-
-  return setTimeout(() => {
-    abortController.abort()
-  }, config.requestTimeoutMs)
 }
 
 function applyLeeChatEvent(event: LeeChatVanillaEvent): void {

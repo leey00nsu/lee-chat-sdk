@@ -151,4 +151,62 @@ describe('LeeChatProvider', () => {
       }),
     )
   })
+
+  it('requestRetry 설정으로 기본 HTTP 요청을 재시도한다', async () => {
+    const fetchImplementation = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ message: { content: 'temporary' } }), {
+          status: 503,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            message: {
+              content: 'retried response',
+            },
+          }),
+          {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          },
+        ),
+      ) as typeof fetch
+    const { result } = renderHook(() => useLeeChat(), {
+      wrapper: ({ children }: { children?: ReactNode }) => (
+        <LeeChatProvider
+          config={{
+            appId: 'app',
+            endpoint: '/api/chat',
+            requestRetry: {
+              maxAttempts: 2,
+            },
+          }}
+          fetchImplementation={fetchImplementation}
+        >
+          {children}
+        </LeeChatProvider>
+      ),
+    })
+
+    await act(async () => {
+      await result.current.submitMessage('retry request')
+    })
+
+    expect(fetchImplementation).toHaveBeenCalledTimes(2)
+    expect(result.current.messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          content: 'retried response',
+          status: 'sent',
+        }),
+      ]),
+    )
+  })
 })

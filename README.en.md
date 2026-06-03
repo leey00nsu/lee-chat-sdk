@@ -71,6 +71,7 @@ pnpm add lee-chat-sdk@file:../lee-chat-sdk/packages/sdk
 - Sends user messages to `endpoint` with POST.
 - Adds the response as an assistant message.
 - Can abort delayed requests with `requestTimeoutMs` and show them as failed messages.
+- Can retry temporary 5xx/network failures with `requestRetry`.
 - Supports `memory` or `localStorage` persistence.
 - Exposes CSS custom properties and class hooks for styling.
 
@@ -97,6 +98,10 @@ const config: LeeChatConfig = {
   position: 'bottom-right',
   initialOpen: false,
   requestTimeoutMs: 15000,
+  requestRetry: {
+    maxAttempts: 2,
+    delayMs: 300,
+  },
   persistence: 'localStorage',
   texts: {
     title: 'Support',
@@ -602,7 +607,6 @@ pnpm publish --access public
 
 - SSE reconnect/backoff, auth header refresh, and session refresh policies are not included yet.
 - WebSocket auth header refresh and session refresh policies are not included yet.
-- Config-level retry policies for the default React/Vanilla widgets are not included yet.
 - Storybook includes default widget and operator-console state examples, but documentation-style guides are still limited.
 - Package export paths are currently limited to the root export.
 
@@ -610,6 +614,5 @@ pnpm publish --access public
 
 - Add SSE reconnect/backoff policies.
 - Add WebSocket auth header refresh and session refresh policies.
-- Add config-level retry policies for the default React/Vanilla widgets.
 - Add Storybook interaction/play scenarios.
 - Prepare an npm release workflow.

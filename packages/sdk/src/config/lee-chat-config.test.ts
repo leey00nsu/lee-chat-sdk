@@ -93,4 +93,20 @@ describe('resolveLeeChatConfig', () => {
 
     expect(config.requestTimeoutMs).toBe(3000)
   })
+
+  it('requestRetry 설정을 보존한다', () => {
+    const config = resolveLeeChatConfig({
+      appId: 'app',
+      endpoint: '/api/chat',
+      requestRetry: {
+        maxAttempts: 2,
+        delayMs: 100,
+      },
+    })
+
+    expect(config.requestRetry).toEqual({
+      maxAttempts: 2,
+      delayMs: 100,
+    })
+  })
 })

@@ -71,6 +71,7 @@ pnpm add lee-chat-sdk@file:../lee-chat-sdk/packages/sdk
 - 사용자가 보낸 메시지를 `endpoint`로 POST 전송합니다.
 - 응답 메시지를 assistant 메시지로 추가합니다.
 - `requestTimeoutMs`로 지연된 요청을 중단하고 실패 메시지로 표시할 수 있습니다.
+- `requestRetry`로 일시적인 5xx/network 실패를 재시도할 수 있습니다.
 - `memory` 또는 `localStorage` persistence를 선택할 수 있습니다.
 - CSS custom properties와 class hook으로 스타일을 조정할 수 있습니다.
 
@@ -97,6 +98,10 @@ const config: LeeChatConfig = {
   position: 'bottom-right',
   initialOpen: false,
   requestTimeoutMs: 15000,
+  requestRetry: {
+    maxAttempts: 2,
+    delayMs: 300,
+  },
   persistence: 'localStorage',
   texts: {
     title: '상담',
@@ -602,7 +607,6 @@ pnpm publish --access public
 
 - SSE reconnect/backoff, auth header 갱신, session refresh 정책은 아직 포함되어 있지 않습니다.
 - WebSocket auth header 갱신, session refresh 정책은 아직 포함되어 있지 않습니다.
-- 기본 React/Vanilla widget config에서 retry 정책을 직접 설정하는 옵션은 아직 포함되어 있지 않습니다.
 - Storybook은 기본 위젯과 운영 콘솔 상태 예제를 포함하지만, 문서형 가이드는 아직 부족합니다.
 - package export path는 현재 root export로 제한되어 있습니다.
 
@@ -610,6 +614,5 @@ pnpm publish --access public
 
 - SSE reconnect/backoff 정책 추가
 - WebSocket auth header 갱신, session refresh 정책 추가
-- 기본 React/Vanilla widget config-level retry 정책 추가
 - Storybook interaction/play 시나리오 추가
 - npm release workflow 준비
