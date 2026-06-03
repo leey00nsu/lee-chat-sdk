@@ -52,6 +52,103 @@ describe('HttpChatTransport', () => {
     )
   })
 
+  it('retry.maxAttempts 안에서 5xx 응답을 재시도하고 성공 응답을 반환한다', async () => {
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 503,
+        json: async () => ({ message: 'temporary failure' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ answer: '재시도 성공' }),
+      })
+    const transport = new HttpChatTransport<RequestBody, ResponseBody>({
+      endpoint: '/api/chat',
+      retry: {
+        maxAttempts: 2,
+      },
+    })
+
+    const response = await transport.sendMessage({ question: '질문' })
+
+    expect(response).toEqual({ answer: '재시도 성공' })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('network 오류를 retry하고 성공 응답을 반환한다', async () => {
+    fetchMock
+      .mockRejectedValueOnce(new TypeError('network failed'))
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ answer: '네트워크 재시도 성공' }),
+      })
+    const transport = new HttpChatTransport<RequestBody, ResponseBody>({
+      endpoint: '/api/chat',
+      retry: {
+        maxAttempts: 2,
+      },
+    })
+
+    const response = await transport.sendMessage({ question: '질문' })
+
+    expect(response).toEqual({ answer: '네트워크 재시도 성공' })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('4xx 응답은 기본 retry 대상에서 제외한다', async () => {
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: async () => ({ message: 'bad request' }),
+    })
+    const transport = new HttpChatTransport<RequestBody, ResponseBody>({
+      endpoint: '/api/chat',
+      retry: {
+        maxAttempts: 3,
+      },
+    })
+
+    await expect(transport.sendMessage({ question: '질문' })).rejects.toThrow(
+      'HTTP chat transport request failed',
+    )
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('retry.delayMs만큼 기다린 뒤 다음 시도를 실행한다', async () => {
+    vi.useFakeTimers()
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 503,
+        json: async () => ({ message: 'temporary failure' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ answer: '지연 후 성공' }),
+      })
+    const transport = new HttpChatTransport<RequestBody, ResponseBody>({
+      endpoint: '/api/chat',
+      retry: {
+        maxAttempts: 2,
+        delayMs: 500,
+      },
+    })
+    const requestPromise = transport.sendMessage({ question: '질문' })
+
+    await vi.advanceTimersByTimeAsync(499)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    await vi.advanceTimersByTimeAsync(1)
+    const response = await requestPromise
+
+    expect(response).toEqual({ answer: '지연 후 성공' })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
   it('timeoutMs가 지나면 요청을 abort한다', async () => {
     vi.useFakeTimers()
     fetchMock.mockImplementation((_endpoint, init?: RequestInit) => {

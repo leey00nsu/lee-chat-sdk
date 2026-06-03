@@ -100,7 +100,10 @@ export type {
   ChatEventUnsubscribe,
 } from './transport/chat-event-transport'
 export { HttpChatTransport } from './transport/http-chat-transport'
-export type { HttpChatTransportParams } from './transport/http-chat-transport'
+export type {
+  HttpChatTransportParams,
+  HttpChatTransportRetryOptions,
+} from './transport/http-chat-transport'
 export { SseChatEventTransport } from './transport/sse-chat-event-transport'
 export type {
   CreateEventSource,
