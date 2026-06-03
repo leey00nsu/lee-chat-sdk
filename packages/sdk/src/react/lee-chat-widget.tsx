@@ -6,7 +6,7 @@ import type { ChatMessage, ChatMessagePart } from '../model/chat-message'
 import { ChatComposer } from '../ui/chat-composer'
 import { ChatMessageList } from '../ui/chat-message-list'
 import { useLeeChat } from './use-lee-chat'
-import './lee-chat-widget.css'
+import '../style/lee-chat-widget.css'
 
 export interface LeeChatWidgetMessageRenderParams {
   message: ChatMessage<Record<string, unknown>>

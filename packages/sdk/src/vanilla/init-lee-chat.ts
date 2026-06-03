@@ -19,7 +19,7 @@ import type {
   ChatEventTransport,
   ChatEventUnsubscribe,
 } from '../transport/chat-event-transport'
-import '../react/lee-chat-widget.css'
+import '../style/lee-chat-widget.css'
 
 export interface LeeChatVanillaHeaderRenderParams {
   title: string

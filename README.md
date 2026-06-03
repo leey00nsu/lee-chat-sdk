@@ -584,6 +584,7 @@ pnpm --filter lee-chat-sdk-console test:run
 - `packages/sdk/package.json`에서 `"private": true` 제거 확인
 - `description`, `license`, `author`, `keywords`, `publishConfig` 확인
 - `lee-chat-sdk/vanilla` subpath와 React optional peer dependency 확인
+- `lee-chat-sdk/vanilla` bundle이 React 런타임을 포함하지 않는지 확인
 - npm 패키지 이름 사용 가능 여부 확인
 - `pnpm --filter lee-chat-sdk typecheck` 실행
 - `pnpm --filter lee-chat-sdk test:run` 실행
@@ -597,7 +598,6 @@ pnpm publish --access public
 
 ## 현재 한계
 
-- 현재 Vanilla JS API는 React 코드를 작성하지 않아도 되지만 내부 렌더러는 React 기반입니다.
 - SSE reconnect/backoff, auth header 갱신, session refresh 정책은 아직 포함되어 있지 않습니다.
 - WebSocket auth header 갱신, session refresh 정책은 아직 포함되어 있지 않습니다.
 - 고급 retry 정책, timeout, abort/cancel 정책은 아직 포함되어 있지 않습니다.
@@ -606,7 +606,6 @@ pnpm publish --access public
 
 ## Roadmap
 
-- no-React browser bundle 제공
 - SSE reconnect/backoff 정책 추가
 - WebSocket auth header 갱신, session refresh 정책 추가
 - timeout, abort/cancel, 고급 retry 정책 추가
