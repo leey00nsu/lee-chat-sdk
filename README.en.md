@@ -691,15 +691,13 @@ pnpm --filter lee-chat-sdk-console test:run
 
 ## npm Publishing Checklist
 
-- Confirm that `"private": true` has been removed from `packages/sdk/package.json`.
-- Confirm `description`, `license`, `author`, `keywords`, and `publishConfig`.
-- Confirm the `lee-chat-sdk/vanilla` subpath and optional React peer dependency policy.
-- Confirm that the `lee-chat-sdk/vanilla` bundle does not include the React runtime.
+- Run `pnpm release:ready` to check package metadata, export paths, files, public publishConfig, and optional React peer dependencies.
+- Run `pnpm release:check` to execute readiness, typecheck, tests, build, and npm pack dry-run.
 - Confirm that the package name is available on npm.
-- Run `pnpm release:check`.
 - Publish from `packages/sdk`.
 
 ```bash
+pnpm release:ready
 pnpm release:check
 cd packages/sdk
 pnpm publish --access public

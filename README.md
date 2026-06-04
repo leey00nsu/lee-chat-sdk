@@ -691,15 +691,13 @@ pnpm --filter lee-chat-sdk-console test:run
 
 ## npm 배포 체크리스트
 
-- `packages/sdk/package.json`에서 `"private": true` 제거 확인
-- `description`, `license`, `author`, `keywords`, `publishConfig` 확인
-- `lee-chat-sdk/vanilla` subpath와 React optional peer dependency 확인
-- `lee-chat-sdk/vanilla` bundle이 React 런타임을 포함하지 않는지 확인
+- `pnpm release:ready`로 package metadata, export path, files, public publishConfig, React optional peer dependency 확인
+- `pnpm release:check`로 readiness, typecheck, test, build, npm pack dry-run 실행
 - npm 패키지 이름 사용 가능 여부 확인
-- `pnpm release:check` 실행
 - `packages/sdk`에서 publish
 
 ```bash
+pnpm release:ready
 pnpm release:check
 cd packages/sdk
 pnpm publish --access public

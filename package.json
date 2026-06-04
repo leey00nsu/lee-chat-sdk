@@ -6,6 +6,7 @@
   "scripts": {
     "build": "pnpm --recursive --if-present build",
     "release:check": "pnpm --filter lee-chat-sdk release:check",
+    "release:ready": "node scripts/check-release-readiness.mjs",
     "storybook": "pnpm --filter lee-chat-sdk-storybook storybook",
     "storybook:build": "pnpm --filter lee-chat-sdk-storybook build",
     "test": "pnpm --recursive --if-present test",
