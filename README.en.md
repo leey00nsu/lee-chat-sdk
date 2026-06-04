@@ -669,7 +669,7 @@ pnpm storybook
 
 - `apps/demo`: drop-in chat widget example
 - `apps/console`: operator console model example
-- `apps/storybook`: Storybook for reviewing SDK UI states
+- `apps/storybook`: Storybook for reviewing SDK UI states and install/integration guides
 
 ## Development
 
@@ -706,7 +706,7 @@ pnpm publish --access public
 ## Current Limitations
 
 - SSE/WebSocket provide endpoint-factory based auth refresh instead of direct arbitrary auth-header injection because of browser API constraints.
-- Storybook includes default widget and operator-console state examples, but documentation-style guides are still limited.
+- Storybook interaction/play scenarios are still limited.
 - Package export paths are currently limited to the root export.
 
 ## Roadmap

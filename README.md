@@ -669,7 +669,7 @@ pnpm storybook
 
 - `apps/demo`: drop-in chat widget 사용 예제
 - `apps/console`: 운영 콘솔 모델 예제
-- `apps/storybook`: SDK UI 상태 검수용 Storybook
+- `apps/storybook`: SDK UI 상태와 설치/연동 guide 검수용 Storybook
 
 ## 개발
 
@@ -706,7 +706,7 @@ pnpm publish --access public
 ## 현재 한계
 
 - SSE/WebSocket은 브라우저 API 제약상 임의 auth header 직접 주입 대신 endpoint factory 기반 auth refresh를 제공합니다.
-- Storybook은 기본 위젯과 운영 콘솔 상태 예제를 포함하지만, 문서형 가이드는 아직 부족합니다.
+- Storybook interaction/play 시나리오는 아직 부족합니다.
 - package export path는 현재 root export로 제한되어 있습니다.
 
 ## Roadmap
