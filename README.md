@@ -2,11 +2,25 @@
 
 한국어 | [English](./README.en.md)
 
-`lee-chat-sdk`는 웹사이트에 채팅 경험을 빠르게 삽입하기 위한 drop-in chat SDK입니다. 기본 UI는 페이지 오른쪽 아래의 플로팅 버튼으로 시작하고, 버튼을 누르면 채팅 패널이 열립니다. 고객상담, AI assistant, 일반 대화, 그룹 대화로 확장 가능한 conversation 모델을 기반으로 하며 React 앱에서는 컴포넌트로, 일반 JavaScript 환경에서는 `initLeeChat()` 함수로 사용할 수 있습니다.
+`lee-chat-sdk`는 웹사이트에 채팅 경험을 빠르게 삽입하기 위한 drop-in chat SDK입니다. React 앱에서는 컴포넌트로, 일반 JavaScript 환경에서는 `initLeeChat()`으로, 번들러가 없는 사이트에서는 script tag로 붙일 수 있습니다.
+
+이 프로젝트는 **채팅 UI와 client/server contract를 제공하는 SDK**입니다. 실제 메시지 저장 DB, 인증/권한, rate limit, tenant 분리, 첨부파일 저장소, realtime broadcast는 host application backend가 연결합니다.
+
+## 지원 방식
+
+- React: `LeeChatProvider`, `LeeChatWidget`
+- Vanilla JS: `lee-chat-sdk/vanilla`
+- Script tag: `dist/lee-chat.global.js`
+- Server helpers: `lee-chat-sdk/server`
+- Test helpers: `lee-chat-sdk/testing`
 
 ## 빠른 시작
 
-위젯 기본 스타일을 사용하려면 앱 진입점에서 CSS를 한 번 import합니다.
+```bash
+pnpm add lee-chat-sdk
+```
+
+기본 스타일을 한 번 import합니다.
 
 ```ts
 import 'lee-chat-sdk/style.css'
@@ -20,6 +34,7 @@ import {
   LeeChatProvider,
   LeeChatWidget,
 } from 'lee-chat-sdk'
+import 'lee-chat-sdk/style.css'
 
 const syncClient = new ConversationSyncClient({
   endpoint: '/api/chat',
@@ -31,6 +46,7 @@ export function App() {
       config={{
         appId: 'my-service',
         endpoint: '/api/chat',
+        initialMessage: '무엇을 도와드릴까요?',
       }}
       syncClient={syncClient}
     >
@@ -44,6 +60,7 @@ export function App() {
 
 ```ts
 import { initLeeChat } from 'lee-chat-sdk/vanilla'
+import 'lee-chat-sdk/style.css'
 
 const leeChat = initLeeChat({
   appId: 'my-service',
@@ -57,9 +74,6 @@ leeChat.open()
 
 ### Script Tag
 
-번들러가 없는 사이트에서는 빌드 산출물 `dist/lee-chat.global.js`를 CDN에 올려 전역 `LeeChat` API로 사용할 수 있습니다. 이 IIFE 번들은 기본 위젯 CSS를 스크립트 안에 포함합니다.
-빌드 시 생성되는 `dist/lee-chat.global.manifest.json`에서 SRI `integrity` 값을 확인할 수 있습니다.
-
 ```html
 <script src="https://cdn.example.com/lee-chat.global.js"></script>
 <script>
@@ -72,733 +86,44 @@ leeChat.open()
 </script>
 ```
 
-## 설치
-
-npm 배포 후에는 다음처럼 설치합니다.
-
-```bash
-pnpm add lee-chat-sdk
-```
-
-또는:
-
-```bash
-npm install lee-chat-sdk
-```
-
-로컬 개발 중에는 sibling workspace에서 직접 연결할 수 있습니다.
-
-```bash
-pnpm add lee-chat-sdk@file:../lee-chat-sdk/packages/sdk
-```
-
 ## 기본 동작
 
-- 페이지 오른쪽 아래에 플로팅 채팅 버튼을 렌더링합니다.
-- 버튼을 누르면 채팅 패널, 메시지 목록, 입력창, 전송 버튼이 표시됩니다.
-- `participant.id`를 직접 주지 않으면 `visitor.id`를 localStorage에 생성/저장해 같은 브라우저 방문자를 재식별합니다.
-- 기본 `conversation.id`는 visitor 또는 participant 단위로 분리됩니다.
-- `initialMessage`는 저장된 대화가 없을 때 assistant welcome message로 표시되며 자동 POST 요청은 만들지 않습니다.
-- `syncClient`를 넘기면 위젯을 열 때 마지막 unread 메시지를 read receipt로 동기화합니다.
+- 플로팅 채팅 버튼과 패널을 렌더링합니다.
+- `initialMessage`를 assistant welcome message로 표시할 수 있습니다.
 - 사용자가 보낸 메시지를 `endpoint`로 POST 전송합니다.
-- 응답 메시지를 assistant 메시지로 추가합니다.
-- `requestHeaders`로 정적/동적 인증 헤더를 붙일 수 있습니다.
-- `requestAuth.refresh`로 401 같은 인증 만료 응답 후 토큰을 갱신하고 재요청할 수 있습니다.
-- `requestTimeoutMs`로 지연된 요청을 중단하고 실패 메시지로 표시할 수 있습니다.
-- `requestRetry`로 일시적인 5xx/network 실패를 재시도할 수 있습니다.
+- text/image/file message part를 렌더링합니다.
+- host-owned `uploadAttachment(file)` contract로 첨부파일을 전송할 수 있습니다.
 - `memory` 또는 `localStorage` persistence를 선택할 수 있습니다.
-- CSS custom properties와 class hook으로 스타일을 조정할 수 있습니다.
+- `ConversationSyncClient`로 conversation/message/read receipt를 서버와 동기화할 수 있습니다.
+- SSE/WebSocket transport로 `message.created`, presence, typing, read event를 반영할 수 있습니다.
+- `requestHeaders`, `requestAuth`, `requestTimeoutMs`, `requestRetry`로 인증/timeout/retry를 설정할 수 있습니다.
 
-## 설정
+## 문서
 
-```ts
-import type { LeeChatConfig } from 'lee-chat-sdk'
+- [Integration Guide](./docs/integration.md): React, Vanilla, script tag, attachment, realtime, styling
+- [Configuration](./docs/configuration.md): `LeeChatConfig`, identity, auth, persistence
+- [API Reference](./docs/api.md): public API 요약
+- [Backend Contract](./docs/backend-contract.ko.md): host backend가 구현해야 하는 endpoint 요약
+- [Backend Contract EN](./docs/backend-contract.md): 상세 server contract와 Next.js 예제
+- [Operator Console](./docs/operator-console.md): experimental 운영 콘솔 primitive
+- [Release Guide](./docs/release.ko.md): maintainer 배포 절차
 
-const config: LeeChatConfig = {
-  appId: 'commerce-web',
-  endpoint: '/api/chat',
-  conversation: {
-    kind: 'support',
-  },
-  visitor: {
-    id: 'visitor-123',
-    metadata: {
-      source: 'pricing-page',
-    },
-  },
-  participant: {
-    id: 'participant-user-123',
-    kind: 'user',
-    displayName: 'Lee',
-    email: 'lee@example.com',
-  },
-  metadata: {
-    plan: 'pro',
-  },
-  position: 'bottom-right',
-  initialOpen: false,
-  initialMessage: '무엇을 도와드릴까요?',
-  requestTimeoutMs: 15000,
-  requestRetry: {
-    maxAttempts: 2,
-    delayMs: 300,
-  },
-  requestHeaders: () => ({
-    Authorization: `Bearer ${getAccessToken()}`,
-  }),
-  requestAuth: {
-    refresh: async () => {
-      await refreshAccessToken()
-    },
-  },
-  persistence: 'localStorage',
-  texts: {
-    title: '상담',
-    subtitle: '궁금한 점을 남겨주세요.',
-    triggerLabel: '상담 열기',
-    placeholder: '메시지를 입력하세요',
-    send: '보내기',
-    sending: '전송 중',
-    messageSending: '전송 중...',
-    assistantLoading: '답변을 작성 중입니다...',
-    participantOnline: '온라인',
-    participantTyping: '입력 중입니다...',
-    messageRead: '읽음',
-    error: '전송에 실패했습니다. 다시 시도해 주세요.',
-    retry: '다시 보내기',
-  },
-  theme: {
-    colorScheme: 'light',
-    primaryColor: '#111827',
-    radius: '12px',
-  },
-}
-```
+## Backend 요약
 
-## Authentication
+운영 backend는 보통 다음 endpoint를 제공합니다.
 
-`requestHeaders`는 객체 또는 함수를 받을 수 있습니다. 함수는 매 요청마다 다시 평가되므로 토큰 갱신 후 새 값을 사용할 수 있습니다.
-
-```ts
-initLeeChat({
-  appId: 'commerce-web',
-  endpoint: '/api/chat',
-  requestHeaders: () => ({
-    Authorization: `Bearer ${authStore.accessToken}`,
-  }),
-  requestAuth: {
-    refresh: async ({ status }) => {
-      if (status === 401) {
-        await authStore.refresh()
-      }
-    },
-    refreshStatusCodes: [401],
-    maxRefreshAttempts: 1,
-  },
-})
-```
-
-## Backend Contract
-
-SDK는 `endpoint`로 다음 형태의 요청을 보냅니다.
-
-구체적인 서버 endpoint 예제와 realtime/sync 계약은 [docs/backend-contract.md](./docs/backend-contract.md)에 정리되어 있습니다.
-테스트와 데모에서는 `lee-chat-sdk/testing`의 `createMockLeeChatServer()`로 같은 contract를 로컬에서 시뮬레이션할 수 있습니다.
-로컬 개발과 contract 검증용 route handler가 필요하면 `lee-chat-sdk/server`의 `createInMemoryLeeChatBackend()`를 사용할 수 있습니다. 이 구현은 메모리에 저장하므로 운영 DB 대체용은 아닙니다.
-운영 route에서는 같은 subpath의 `createLeeChatRouteHandler()`에 DB storage adapter를 연결하면 message 저장, conversation sync, read receipt route contract를 재사용할 수 있습니다.
-SSE realtime backend가 필요하면 `createLeeChatEventStream()`으로 `GET /api/chat/events` stream과 `publish(event)`를 구성할 수 있습니다.
-
-```ts
-import { createInMemoryLeeChatBackend } from 'lee-chat-sdk/server'
-
-const backend = createInMemoryLeeChatBackend()
-
-export function POST(request: Request) {
-  return backend.handleRequest(request)
-}
-
-export function GET(request: Request) {
-  return backend.handleRequest(request)
-}
-
-export function PUT(request: Request) {
-  return backend.handleRequest(request)
-}
-```
-
-```ts
-type ChatMessagePart =
-  | {
-      type: 'text'
-      text: string
-    }
-  | {
-      type: 'image'
-      url: string
-      alt?: string
-      width?: number
-      height?: number
-      mediaType?: string
-    }
-  | {
-      type: 'file'
-      url: string
-      name: string
-      size?: number
-      mediaType?: string
-    }
-
-interface LeeChatRequest {
-  appId: string
-  conversation: {
-    id: string
-    kind: 'direct' | 'support' | 'assistant' | 'group'
-  }
-  participant: {
-    id: string
-    kind: 'user' | 'operator' | 'bot' | 'system'
-    displayName?: string
-    metadata?: Record<string, unknown>
-  }
-  visitor: {
-    id: string
-    metadata?: Record<string, unknown>
-  }
-  message: {
-    id: string
-    senderId: string
-    content: string
-    parts: ChatMessagePart[]
-    createdAt: string
-  }
-  metadata?: Record<string, unknown>
-  history: Array<{
-    role: 'user' | 'assistant' | 'system' | 'agent'
-    senderId: string
-    content: string
-    parts: ChatMessagePart[]
-    createdAt: string
-  }>
-}
-```
-
-응답은 다음 형태를 기대합니다.
-
-```ts
-interface LeeChatResponse {
-  message: {
-    id?: string
-    content: string
-    parts?: ChatMessagePart[]
-    createdAt?: string
-    metadata?: Record<string, unknown>
-  }
-}
-```
-
-간단한 Next.js route handler 예시:
-
-```ts
-import type { LeeChatRequest, LeeChatResponse } from 'lee-chat-sdk'
-
-export async function POST(request: Request) {
-  const body = (await request.json()) as LeeChatRequest
-  const text = body.message.parts
-    .filter((part) => part.type === 'text')
-    .map((part) => part.text)
-    .join('')
-
-  const response: LeeChatResponse = {
-    message: {
-      content: `Received: ${text}`,
-      metadata: {
-        agentName: 'Mina',
-      },
-    },
-  }
-
-  return Response.json(response)
-}
-```
-
-응답 `parts`에는 텍스트뿐 아니라 이미지와 파일 attachment를 함께 넣을 수 있습니다. 기본 React/Vanilla UI는 `image` part를 이미지로, `file` part를 링크로 렌더링합니다.
-사용자 파일 업로드는 host app이 수행하고, 업로드 결과는 `createChatMessagePartFromAttachment()`로 SDK message part 형태로 변환할 수 있습니다.
-
-```ts
-import { createChatMessagePartFromAttachment } from 'lee-chat-sdk'
-
-const imagePart = createChatMessagePartFromAttachment({
-  kind: 'image',
-  url: uploadedImage.url,
-  alt: uploadedImage.name,
-  mediaType: uploadedImage.mediaType,
-})
-```
-
-기본 composer에서 파일 선택 UI를 쓰려면 host app의 업로드 함수를 넘깁니다. React는 `LeeChatWidget` prop, Vanilla/script tag는 `initLeeChat()` config로 같은 contract를 사용합니다.
-
-```tsx
-<LeeChatWidget
-  uploadAttachment={async (file) => {
-    const uploadedFile = await uploadFileToStorage(file)
-
-    return {
-      kind: 'file',
-      url: uploadedFile.url,
-      name: file.name,
-      mediaType: file.type,
-      size: file.size,
-    }
-  }}
-/>
-```
-
-```ts
-initLeeChat({
-  appId: 'my-service',
-  endpoint: '/api/chat',
-  uploadAttachment: async (file) => {
-    const uploadedFile = await uploadFileToStorage(file)
-
-    return {
-      kind: 'file',
-      url: uploadedFile.url,
-      name: file.name,
-      mediaType: file.type,
-      size: file.size,
-    }
-  },
-})
-```
-
-## Server Sync Contract
-
-`ConversationSyncClient`는 서버에 저장된 대화와 메시지를 조회하고 read receipt를 동기화하는 headless client입니다. 기본 `endpoint`가 `/api/chat`이면 다음 REST endpoint를 사용합니다.
-
-- `GET /api/chat/conversations?appId=...&visitorId=...&participantId=...&cursor=...&limit=...`
-- `GET /api/chat/conversations/:conversationId/messages?cursor=...&limit=...`
+- `POST /api/chat`
+- `POST /api/chat/attachments`
+- `GET /api/chat/conversations`
+- `GET /api/chat/conversations/:conversationId/messages`
 - `PUT /api/chat/conversations/:conversationId/read`
+- `GET /api/chat/events`
 
-```ts
-import { ConversationSyncClient } from 'lee-chat-sdk'
+`lee-chat-sdk/server`는 production storage adapter를 연결하는 `createLeeChatRouteHandler()`, local reference용 `createInMemoryLeeChatBackend()`, SSE stream helper인 `createLeeChatEventStream()`을 제공합니다.
 
-const syncClient = new ConversationSyncClient({
-  endpoint: '/api/chat',
-  headers: () => ({
-    Authorization: `Bearer ${authStore.accessToken}`,
-  }),
-  auth: {
-    refresh: async () => {
-      await authStore.refresh()
-    },
-  },
-})
+## Operator Console
 
-const conversations = await syncClient.listConversations({
-  appId: 'commerce-web',
-  visitorId: 'visitor-123',
-})
-
-const messages = await syncClient.listMessages({
-  conversationId: conversations.conversations[0]?.id ?? '',
-  limit: 30,
-})
-
-await syncClient.markMessageRead({
-  conversationId: 'conversation-1',
-  messageId: 'message-1',
-  participantId: 'visitor-123',
-})
-```
-
-`listConversations` 응답은 `{ conversations, nextCursor }`, `listMessages` 응답은 `{ messages, nextCursor }`, `markMessageRead` 응답은 `{ readReceipt }` 형태를 기대합니다. 모델 타입은 SDK의 `ChatConversation`, `ChatMessage`, `ChatReadReceipt`를 그대로 사용합니다.
-
-## Styling
-
-기본 UI는 CSS custom properties와 class hook을 노출합니다.
-`theme.primaryColor`와 `theme.radius`는 host page의 `:root`가 아니라 `.lee-chat-root` 위젯 root에만 적용됩니다.
-Vanilla/script tag 경로에서는 `isolation: 'shadowDom'`으로 host CSS와 위젯 DOM을 더 강하게 분리할 수 있습니다.
-
-위젯 기본 스타일을 사용하려면 다음 subpath를 앱에서 한 번 import합니다.
-
-```ts
-import 'lee-chat-sdk/style.css'
-```
-
-```css
-:root {
-  --lee-chat-primary: #111827;
-  --lee-chat-background: #ffffff;
-  --lee-chat-foreground: #111827;
-  --lee-chat-muted: #f3f4f6;
-  --lee-chat-border: #e5e7eb;
-  --lee-chat-radius: 12px;
-  --lee-chat-z-index: 60;
-}
-
-.lee-chat-trigger {
-  box-shadow: 0 12px 28px rgb(15 23 42 / 18%);
-}
-
-.lee-chat-panel {
-  width: min(420px, calc(100vw - 32px));
-}
-```
-
-설정으로 class name을 추가할 수도 있습니다.
-
-```ts
-initLeeChat({
-  appId: 'my-service',
-  endpoint: '/api/chat',
-  className: {
-    root: 'my-chat-root',
-    trigger: 'my-chat-trigger',
-    panel: 'my-chat-panel',
-    header: 'my-chat-header',
-    messageList: 'my-chat-message-list',
-    message: 'my-chat-message',
-    messageStatus: 'my-chat-message-status',
-    retryButton: 'my-chat-retry',
-    assistantLoading: 'my-chat-assistant-loading',
-    participantStatus: 'my-chat-participant-status',
-    typingIndicator: 'my-chat-typing-indicator',
-    readReceipt: 'my-chat-read-receipt',
-    composer: 'my-chat-composer',
-  },
-})
-```
-
-React에서는 기본 말풍선 렌더링을 더 깊게 바꿀 수 있습니다.
-
-```tsx
-<LeeChatWidget
-  renderMessage={({ message, retryMessage }) => (
-    <article data-status={message.status}>
-      <p>
-        {message.parts
-          .filter((part) => part.type === 'text')
-          .map((part) => part.text)
-          .join('')}
-      </p>
-      {message.status === 'failed' ? (
-        <button type="button" onClick={() => retryMessage(message.id)}>
-          다시 보내기
-        </button>
-      ) : null}
-    </article>
-  )}
-  renderAssistantLoading={() => <p>답변을 작성 중입니다...</p>}
-/>
-```
-
-React widget은 header, trigger, composer footer도 slot으로 교체할 수 있습니다.
-
-```tsx
-<LeeChatWidget
-  renderHeader={({ title, subtitle, close }) => (
-    <header>
-      <strong>{title}</strong>
-      <span>{subtitle}</span>
-      <button type="button" onClick={close}>
-        닫기
-      </button>
-    </header>
-  )}
-  renderTrigger={({ open, unreadCount }) => (
-    <button type="button" onClick={open}>
-      문의하기 {unreadCount > 0 ? unreadCount : null}
-    </button>
-  )}
-  renderComposerFooter={({ isSubmitting }) => (
-    <small>{isSubmitting ? '전송 중' : '평균 응답 시간 5분'}</small>
-  )}
-/>
-```
-
-## React API
-
-React 앱에서는 provider와 widget을 조합합니다.
-
-```tsx
-import {
-  LeeChatProvider,
-  LeeChatWidget,
-  SseChatEventTransport,
-} from 'lee-chat-sdk'
-
-const eventTransport = new SseChatEventTransport({
-  endpoint: '/api/support-chat/events',
-})
-
-export function SupportWidget() {
-  return (
-    <LeeChatProvider
-      config={{
-        appId: 'support',
-        endpoint: '/api/support-chat',
-        texts: {
-          title: 'Support',
-          subtitle: 'We usually reply in a few minutes.',
-        },
-      }}
-      eventTransport={eventTransport}
-    >
-      <LeeChatWidget />
-    </LeeChatProvider>
-  )
-}
-```
-
-WebSocket을 쓰는 경우 같은 `eventTransport` 자리에 reconnect/backoff 옵션을 가진 adapter를 전달합니다.
-
-```ts
-import { WebSocketChatEventTransport } from 'lee-chat-sdk'
-
-const eventTransport = new WebSocketChatEventTransport({
-  endpoint: 'wss://example.com/support-chat/events',
-  reconnect: {
-    enabled: true,
-    initialDelayMs: 1000,
-    maxDelayMs: 30000,
-  },
-})
-```
-
-Realtime transport는 브라우저 `EventSource`/`WebSocket` 제약 때문에 임의 auth header를 직접 주입하지 않습니다. 대신 `endpoint`를 함수로 넘기면 매 연결과 reconnect마다 URL을 다시 계산할 수 있고, `auth.refresh`로 토큰 갱신 후 새 URL로 재연결할 수 있습니다.
-
-```ts
-const eventTransport = new SseChatEventTransport({
-  endpoint: () => `/api/support-chat/events?token=${authStore.accessToken}`,
-  auth: {
-    refresh: async () => {
-      await authStore.refresh()
-    },
-  },
-  reconnect: {
-    enabled: true,
-  },
-})
-```
-
-`useLeeChat()`으로 열림 상태와 controller에 직접 접근할 수 있습니다.
-
-```tsx
-import { useLeeChat } from 'lee-chat-sdk'
-
-export function CustomOpenButton() {
-  const leeChat = useLeeChat()
-
-  return (
-    <button type="button" onClick={leeChat.open}>
-      Open
-    </button>
-  )
-}
-```
-
-## Vanilla JS API
-
-React 코드를 작성하지 않는 앱에서는 `lee-chat-sdk/vanilla`에서 `initLeeChat()`을 가져옵니다. 이 subpath는 React를 import하지 않는 DOM 기반 엔트리입니다.
-
-```tsx
-import {
-  closeLeeChat,
-  destroyLeeChat,
-  initLeeChat,
-  openLeeChat,
-} from 'lee-chat-sdk/vanilla'
-import { SseChatEventTransport } from 'lee-chat-sdk'
-
-const eventTransport = new SseChatEventTransport({
-  endpoint: '/api/chat/events',
-})
-
-const leeChat = initLeeChat({
-  appId: 'landing-page',
-  endpoint: '/api/chat',
-  eventTransport,
-  initialOpen: true,
-})
-
-leeChat.applyEvent({
-  type: 'participant.typing_changed',
-  typingIndicator: {
-    conversationId: 'landing-page:conversation',
-    participantId: 'landing-page-assistant',
-    isTyping: true,
-    updatedAt: new Date().toISOString(),
-  },
-})
-
-openLeeChat()
-closeLeeChat()
-destroyLeeChat()
-```
-
-특정 컨테이너에 마운트할 수도 있습니다.
-
-```ts
-const container = document.querySelector('#chat-root')
-
-if (container instanceof HTMLElement) {
-  initLeeChat({
-    appId: 'docs',
-    endpoint: '/api/chat',
-    container,
-  })
-}
-```
-
-Vanilla API에서도 DOM을 반환하는 renderer hook으로 주요 영역을 교체할 수 있습니다.
-
-```ts
-initLeeChat({
-  appId: 'docs',
-  endpoint: '/api/chat',
-  renderTrigger: ({ open, unreadCount }) => {
-    const button = document.createElement('button')
-    button.type = 'button'
-    button.textContent = `문의하기 ${unreadCount || ''}`
-    button.addEventListener('click', open)
-    return button
-  },
-  renderMessage: ({ message }) => {
-    const article = document.createElement('article')
-    article.textContent = `${message.role}: ${message.content}`
-    return article
-  },
-})
-```
-
-## Headless API
-
-기본 UI보다 더 깊게 커스터마이징해야 한다면 headless controller와 primitive를 사용할 수 있습니다.
-
-- `ConversationClient`: React와 무관하게 메시지 전송, 실패 처리, retry, persistence 저장을 처리하는 core client입니다.
-- `ConversationClient.applyEvent`: transport나 realtime adapter에서 받은 `message.created`, presence, typing, read event를 core state에 적용합니다.
-- `useChatController`: 입력 상태, 제출 상태, 메시지 목록, transport 호출, persistence 저장을 관리합니다.
-- `useChatOperatorConsole`: 실험적 운영 콘솔 primitive입니다. 선택 대화, summary 목록, 배정/종료 event 생성을 관리하지만 production-ready 콘솔은 아닙니다.
-- `ChatTransport`: HTTP, mock, WebSocket, SSE 같은 전송 방식을 교체하기 위한 adapter interface입니다.
-- `HttpChatTransport`: 기본 HTTP POST transport입니다. `timeoutMs`, 호출별 `AbortSignal`, 5xx/network retry 정책을 제어할 수 있습니다.
-- `SseChatEventTransport`: browser `EventSource` 기반 SSE adapter입니다. 서버 event를 `ConversationClientEvent`로 파싱해 React Provider나 Vanilla widget에 연결하며, reconnect/backoff 옵션을 제공합니다.
-- `WebSocketChatEventTransport`: browser `WebSocket` 기반 realtime adapter입니다. 서버 message payload를 `ConversationClientEvent`로 파싱해 React Provider나 Vanilla widget에 연결하며, reconnect/backoff 옵션을 제공합니다.
-- `MemoryChatPersistence`: 메모리 기반 대화 저장소입니다.
-- `LocalStorageChatPersistence`: 브라우저 localStorage 기반 대화 저장소입니다.
-- `ChatParticipantPresence`, `ChatTypingIndicator`, `ChatReadReceipt`: presence, typing, 읽음 상태를 참여자 기준으로 표현하는 core 모델입니다. 새 메시지는 `message.created` event로 active conversation에 upsert할 수 있습니다.
-- `ChatComposer`, `ChatMessageList`, `ChatWidgetShell`, `FloatingChatTrigger`: 직접 조합 가능한 UI primitive입니다.
-
-## Operator Console Model
-
-운영자 콘솔 API는 experimental primitive입니다. 운영 도구나 내부 콘솔 prototype에서 `ChatEvent` 모델을 사용할 수 있고, 메시지 생성, 실패, 배정 변경, 대화 종료, 내부 메모, 사용자 이벤트를 하나의 event stream으로 다룰 수 있습니다. 이 API는 production-ready 콘솔이 아니며, 실제 운영에는 상담원 답변 저장, 배정/종료 mutation, 내부 메모, 상담원 권한, 라우팅 정책, 영구 저장소, realtime backend를 host app에서 구현해야 합니다.
-
-```ts
-import {
-  assignChatOperatorConversation,
-  buildChatConversationSummaries,
-  buildChatOperatorConsoleState,
-  buildChatEvent,
-  closeChatOperatorConversation,
-  collectChatEventsByConversationId,
-  useChatOperatorConsole,
-  type ChatEvent,
-  type ChatConversation,
-  type ChatMessage,
-} from 'lee-chat-sdk'
-
-const conversations: ChatConversation[] = []
-const messages: ChatMessage[] = []
-const events: ChatEvent[] = [
-  buildChatEvent({
-    id: 'event-1',
-    conversationId: 'conversation-1',
-    type: 'conversation.assigned',
-    createdAt: '2026-06-01T00:00:00.000Z',
-    payload: { agentName: 'Jin' },
-  }),
-]
-
-const conversationEvents = collectChatEventsByConversationId({
-  events,
-  conversationId: 'conversation-1',
-})
-const conversationSummaries = buildChatConversationSummaries({
-  conversations,
-  messages,
-  events,
-  currentParticipantId: 'operator-1',
-})
-const operatorState = buildChatOperatorConsoleState({
-  conversations,
-  messages,
-  events,
-  selectedConversationId: 'conversation-1',
-  currentParticipantId: 'operator-1',
-})
-const assignedState = assignChatOperatorConversation({
-  state: operatorState,
-  conversationId: 'conversation-1',
-  agentName: 'Jin',
-  eventId: 'event-2',
-  createdAt: new Date().toISOString(),
-})
-const closedState = closeChatOperatorConversation({
-  state: assignedState,
-  conversationId: 'conversation-1',
-  eventId: 'event-3',
-  createdAt: new Date().toISOString(),
-})
-
-function OperatorConsolePanel() {
-  const operatorConsole = useChatOperatorConsole({
-    conversations,
-    messages,
-    initialEvents: events,
-    initialSelectedConversationId: 'conversation-1',
-    currentParticipantId: 'operator-1',
-  })
-
-  return operatorConsole.state.conversationSummaries.map((summary) => {
-    return <button key={summary.id}>{summary.title}</button>
-  })
-}
-```
-
-서버 저장소와 realtime event를 함께 쓰는 experimental 운영 콘솔 prototype은 `useSyncedChatOperatorConsole()`로 시작할 수 있습니다. 이 hook은 conversation/message 조회와 realtime event 반영을 돕지만, 상담원 답변/배정/종료를 서버에 저장하는 production mutation API는 제공하지 않습니다.
-
-```tsx
-import {
-  ConversationSyncClient,
-  SseChatEventTransport,
-  useSyncedChatOperatorConsole,
-} from 'lee-chat-sdk'
-
-const syncClient = new ConversationSyncClient({
-  endpoint: '/api/chat',
-})
-const eventTransport = new SseChatEventTransport({
-  endpoint: '/api/chat/events',
-})
-
-function SyncedOperatorConsolePanel() {
-  const operatorConsole = useSyncedChatOperatorConsole({
-    syncClient,
-    eventTransport,
-    listConversationsParams: {
-      appId: 'support',
-    },
-    currentParticipantId: 'operator-1',
-  })
-
-  if (operatorConsole.isLoading) {
-    return <p>Loading conversations...</p>
-  }
-
-  return operatorConsole.state.conversationSummaries.map((summary) => {
-    return <button key={summary.id}>{summary.title}</button>
-  })
-}
-```
+운영자 콘솔 API와 `apps/console`은 **experimental primitive/demo**입니다. production-ready 콘솔이 아니며, 운영 배포에는 상담원 mutation API, 권한, 라우팅 정책, 영구 저장소, realtime backend가 필요합니다.
 
 ## 예제 앱
 
@@ -808,7 +133,7 @@ pnpm --filter lee-chat-sdk-console dev
 pnpm storybook
 ```
 
-- `apps/demo`: drop-in chat widget 사용 예제
+- `apps/demo`: drop-in chat widget 예제
 - `apps/console`: experimental 운영 콘솔 primitive 데모
 - `apps/storybook`: SDK UI 상태와 설치/연동 guide 검수용 Storybook
 
@@ -823,43 +148,5 @@ pnpm build
 pnpm storybook:build
 ```
 
-패키지별 확인:
+배포 절차는 [Release Guide](./docs/release.ko.md)에 있습니다.
 
-```bash
-pnpm --filter lee-chat-sdk test:run
-pnpm --filter lee-chat-sdk-demo test:run
-pnpm --filter lee-chat-sdk-console test:run
-```
-
-## npm 배포 체크리스트
-
-- `pnpm release:ready`로 package metadata, export path, files, public publishConfig, React optional peer dependency 확인
-- `pnpm test:e2e`로 script tag IIFE bundle, shadow DOM isolation, endpoint 전송을 실제 Chromium에서 확인
-- `pnpm release:smoke`로 실제 tarball을 임시 소비자 프로젝트에 설치해 ESM/CJS/TypeScript export 확인
-- `pnpm release:check`로 readiness, typecheck, test, build, npm pack dry-run, consumer smoke, E2E 실행
-- root `CHANGELOG.md`와 `packages/sdk/CHANGELOG.md`에 현재 `packages/sdk` version 섹션이 있는지 확인
-- 자세한 절차는 [docs/release.md](./docs/release.md) 참고
-- GitHub Actions `Publish SDK` workflow는 기본 dry-run이며, 실제 publish에는 `NPM_TOKEN` secret이 필요합니다.
-- CDN 파일은 `Publish SDK` workflow의 `lee-chat-sdk-cdn-bundle` artifact로 받을 수 있습니다.
-- npm 패키지 이름 사용 가능 여부 확인
-- `packages/sdk`에서 publish
-
-```bash
-pnpm release:ready
-pnpm release:check
-cd packages/sdk
-pnpm publish --access public
-```
-
-`packages/sdk`에는 `prepublishOnly`가 설정되어 있어 `pnpm publish`를 직접 실행해도 root `release:check`가 다시 실행됩니다.
-
-## 현재 한계
-
-- SSE/WebSocket은 브라우저 API 제약상 임의 auth header 직접 주입 대신 endpoint factory 기반 auth refresh를 제공합니다.
-- Storybook interaction/play는 기본 위젯 전송과 운영 콘솔 대화 선택을 다루며, 추가 edge case와 visual regression coverage는 아직 필요합니다.
-- 운영 콘솔 API와 앱은 experimental primitive/demo이며 production-ready 콘솔이 아닙니다. 운영 배포에는 상담원 mutation API, 팀 권한, 라우팅 정책, 영구 저장소, realtime backend 연결이 필요합니다.
-
-## Roadmap
-
-- Storybook edge case interaction과 visual regression coverage 확장
-- experimental 운영 콘솔 primitive를 production 콘솔 contract로 확장할지 별도 결정

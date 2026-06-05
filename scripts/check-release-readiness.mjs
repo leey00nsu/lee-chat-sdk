@@ -40,17 +40,17 @@ const REQUIRED_CHANGELOG_TERMS = [
 
 const REQUIRED_OPERATOR_CONSOLE_DOCS = [
   {
-    path: '../README.md',
+    path: '../docs/operator-console.md',
     terms: [
       '운영자 콘솔 API는 experimental primitive입니다',
-      'production-ready 콘솔이 아닙니다',
+      'production-ready 콘솔',
       'production mutation API는 제공하지 않습니다',
     ],
   },
   {
-    path: '../README.en.md',
+    path: '../docs/operator-console.en.md',
     terms: [
-      'The operator console APIs are experimental primitives',
+      'Operator console APIs are experimental primitives',
       'not a production-ready console',
       'does not provide production mutation APIs',
     ],
@@ -58,17 +58,31 @@ const REQUIRED_OPERATOR_CONSOLE_DOCS = [
   {
     path: '../packages/sdk/README.md',
     terms: [
-      'experimental 운영 콘솔 primitive',
-      'production-ready 콘솔은 아니며',
+      '운영자 콘솔 API는 experimental primitive입니다',
+      'production-ready 콘솔이 아니며',
     ],
   },
   {
     path: '../packages/sdk/README.en.md',
     terms: [
-      'experimental operator-console primitives',
+      'Operator console APIs are experimental primitives',
       'not a production-ready console',
     ],
   },
+]
+const REQUIRED_DOC_FILES = [
+  '../docs/integration.md',
+  '../docs/integration.en.md',
+  '../docs/configuration.md',
+  '../docs/configuration.en.md',
+  '../docs/api.md',
+  '../docs/api.en.md',
+  '../docs/operator-console.md',
+  '../docs/operator-console.en.md',
+  '../docs/backend-contract.ko.md',
+  '../docs/backend-contract.md',
+  '../docs/release.ko.md',
+  '../docs/release.md',
 ]
 const REQUIRED_BACKEND_CONTRACT_TERMS = [
   '## Attachment Upload Endpoint',
@@ -96,6 +110,14 @@ const backendContract = await readFile(
   new URL('../docs/backend-contract.md', import.meta.url),
   'utf8',
 ).catch(() => '')
+const requiredDocs = await Promise.all(
+  REQUIRED_DOC_FILES.map(async (filePath) => ({
+    path: filePath,
+    content: await readFile(new URL(filePath, import.meta.url), 'utf8').catch(
+      () => '',
+    ),
+  })),
+)
 const operatorConsoleDocs = await Promise.all(
   REQUIRED_OPERATOR_CONSOLE_DOCS.map(async (document) => ({
     ...document,
@@ -154,6 +176,12 @@ if (!backendContract) {
     }
   })
 }
+
+requiredDocs.forEach((document) => {
+  if (!document.content) {
+    errors.push(`${document.path} is required before publishing.`)
+  }
+})
 
 operatorConsoleDocs.forEach((document) => {
   if (!document.content) {
