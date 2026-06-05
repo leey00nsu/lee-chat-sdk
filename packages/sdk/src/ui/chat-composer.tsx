@@ -1,6 +1,11 @@
 'use client'
 
-import type { FormEvent, KeyboardEvent } from 'react'
+import { useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from 'react'
+import {
+  createChatMessagePartFromAttachment,
+  type UploadedChatAttachment,
+} from '../model/chat-attachment'
+import type { ChatMessagePart } from '../model/chat-message'
 
 export interface ChatComposerProps {
   inputId: string
@@ -10,8 +15,9 @@ export interface ChatComposerProps {
   submitLabel: string
   isLoading?: boolean
   maximumLength?: number
+  uploadAttachment?: (file: File) => Promise<UploadedChatAttachment>
   onChange: (nextValue: string) => void
-  onSubmit: () => void
+  onSubmit: (parts?: ChatMessagePart[]) => void
 }
 
 const CHAT_COMPOSER_KEY = {
@@ -26,20 +32,25 @@ export function ChatComposer({
   submitLabel,
   isLoading = false,
   maximumLength,
+  uploadAttachment,
   onChange,
   onSubmit,
 }: ChatComposerProps) {
+  const [pendingParts, setPendingParts] = useState<ChatMessagePart[]>([])
+  const [isUploading, setIsUploading] = useState(false)
+
   function handleSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault()
     submitMessage()
   }
 
   function submitMessage(): void {
-    if (isLoading || !value.trim()) {
+    if (isLoading || isUploading || (!value.trim() && pendingParts.length === 0)) {
       return
     }
 
-    onSubmit()
+    onSubmit(resolveSubmittedParts())
+    setPendingParts([])
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>): void {
@@ -55,6 +66,51 @@ export function ChatComposer({
     submitMessage()
   }
 
+  async function handleAttachmentChange(
+    event: ChangeEvent<HTMLInputElement>,
+  ): Promise<void> {
+    const files = Array.from(event.target.files ?? [])
+
+    if (!uploadAttachment || files.length === 0) {
+      return
+    }
+
+    setIsUploading(true)
+
+    try {
+      const uploadedParts = await Promise.all(
+        files.map(async (file) => {
+          return createChatMessagePartFromAttachment(await uploadAttachment(file))
+        }),
+      )
+
+      setPendingParts((currentParts) => [...currentParts, ...uploadedParts])
+    } finally {
+      setIsUploading(false)
+      event.target.value = ''
+    }
+  }
+
+  function resolveSubmittedParts(): ChatMessagePart[] | undefined {
+    const trimmedValue = value.trim()
+
+    if (pendingParts.length === 0) {
+      return undefined
+    }
+
+    return [
+      ...(trimmedValue
+        ? [
+            {
+              type: 'text' as const,
+              text: trimmedValue,
+            },
+          ]
+        : []),
+      ...pendingParts,
+    ]
+  }
+
   return (
     <form onSubmit={handleSubmit}>
       <label htmlFor={inputId}>{label}</label>
@@ -66,9 +122,57 @@ export function ChatComposer({
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={handleKeyDown}
       />
-      <button type="submit" disabled={isLoading || !value.trim()}>
+      {uploadAttachment ? (
+        <>
+          <label htmlFor={`${inputId}-attachment`}>Attach file</label>
+          <input
+            id={`${inputId}-attachment`}
+            type="file"
+            multiple
+            disabled={isLoading || isUploading}
+            onChange={(event) => {
+              void handleAttachmentChange(event)
+            }}
+          />
+          {pendingParts.length > 0 ? (
+            <ul className="lee-chat-attachment-list">
+              {pendingParts.map((part) => {
+                return (
+                  <li key={createPendingPartKey(part)}>
+                    {createPendingPartLabel(part)}
+                  </li>
+                )
+              })}
+            </ul>
+          ) : null}
+        </>
+      ) : null}
+      <button
+        type="submit"
+        disabled={isLoading || isUploading || (!value.trim() && pendingParts.length === 0)}
+      >
         {submitLabel}
       </button>
     </form>
   )
+}
+
+function createPendingPartLabel(part: ChatMessagePart): string {
+  if (part.type === 'file') {
+    return part.name
+  }
+
+  if (part.type === 'image') {
+    return part.alt ?? part.url
+  }
+
+  return part.text
+}
+
+function createPendingPartKey(part: ChatMessagePart): string {
+  if (part.type === 'text') {
+    return `${part.type}-${part.text}`
+  }
+
+  return `${part.type}-${part.url}`
 }

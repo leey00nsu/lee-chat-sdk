@@ -63,6 +63,10 @@ const HTTP_CHAT_TRANSPORT_AUTH = {
   DEFAULT_MAX_REFRESH_ATTEMPTS: 1,
 } as const
 
+function getDefaultFetchImplementation(): typeof fetch {
+  return globalThis.fetch.bind(globalThis)
+}
+
 export class HttpChatTransport<TRequest, TResponse>
   implements ChatTransport<TRequest, TResponse>
 {
@@ -78,7 +82,7 @@ export class HttpChatTransport<TRequest, TResponse>
 
   constructor({
     endpoint,
-    fetchImplementation = globalThis.fetch,
+    fetchImplementation = getDefaultFetchImplementation(),
     headers = {},
     timeoutMs = HTTP_CHAT_TRANSPORT_TIMEOUT.DISABLED_MS,
     retry = {},

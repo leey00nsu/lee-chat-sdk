@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   ConversationClient,
   type BuildConversationAssistantMessageParams,
@@ -10,7 +10,7 @@ import {
   type ConversationParticipantState,
 } from '../client/conversation-client'
 import { createChatMessageId } from '../lib/create-chat-message-id'
-import type { ChatMessage } from '../model/chat-message'
+import type { ChatMessage, ChatMessagePart } from '../model/chat-message'
 import type { ChatPersistence } from '../persistence/chat-persistence'
 import type { ChatTransport } from '../transport/chat-transport'
 
@@ -30,9 +30,11 @@ export interface UseChatControllerParams<
       TMessageMetadata
     >,
   ) => BuiltConversationAssistantMessage<TMessageMetadata>
+  initialMessages?: Array<ChatMessage<TMessageMetadata>>
   persistence?: ChatPersistence<ChatMessage<TMessageMetadata>>
   senderId?: string
   assistantSenderId?: string
+  resetKey?: string
   createMessageId?: () => string
   getCurrentDate?: () => Date
 }
@@ -43,10 +45,19 @@ export interface UseChatControllerResult<TMessageMetadata = unknown> {
   inputValue: string
   isSubmitting: boolean
   setInputValue: (nextInputValue: string) => void
-  submitMessage: (contentOverride?: string) => Promise<void>
+  submitMessage: (
+    contentOverride?: string,
+    partsOverride?: ChatMessagePart[],
+  ) => Promise<void>
   retryMessage: (messageId: string) => Promise<void>
   applyEvent: (event: ConversationClientEvent) => void
   clearMessages: () => void
+}
+
+const EMPTY_INITIAL_MESSAGES: [] = []
+
+function getDefaultCurrentDate(): Date {
+  return new Date()
 }
 
 export function useChatController<
@@ -58,18 +69,24 @@ export function useChatController<
   transport,
   buildRequest,
   buildAssistantMessage,
+  initialMessages = EMPTY_INITIAL_MESSAGES,
   persistence,
   senderId = 'participant-user',
   assistantSenderId = 'participant-assistant',
+  resetKey,
   createMessageId = createChatMessageId,
-  getCurrentDate = () => new Date(),
+  getCurrentDate = getDefaultCurrentDate,
 }: UseChatControllerParams<
   TRequest,
   TResponse,
   TMessageMetadata
 >): UseChatControllerResult<TMessageMetadata> {
   const [messages, setMessages] = useState<Array<ChatMessage<TMessageMetadata>>>(
-    () => persistence?.read() ?? [],
+    () => {
+      const persistedMessages = persistence?.read() ?? []
+
+      return persistedMessages.length > 0 ? persistedMessages : initialMessages
+    },
   )
   const [participantState, setParticipantState] =
     useState<ConversationParticipantState>(() => ({
@@ -80,8 +97,29 @@ export function useChatController<
   const clientRef = useRef<
     ConversationClient<TRequest, TResponse, TMessageMetadata> | undefined
   >(undefined)
+  const clientDependenciesRef = useRef<
+    | {
+        conversationId: string
+        senderId: string
+        assistantSenderId: string
+        resetKey?: string
+      }
+    | undefined
+  >(undefined)
+  const nextClientDependencies = {
+    conversationId,
+    senderId,
+    assistantSenderId,
+    resetKey,
+  }
 
-  if (!clientRef.current) {
+  if (
+    !clientRef.current ||
+    shouldRecreateConversationClient(
+      clientDependenciesRef.current,
+      nextClientDependencies,
+    )
+  ) {
     clientRef.current = new ConversationClient<
       TRequest,
       TResponse,
@@ -93,22 +131,38 @@ export function useChatController<
       transport,
       buildRequest,
       buildAssistantMessage,
+      initialMessages,
       persistence,
       onMessagesChange: setMessages,
       onParticipantStateChange: setParticipantState,
       createMessageId,
       getCurrentDate,
     })
+    clientDependenciesRef.current = nextClientDependencies
   }
 
   const [inputValue, setInputValue] = useState('')
   const inputValueReference = useRef('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  async function submitMessage(contentOverride?: string): Promise<void> {
+  useEffect(() => {
+    setMessages(clientRef.current?.getMessages() ?? [])
+    setParticipantState(
+      clientRef.current?.getParticipantState() ?? {
+        presences: [],
+        typingIndicators: [],
+        readReceipts: [],
+      },
+    )
+  }, [conversationId, senderId, assistantSenderId, resetKey])
+
+  async function submitMessage(
+    contentOverride?: string,
+    partsOverride: ChatMessagePart[] = [],
+  ): Promise<void> {
     const trimmedContent = (contentOverride ?? inputValueReference.current).trim()
 
-    if (!trimmedContent || isSubmitting) {
+    if ((!trimmedContent && partsOverride.length === 0) || isSubmitting) {
       return
     }
 
@@ -119,7 +173,10 @@ export function useChatController<
     setIsSubmitting(true)
 
     try {
-      const result = await clientRef.current?.submitMessage(trimmedContent)
+      const result = await clientRef.current?.submitMessage({
+        content: trimmedContent,
+        parts: partsOverride.length > 0 ? partsOverride : undefined,
+      })
       setMessages(result?.messages ?? [])
     } finally {
       setIsSubmitting(false)
@@ -171,4 +228,29 @@ export function useChatController<
     inputValueReference.current = nextInputValue
     setInputValue(nextInputValue)
   }
+}
+
+function shouldRecreateConversationClient<TRequest, TResponse, TMessageMetadata>(
+  previous:
+    | {
+        conversationId: string
+        senderId: string
+        assistantSenderId: string
+        resetKey?: string
+      }
+    | undefined,
+  next: {
+    conversationId: string
+    senderId: string
+    assistantSenderId: string
+    resetKey?: string
+  },
+): boolean {
+  return (
+    !previous ||
+    previous.conversationId !== next.conversationId ||
+    previous.senderId !== next.senderId ||
+    previous.assistantSenderId !== next.assistantSenderId ||
+    previous.resetKey !== next.resetKey
+  )
 }

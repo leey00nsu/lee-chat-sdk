@@ -63,6 +63,10 @@ const CONVERSATION_SYNC_CLIENT_AUTH = {
   DEFAULT_MAX_REFRESH_ATTEMPTS: 1,
 } as const
 
+function getDefaultFetchImplementation(): typeof fetch {
+  return globalThis.fetch.bind(globalThis)
+}
+
 export class ConversationSyncClient {
   private readonly endpoint: string
   private readonly fetchImplementation: typeof fetch
@@ -74,7 +78,7 @@ export class ConversationSyncClient {
 
   constructor({
     endpoint,
-    fetchImplementation = globalThis.fetch,
+    fetchImplementation = getDefaultFetchImplementation(),
     headers = {},
     auth = {},
   }: ConversationSyncClientParams) {

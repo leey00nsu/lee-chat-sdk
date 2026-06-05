@@ -1,6 +1,7 @@
-import { act, renderHook, waitFor } from '@testing-library/react'
-import type { ReactNode } from 'react'
+import { act, render, renderHook, waitFor } from '@testing-library/react'
+import { useEffect, type ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
+import type { LeeChatConfig } from '../config/lee-chat-config'
 import { LeeChatProvider } from './lee-chat-provider'
 import { useLeeChat } from './use-lee-chat'
 import type { ChatEventTransport } from '../transport/chat-event-transport'
@@ -108,6 +109,89 @@ describe('LeeChatProvider', () => {
       },
     ])
     expect(subscribe).toHaveBeenCalledTimes(1)
+  })
+
+  it('initialMessage를 초기 assistant 메시지로 제공하고 자동 요청하지 않는다', () => {
+    const fetchImplementation = vi.fn() as unknown as typeof fetch
+    const { result } = renderHook(() => useLeeChat(), {
+      wrapper: ({ children }: { children?: ReactNode }) => (
+        <LeeChatProvider
+          config={{
+            appId: 'app',
+            endpoint: '/api/chat',
+            visitor: {
+              id: 'visitor-initial',
+            },
+            initialMessage: 'Welcome. How can I help?',
+          }}
+          fetchImplementation={fetchImplementation}
+        >
+          {children}
+        </LeeChatProvider>
+      ),
+    })
+
+    expect(result.current.messages).toEqual([
+      expect.objectContaining({
+        id: 'app:conversation:visitor-initial:initial-message',
+        conversationId: 'app:conversation:visitor-initial',
+        senderId: 'app-assistant',
+        role: 'assistant',
+        content: 'Welcome. How can I help?',
+        status: 'sent',
+      }),
+    ])
+    expect(fetchImplementation).not.toHaveBeenCalled()
+  })
+
+  it('open 시 마지막 unread 메시지를 read sync하고 다시 닫아도 unread로 세지 않는다', async () => {
+    const markMessageRead = vi.fn(async () => ({
+      readReceipt: {
+        conversationId: 'app:conversation:visitor-read',
+        messageId: 'app:conversation:visitor-read:initial-message',
+        participantId: 'visitor-read',
+        readAt: '2026-06-01T00:00:00.000Z',
+      },
+    }))
+    const { result } = renderHook(() => useLeeChat(), {
+      wrapper: ({ children }: { children?: ReactNode }) => (
+        <LeeChatProvider
+          config={{
+            appId: 'app',
+            endpoint: '/api/chat',
+            visitor: {
+              id: 'visitor-read',
+            },
+            initialMessage: 'Unread welcome message',
+          }}
+          syncClient={{
+            markMessageRead,
+          }}
+        >
+          {children}
+        </LeeChatProvider>
+      ),
+    })
+
+    expect(result.current.unreadCount).toBe(1)
+
+    await act(async () => {
+      result.current.open()
+    })
+
+    await waitFor(() => {
+      expect(markMessageRead).toHaveBeenCalledWith({
+        conversationId: 'app:conversation:visitor-read',
+        messageId: 'app:conversation:visitor-read:initial-message',
+        participantId: 'visitor-read',
+      })
+    })
+
+    act(() => {
+      result.current.close()
+    })
+
+    expect(result.current.unreadCount).toBe(0)
   })
 
   it('requestTimeoutMs가 지나면 기본 HTTP 요청을 실패 메시지로 처리한다', async () => {
@@ -283,6 +367,104 @@ describe('LeeChatProvider', () => {
           status: 'sent',
         }),
       ]),
+    )
+  })
+
+  it('config가 바뀌면 새 endpoint와 conversation으로 요청한다', async () => {
+    const fetchMock = vi.fn(
+      async (_endpoint: RequestInfo | URL, init?: RequestInit) =>
+        new Response(
+          JSON.stringify({
+            message: {
+              content: `response for ${JSON.parse(String(init?.body)).appId}`,
+            },
+          }),
+          {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          },
+        ),
+    )
+    let latestLeeChat: ReturnType<typeof useLeeChat> | undefined
+
+    function LeeChatProbe({
+      onValue,
+    }: {
+      onValue: (value: ReturnType<typeof useLeeChat>) => void
+    }) {
+      const leeChat = useLeeChat()
+
+      useEffect(() => {
+        onValue(leeChat)
+      }, [leeChat, onValue])
+
+      return null
+    }
+
+    function TestProvider({ config }: { config: LeeChatConfig }) {
+      return (
+        <LeeChatProvider
+          config={config}
+          fetchImplementation={fetchMock as unknown as typeof fetch}
+        >
+          <LeeChatProbe
+            onValue={(value) => {
+              latestLeeChat = value
+            }}
+          />
+        </LeeChatProvider>
+      )
+    }
+
+    const { rerender } = render(
+      <TestProvider
+        config={{
+          appId: 'app-one',
+          endpoint: '/api/chat-one',
+          visitor: {
+            id: 'visitor-one',
+          },
+        }}
+      />,
+    )
+
+    await act(async () => {
+      await latestLeeChat?.submitMessage('first request')
+    })
+
+    rerender(
+      <TestProvider
+        config={{
+          appId: 'app-two',
+          endpoint: '/api/chat-two',
+          visitor: {
+            id: 'visitor-two',
+          },
+        }}
+      />,
+    )
+
+    await act(async () => {
+      await latestLeeChat?.submitMessage('second request')
+    })
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/chat-one')
+    expect(fetchMock.mock.calls[1]?.[0]).toBe('/api/chat-two')
+    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual(
+      expect.objectContaining({
+        appId: 'app-two',
+        conversation: expect.objectContaining({
+          id: 'app-two:conversation:visitor-two',
+        }),
+        participant: expect.objectContaining({
+          id: 'visitor-two',
+        }),
+        visitor: {
+          id: 'visitor-two',
+        },
+      }),
     )
   })
 })

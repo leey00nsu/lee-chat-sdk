@@ -65,6 +65,7 @@ describe('resolveLeeChatConfig', () => {
         id: 'participant-custom',
         kind: 'bot',
         displayName: 'Assistant',
+        email: 'assistant@example.com',
       },
       texts: {
         title: 'Support',
@@ -81,6 +82,7 @@ describe('resolveLeeChatConfig', () => {
     expect(config.participant.id).toBe('participant-custom')
     expect(config.participant.kind).toBe('bot')
     expect(config.participant.displayName).toBe('Assistant')
+    expect(config.participant.email).toBe('assistant@example.com')
     expect(config.texts.title).toBe('Support')
     expect(config.texts.send).toBe('Send')
     expect(config.texts.retry).toBe('Retry')

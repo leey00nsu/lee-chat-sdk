@@ -217,6 +217,22 @@
   font: inherit;
 }
 
+.lee-chat-composer input[type='file'] {
+  font: inherit;
+  font-size: 13px;
+}
+
+.lee-chat-attachment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  color: #4b5563;
+  font-size: 12px;
+  list-style: none;
+}
+
 .lee-chat-composer button,
 .lee-chat-trigger {
   border: 0;

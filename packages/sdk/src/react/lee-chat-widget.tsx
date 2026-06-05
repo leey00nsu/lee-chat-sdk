@@ -1,8 +1,9 @@
 'use client'
 
 import * as Popover from '@radix-ui/react-popover'
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
 import type { ChatMessage, ChatMessagePart } from '../model/chat-message'
+import type { UploadedChatAttachment } from '../model/chat-attachment'
 import { ChatComposer } from '../ui/chat-composer'
 import { ChatMessageList } from '../ui/chat-message-list'
 import { useLeeChat } from './use-lee-chat'
@@ -36,6 +37,7 @@ export interface LeeChatWidgetComposerFooterRenderParams {
 }
 
 export interface LeeChatWidgetProps {
+  uploadAttachment?: (file: File) => Promise<UploadedChatAttachment>
   renderHeader?: (params: LeeChatWidgetHeaderRenderParams) => ReactNode
   renderMessage?: (params: LeeChatWidgetMessageRenderParams) => ReactNode
   renderAssistantLoading?: () => ReactNode
@@ -60,6 +62,7 @@ function resolvePopoverAlign(position: string): 'start' | 'end' {
 }
 
 export function LeeChatWidget({
+  uploadAttachment,
   renderHeader,
   renderMessage,
   renderAssistantLoading,
@@ -86,12 +89,6 @@ export function LeeChatWidget({
       )
     },
   )
-
-  useEffect(() => {
-    const rootStyle = document.documentElement.style
-    rootStyle.setProperty('--lee-chat-primary', config.theme.primaryColor)
-    rootStyle.setProperty('--lee-chat-radius', config.theme.radius)
-  }, [config.theme.primaryColor, config.theme.radius])
 
   useEffect(() => {
     if (!leeChat.isOpen) {
@@ -309,6 +306,10 @@ export function LeeChatWidget({
     <Popover.Root open={leeChat.isOpen} onOpenChange={handleOpenChange}>
       <div
         data-testid="lee-chat-root"
+        style={{
+          '--lee-chat-primary': config.theme.primaryColor,
+          '--lee-chat-radius': config.theme.radius,
+        } as CSSProperties}
         className={mergeClassNames(
           'lee-chat-root',
           resolvePositionClassName(config.position),
@@ -403,9 +404,10 @@ export function LeeChatWidget({
                   chat.isSubmitting ? config.texts.sending : config.texts.send
                 }
                 isLoading={chat.isSubmitting}
+                uploadAttachment={uploadAttachment}
                 onChange={chat.setInputValue}
-                onSubmit={() => {
-                  void chat.submitMessage()
+                onSubmit={(parts) => {
+                  void chat.submitMessage(undefined, parts)
                 }}
               />
               {renderComposerFooter

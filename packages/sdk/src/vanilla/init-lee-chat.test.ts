@@ -52,6 +52,121 @@ describe('vanilla initLeeChat', () => {
     expect(document.querySelector('[aria-label="Chat"]')).toBeNull()
   })
 
+  it('theme CSS variables를 document root가 아니라 widget root에만 적용한다', () => {
+    initLeeChat({
+      appId: 'vanilla-app',
+      endpoint: '/api/chat',
+      fetchImplementation: fetchMock,
+      theme: {
+        primaryColor: '#2563eb',
+        radius: '16px',
+      },
+    })
+
+    const widgetRoot = document.querySelector('[data-testid="lee-chat-root"]')
+
+    expect(widgetRoot).toBeInstanceOf(HTMLElement)
+    expect((widgetRoot as HTMLElement).style.getPropertyValue('--lee-chat-primary')).toBe(
+      '#2563eb',
+    )
+    expect((widgetRoot as HTMLElement).style.getPropertyValue('--lee-chat-radius')).toBe(
+      '16px',
+    )
+    expect(
+      document.documentElement.style.getPropertyValue('--lee-chat-primary'),
+    ).toBe('')
+    expect(
+      document.documentElement.style.getPropertyValue('--lee-chat-radius'),
+    ).toBe('')
+  })
+
+  it('shadowDom isolation이면 widget root를 shadow root 안에 mount한다', () => {
+    initLeeChat({
+      appId: 'vanilla-app',
+      endpoint: '/api/chat',
+      fetchImplementation: fetchMock,
+      isolation: 'shadowDom',
+      initialOpen: true,
+    })
+
+    const container = document.querySelector('[data-lee-chat-container="true"]')
+
+    expect(container).toBeInstanceOf(HTMLElement)
+    expect(container?.shadowRoot).toBeInstanceOf(ShadowRoot)
+    expect(document.querySelector('[data-testid="lee-chat-root"]')).toBeNull()
+    expect(
+      container?.shadowRoot?.querySelector('[data-testid="lee-chat-root"]'),
+    ).toBeTruthy()
+    expect(container?.shadowRoot?.querySelector('style')?.textContent).toContain(
+      '.lee-chat-root',
+    )
+  })
+
+  it('initialMessage를 초기 assistant 메시지로 렌더링하고 자동 요청하지 않는다', () => {
+    initLeeChat({
+      appId: 'vanilla-app',
+      endpoint: '/api/chat',
+      fetchImplementation: fetchMock,
+      initialOpen: true,
+      initialMessage: 'Welcome from vanilla.',
+      visitor: {
+        id: 'visitor-vanilla',
+      },
+    })
+
+    expect(document.body.textContent).toContain('Welcome from vanilla.')
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('open 시 마지막 unread 메시지를 read sync하고 다시 닫아도 unread로 세지 않는다', async () => {
+    const markMessageRead = vi.fn(async () => ({
+      readReceipt: {
+        conversationId: 'vanilla-app:conversation:visitor-vanilla',
+        messageId: 'vanilla-app:conversation:visitor-vanilla:initial-message',
+        participantId: 'visitor-vanilla',
+        readAt: '2026-06-01T00:00:00.000Z',
+      },
+    }))
+    let latestUnreadCount = -1
+
+    initLeeChat({
+      appId: 'vanilla-app',
+      endpoint: '/api/chat',
+      fetchImplementation: fetchMock,
+      initialMessage: 'Unread vanilla welcome',
+      visitor: {
+        id: 'visitor-vanilla',
+      },
+      syncClient: {
+        markMessageRead,
+      },
+      renderTrigger: ({ open, unreadCount }) => {
+        latestUnreadCount = unreadCount
+        const button = document.createElement('button')
+        button.type = 'button'
+        button.textContent = `open ${unreadCount}`
+        button.addEventListener('click', open)
+        return button
+      },
+    })
+
+    expect(latestUnreadCount).toBe(1)
+
+    openLeeChat()
+
+    await waitFor(() => {
+      expect(markMessageRead).toHaveBeenCalledWith({
+        conversationId: 'vanilla-app:conversation:visitor-vanilla',
+        messageId: 'vanilla-app:conversation:visitor-vanilla:initial-message',
+        participantId: 'visitor-vanilla',
+      })
+    })
+
+    closeLeeChat()
+
+    expect(latestUnreadCount).toBe(0)
+  })
+
   it('사용자 메시지를 endpoint로 전송하고 응답을 렌더링한다', async () => {
     fetchMock.mockResolvedValue(
       new Response(
@@ -174,6 +289,96 @@ describe('vanilla initLeeChat', () => {
       'Content-Type': 'application/json',
       Authorization: 'Bearer vanilla-token',
     })
+  })
+
+  it('uploadAttachment 결과를 사용자 message part로 전송한다', async () => {
+    const uploadAttachment = vi.fn(async () => ({
+      kind: 'file' as const,
+      url: 'https://example.com/vanilla-manual.pdf',
+      name: 'vanilla-manual.pdf',
+      mediaType: 'application/pdf',
+    }))
+    fetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          message: {
+            content: 'Vanilla attachment received',
+          },
+        }),
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        },
+      ),
+    )
+
+    initLeeChat({
+      appId: 'vanilla-app',
+      endpoint: '/api/chat',
+      fetchImplementation: fetchMock,
+      initialOpen: true,
+      uploadAttachment,
+      visitor: {
+        id: 'visitor-vanilla',
+      },
+    })
+
+    const fileInput = document.querySelector('input[type="file"]')
+    const textarea = document.querySelector('textarea')
+
+    if (!(fileInput instanceof HTMLInputElement)) {
+      throw new Error('file input not found')
+    }
+
+    if (!(textarea instanceof HTMLTextAreaElement)) {
+      throw new Error('textarea not found')
+    }
+
+    const file = new File(['manual'], 'vanilla-manual.pdf', {
+      type: 'application/pdf',
+    })
+
+    fireEvent.change(fileInput, {
+      target: {
+        files: [file],
+      },
+    })
+
+    await waitFor(() => {
+      expect(uploadAttachment).toHaveBeenCalledWith(file)
+      expect(document.body.textContent).toContain('vanilla-manual.pdf')
+    })
+
+    fireEvent.change(textarea, {
+      target: {
+        value: 'Vanilla attachment message',
+      },
+    })
+    fireEvent.submit(textarea.form as HTMLFormElement)
+
+    await waitFor(() => {
+      expect(document.body.textContent).toContain('Vanilla attachment received')
+    })
+    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual(
+      expect.objectContaining({
+        message: expect.objectContaining({
+          content: 'Vanilla attachment message',
+          parts: [
+            {
+              type: 'text',
+              text: 'Vanilla attachment message',
+            },
+            {
+              type: 'file',
+              url: 'https://example.com/vanilla-manual.pdf',
+              name: 'vanilla-manual.pdf',
+              mediaType: 'application/pdf',
+            },
+          ],
+        }),
+      }),
+    )
   })
 
   it('assistant 응답의 image와 file part를 기본 UI로 렌더링한다', async () => {

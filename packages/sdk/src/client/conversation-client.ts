@@ -14,6 +14,7 @@ import type { ChatTransport } from '../transport/chat-transport'
 
 export interface BuildConversationRequestParams<TMessageMetadata> {
   content: string
+  parts: ChatMessagePart[]
   conversationId: string
   messages: Array<ChatMessage<TMessageMetadata>>
 }
@@ -52,6 +53,7 @@ export interface ConversationClientParams<
       TMessageMetadata
     >,
   ) => BuiltConversationAssistantMessage<TMessageMetadata>
+  initialMessages?: Array<ChatMessage<TMessageMetadata>>
   persistence?: ChatPersistence<ChatMessage<TMessageMetadata>>
   onMessagesChange?: (messages: Array<ChatMessage<TMessageMetadata>>) => void
   onParticipantStateChange?: (state: ConversationParticipantState) => void
@@ -61,6 +63,11 @@ export interface ConversationClientParams<
 
 export interface ConversationClientMutationResult<TMessageMetadata = unknown> {
   messages: Array<ChatMessage<TMessageMetadata>>
+}
+
+export interface SubmitConversationMessageParams {
+  content: string
+  parts?: ChatMessagePart[]
 }
 
 export interface ConversationParticipantState {
@@ -133,6 +140,7 @@ export class ConversationClient<
     transport,
     buildRequest,
     buildAssistantMessage,
+    initialMessages = [],
     persistence,
     onMessagesChange,
     onParticipantStateChange,
@@ -150,7 +158,9 @@ export class ConversationClient<
     this.onParticipantStateChange = onParticipantStateChange
     this.createMessageId = createMessageId
     this.getCurrentDate = getCurrentDate
-    this.messages = persistence?.read() ?? []
+    const persistedMessages = persistence?.read() ?? []
+    this.messages =
+      persistedMessages.length > 0 ? persistedMessages : initialMessages
     this.participantState = {
       presences: [],
       typingIndicators: [],
@@ -211,11 +221,19 @@ export class ConversationClient<
   }
 
   async submitMessage(
-    content: string,
+    contentOrParams: string | SubmitConversationMessageParams,
   ): Promise<ConversationClientMutationResult<TMessageMetadata>> {
+    const content =
+      typeof contentOrParams === 'string'
+        ? contentOrParams
+        : contentOrParams.content
     const trimmedContent = content.trim()
+    const parts =
+      typeof contentOrParams === 'string'
+        ? createTextMessageParts(trimmedContent)
+        : contentOrParams.parts ?? createTextMessageParts(trimmedContent)
 
-    if (!trimmedContent) {
+    if (!trimmedContent && parts.length === 0) {
       return {
         messages: this.messages,
       }
@@ -227,7 +245,7 @@ export class ConversationClient<
       senderId: this.senderId,
       role: 'user',
       content: trimmedContent,
-      parts: createTextMessageParts(trimmedContent),
+      parts,
       status: 'sending',
       createdAt: this.getCurrentDate().toISOString(),
     }
@@ -280,6 +298,7 @@ export class ConversationClient<
       const response = await this.transport.sendMessage(
         this.buildRequest({
           content: userMessage.content,
+          parts: userMessage.parts,
           conversationId: this.conversationId,
           messages: requestMessages,
         }),

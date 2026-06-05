@@ -153,6 +153,7 @@ export function resolveLeeChatConfig(
       id: participantId,
       kind: config.participant?.kind ?? 'user',
       displayName: config.participant?.displayName,
+      email: config.participant?.email,
       metadata: config.participant?.metadata,
     },
     position: config.position ?? 'bottom-right',

@@ -123,6 +123,41 @@ describe('LeeChatWidget', () => {
     expect(screen.queryByRole('region', { name: 'Chat' })).toBeNull()
   })
 
+  it('theme CSS variables를 document root가 아니라 widget root에만 적용한다', () => {
+    render(
+      <LeeChatProvider
+        config={{
+          appId: 'app',
+          endpoint: '/api/chat',
+          theme: {
+            primaryColor: '#2563eb',
+            radius: '16px',
+          },
+        }}
+      >
+        <LeeChatWidget />
+      </LeeChatProvider>,
+    )
+
+    const widgetRoot = screen
+      .getByRole('button', { name: 'Open chat' })
+      .closest('[data-testid="lee-chat-root"]')
+
+    expect(widgetRoot).toBeInstanceOf(HTMLElement)
+    expect((widgetRoot as HTMLElement).style.getPropertyValue('--lee-chat-primary')).toBe(
+      '#2563eb',
+    )
+    expect((widgetRoot as HTMLElement).style.getPropertyValue('--lee-chat-radius')).toBe(
+      '16px',
+    )
+    expect(
+      document.documentElement.style.getPropertyValue('--lee-chat-primary'),
+    ).toBe('')
+    expect(
+      document.documentElement.style.getPropertyValue('--lee-chat-radius'),
+    ).toBe('')
+  })
+
   it('메시지를 endpoint로 보내고 assistant 응답을 렌더링한다', async () => {
     fetchMock.mockResolvedValue({
       ok: true,
@@ -245,6 +280,79 @@ describe('LeeChatWidget', () => {
       )
       expect(link.getAttribute('href')).toBe('https://example.com/report.pdf')
     })
+  })
+
+  it('uploadAttachment 결과를 사용자 message part로 전송한다', async () => {
+    const uploadAttachment = vi.fn(async () => ({
+      kind: 'file' as const,
+      url: 'https://example.com/manual.pdf',
+      name: 'manual.pdf',
+      mediaType: 'application/pdf',
+    }))
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        message: {
+          content: '첨부를 받았습니다.',
+        },
+      }),
+    })
+
+    render(
+      <LeeChatProvider
+        config={{
+          appId: 'app',
+          endpoint: '/api/chat',
+          initialOpen: true,
+        }}
+        fetchImplementation={fetchMock}
+      >
+        <LeeChatWidget uploadAttachment={uploadAttachment} />
+      </LeeChatProvider>,
+    )
+
+    const file = new File(['manual'], 'manual.pdf', {
+      type: 'application/pdf',
+    })
+
+    fireEvent.change(screen.getByLabelText('Attach file'), {
+      target: {
+        files: [file],
+      },
+    })
+
+    await waitFor(() => {
+      expect(uploadAttachment).toHaveBeenCalledWith(file)
+      expect(screen.getByText('manual.pdf')).toBeTruthy()
+    })
+
+    fireEvent.change(screen.getByLabelText('Message'), {
+      target: { value: '첨부 확인 부탁드립니다.' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('첨부를 받았습니다.')).toBeTruthy()
+    })
+    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual(
+      expect.objectContaining({
+        message: expect.objectContaining({
+          content: '첨부 확인 부탁드립니다.',
+          parts: [
+            {
+              type: 'text',
+              text: '첨부 확인 부탁드립니다.',
+            },
+            {
+              type: 'file',
+              url: 'https://example.com/manual.pdf',
+              name: 'manual.pdf',
+              mediaType: 'application/pdf',
+            },
+          ],
+        }),
+      }),
+    )
   })
 
   it('메시지를 보내면 최신 메시지로 스크롤한다', async () => {
