@@ -13,6 +13,9 @@ const REQUIRED_PACKAGE_FIELDS = [
 const REQUIRED_EXPORTS = [
   '.',
   './vanilla',
+  './global',
+  './testing',
+  './server',
   './style.css',
   './package.json',
 ]
@@ -20,13 +23,29 @@ const REQUIRED_EXPORTS = [
 const REQUIRED_FILES = [
   'dist',
   'LICENSE',
+  'CHANGELOG.md',
   'README.md',
   'README.en.md',
+]
+
+const REQUIRED_CHANGELOG_TERMS = [
+  'lee-chat-sdk/testing',
+  'lee-chat-sdk/server',
+  'script-tag',
+  'consumer smoke',
 ]
 
 const packageJson = JSON.parse(
   await readFile(new URL('../packages/sdk/package.json', import.meta.url), 'utf8'),
 )
+const changelog = await readFile(
+  new URL('../CHANGELOG.md', import.meta.url),
+  'utf8',
+).catch(() => '')
+const packageChangelog = await readFile(
+  new URL('../packages/sdk/CHANGELOG.md', import.meta.url),
+  'utf8',
+).catch(() => '')
 
 const errors = []
 
@@ -56,6 +75,10 @@ if (packageJson.publishConfig?.access !== 'public') {
   errors.push('packages/sdk/package.json publishConfig.access must be public.')
 }
 
+if (!packageJson.scripts?.build?.includes('create-cdn-manifest.mjs')) {
+  errors.push('packages/sdk build script must generate the CDN manifest.')
+}
+
 if (!packageJson.peerDependenciesMeta?.react?.optional) {
   errors.push('react peer dependency must remain optional.')
 }
@@ -64,9 +87,58 @@ if (!packageJson.peerDependenciesMeta?.['react-dom']?.optional) {
   errors.push('react-dom peer dependency must remain optional.')
 }
 
+if (!changelog) {
+  errors.push('CHANGELOG.md is required before publishing.')
+} else if (!changelog.includes(`## ${packageJson.version}`)) {
+  errors.push(
+    `CHANGELOG.md must include a section for packages/sdk version ${packageJson.version}.`,
+  )
+} else {
+  const changelogSection = readChangelogSection(changelog, packageJson.version)
+
+  REQUIRED_CHANGELOG_TERMS.forEach((term) => {
+    if (!changelogSection.includes(term)) {
+      errors.push(
+        `CHANGELOG.md section ${packageJson.version} must mention ${term}.`,
+      )
+    }
+  })
+}
+
+if (!packageChangelog) {
+  errors.push('packages/sdk/CHANGELOG.md is required before publishing.')
+} else if (!packageChangelog.includes(`## ${packageJson.version}`)) {
+  errors.push(
+    `packages/sdk/CHANGELOG.md must include a section for version ${packageJson.version}.`,
+  )
+} else if (
+  readChangelogSection(packageChangelog, packageJson.version).trim() !==
+  readChangelogSection(changelog, packageJson.version).trim()
+) {
+  errors.push(
+    `packages/sdk/CHANGELOG.md section ${packageJson.version} must match root CHANGELOG.md.`,
+  )
+}
+
 if (errors.length > 0) {
   console.error(errors.join('\n'))
   process.exit(1)
 }
 
 console.log('Release readiness checks passed.')
+
+function readChangelogSection(changelogContent, version) {
+  const sectionStart = changelogContent.indexOf(`## ${version}`)
+
+  if (sectionStart === -1) {
+    return ''
+  }
+
+  const nextSectionStart = changelogContent.indexOf('\n## ', sectionStart + 1)
+
+  if (nextSectionStart === -1) {
+    return changelogContent.slice(sectionStart)
+  }
+
+  return changelogContent.slice(sectionStart, nextSectionStart)
+}

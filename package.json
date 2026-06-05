@@ -5,15 +5,18 @@
   "type": "module",
   "scripts": {
     "build": "pnpm --recursive --if-present build",
-    "release:check": "pnpm --filter lee-chat-sdk release:check",
+    "release:check": "pnpm --filter lee-chat-sdk release:check && pnpm release:smoke && pnpm test:e2e",
     "release:ready": "node scripts/check-release-readiness.mjs",
+    "release:smoke": "node scripts/check-package-consumer.mjs",
     "storybook": "pnpm --filter lee-chat-sdk-storybook storybook",
     "storybook:build": "pnpm --filter lee-chat-sdk-storybook build",
     "test": "pnpm --recursive --if-present test",
+    "test:e2e": "playwright test",
     "test:run": "pnpm --recursive --if-present test:run",
     "typecheck": "pnpm --recursive --if-present typecheck"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@testing-library/react": "^16.3.1",
     "@types/node": "^20.19.11",
     "@types/react": "^19.1.12",
