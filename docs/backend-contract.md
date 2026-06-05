@@ -287,6 +287,237 @@ export function PUT(request: Request) {
 }
 ```
 
+## Production Next.js Route With Auth, Rate Limit, And Tenant Context
+
+In production, wrap `createLeeChatRouteHandler()` with your own request context and infrastructure. The SDK helper keeps the chat route contract stable; your route owns auth, tenant isolation, permissions, rate limits, database access, and assistant response generation.
+
+```ts
+// app/api/chat/route.ts
+import {
+  createLeeChatRouteHandler,
+  type LeeChatRouteHandlerStorage,
+} from 'lee-chat-sdk/server'
+import type { LeeChatRequest } from 'lee-chat-sdk'
+
+interface ChatRequestContext {
+  tenantId: string
+  visitorId?: string
+  participantId?: string
+  role: 'visitor' | 'operator' | 'service'
+}
+
+const storage: LeeChatRouteHandlerStorage<ChatRequestContext> = {
+  createContext: requireChatRequestContext,
+  upsertConversation: async (conversation, context) => {
+    await db.chatConversation.upsert({
+      where: {
+        tenantId_id: {
+          tenantId: context.tenantId,
+          id: conversation.id,
+        },
+      },
+      create: {
+        tenantId: context.tenantId,
+        ...conversation,
+      },
+      update: {
+        status: conversation.status,
+        metadata: conversation.metadata,
+      },
+    })
+  },
+  appendMessages: async (messages, context) => {
+    await db.chatMessage.createMany({
+      data: messages.map((message) => ({
+        tenantId: context.tenantId,
+        ...message,
+      })),
+      skipDuplicates: true,
+    })
+  },
+  listConversations: async (params, context) => {
+    await assertCanListConversations(context, params)
+
+    return {
+      conversations: await db.chatConversation.findMany({
+        where: {
+          tenantId: context.tenantId,
+          ...(params.participantId
+            ? {
+                participants: {
+                  some: {
+                    id: params.participantId,
+                  },
+                },
+              }
+            : {}),
+        },
+        take: params.limit ?? 50,
+        cursor: params.cursor ? { id: params.cursor } : undefined,
+      }),
+    }
+  },
+  listMessages: async (params, context) => {
+    await assertCanReadConversation(context, params.conversationId)
+
+    return {
+      messages: await db.chatMessage.findMany({
+        where: {
+          tenantId: context.tenantId,
+          conversationId: params.conversationId,
+        },
+        orderBy: {
+          createdAt: 'asc',
+        },
+        take: params.limit ?? 100,
+        cursor: params.cursor ? { id: params.cursor } : undefined,
+      }),
+    }
+  },
+  upsertReadReceipt: async (readReceipt, context) => {
+    await assertCanReadConversation(context, readReceipt.conversationId)
+
+    await db.chatReadReceipt.upsert({
+      where: {
+        tenantId_conversationId_messageId_participantId: {
+          tenantId: context.tenantId,
+          conversationId: readReceipt.conversationId,
+          messageId: readReceipt.messageId,
+          participantId: readReceipt.participantId,
+        },
+      },
+      create: {
+        tenantId: context.tenantId,
+        ...readReceipt,
+      },
+      update: {
+        readAt: readReceipt.readAt,
+      },
+    })
+  },
+}
+
+const handler = createLeeChatRouteHandler<ChatRequestContext>({
+  storage,
+  assistantSenderId: ({ appId }) => `${appId}-assistant`,
+  getResponse: async ({ request, storageContext }) => {
+    await assertMessageBelongsToContext(request, storageContext)
+
+    return {
+      message: {
+        content: await generateAssistantReply({
+          tenantId: storageContext.tenantId,
+          request,
+        }),
+        metadata: {
+          handledBy: 'assistant',
+        },
+      },
+    }
+  },
+})
+
+export async function POST(request: Request) {
+  return handleChatRoute(request)
+}
+
+export async function GET(request: Request) {
+  return handleChatRoute(request)
+}
+
+export async function PUT(request: Request) {
+  return handleChatRoute(request)
+}
+
+async function handleChatRoute(request: Request): Promise<Response> {
+  try {
+    return await handler.handleRequest(request)
+  } catch (error) {
+    if (error instanceof Response) {
+      return error
+    }
+
+    throw error
+  }
+}
+
+async function requireChatRequestContext(
+  request: Request,
+): Promise<ChatRequestContext> {
+  const session = await auth.verifyRequest(request)
+  const tenant = await tenants.resolveFromRequest(request)
+
+  if (!tenant) {
+    throw new Response('Unknown tenant.', { status: 404 })
+  }
+
+  if (session) {
+    await assertTenantMember({
+      tenantId: tenant.id,
+      userId: session.userId,
+    })
+    await assertRateLimit({
+      tenantId: tenant.id,
+      subjectId: session.userId,
+      action: resolveChatRateLimitAction(request),
+    })
+
+    return {
+      tenantId: tenant.id,
+      participantId: session.userId,
+      role: session.role === 'operator' ? 'operator' : 'visitor',
+    }
+  }
+
+  const visitorId = await visitors.resolveSignedVisitorId(request)
+  await assertRateLimit({
+    tenantId: tenant.id,
+    subjectId: visitorId,
+    action: resolveChatRateLimitAction(request),
+  })
+
+  return {
+    tenantId: tenant.id,
+    visitorId,
+    role: 'visitor',
+  }
+}
+
+async function assertMessageBelongsToContext(
+  request: LeeChatRequest,
+  context: ChatRequestContext,
+): Promise<void> {
+  if (request.appId !== context.tenantId) {
+    throw new Response('Invalid appId for tenant.', { status: 403 })
+  }
+
+  if (
+    context.participantId &&
+    request.participant.id !== context.participantId
+  ) {
+    throw new Response('Invalid participant.', { status: 403 })
+  }
+
+  if (context.visitorId && request.visitor.id !== context.visitorId) {
+    throw new Response('Invalid visitor.', { status: 403 })
+  }
+}
+
+function resolveChatRateLimitAction(request: Request): string {
+  if (request.method === 'POST') {
+    return 'chat.message.create'
+  }
+
+  if (request.method === 'PUT') {
+    return 'chat.read-receipt.upsert'
+  }
+
+  return 'chat.sync.read'
+}
+```
+
+The example uses placeholder `auth`, `tenants`, `visitors`, `db`, and `assertRateLimit` modules because those belong to the host application. The important contract is that every storage method receives the same `ChatRequestContext`, so tenant and permission checks are consistently applied to writes, reads, and read receipts.
+
 ## Conversation Sync Endpoints
 
 `ConversationSyncClient` uses REST endpoints derived from the same base endpoint.
