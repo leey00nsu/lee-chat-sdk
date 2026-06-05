@@ -54,6 +54,8 @@ export type {
   ChatMessageStatus,
   ChatTextMessagePart,
 } from './model/chat-message'
+export { createChatMessagePartFromAttachment } from './model/chat-attachment'
+export type { UploadedChatAttachment } from './model/chat-attachment'
 export type {
   ChatConversation,
   ChatConversationKind,
@@ -165,6 +167,12 @@ export type {
   UseChatOperatorConsoleParams,
   UseChatOperatorConsoleResult,
 } from './react/use-chat-operator-console'
+export { useSyncedChatOperatorConsole } from './react/use-synced-chat-operator-console'
+export type {
+  SyncedChatOperatorConsoleClient,
+  UseSyncedChatOperatorConsoleParams,
+  UseSyncedChatOperatorConsoleResult,
+} from './react/use-synced-chat-operator-console'
 export {
   closeLeeChat,
   destroyLeeChat,

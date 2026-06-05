@@ -220,6 +220,38 @@ export default meta
 
 type Story = StoryObj<typeof meta>
 
+async function waitForStoryText(
+  root: HTMLElement,
+  text: string,
+): Promise<HTMLElement> {
+  const deadline = Date.now() + 3000
+
+  while (Date.now() < deadline) {
+    const element = Array.from(root.querySelectorAll<HTMLElement>('*')).find(
+      (candidate) => candidate.textContent?.includes(text),
+    )
+
+    if (element) {
+      return element
+    }
+
+    await new Promise((resolve) => {
+      setTimeout(resolve, 25)
+    })
+  }
+
+  throw new Error(`Story text not found: ${text}`)
+}
+
+function clickStoryElement(element: HTMLElement): void {
+  element.dispatchEvent(
+    new MouseEvent('click', {
+      bubbles: true,
+      cancelable: true,
+    }),
+  )
+}
+
 export const AssignedQueue: Story = {
   args: {
     initialSelectedConversationId: 'conversation-pricing',
@@ -235,6 +267,16 @@ export const AssignedQueue: Story = {
         },
       }),
     ],
+  },
+  play: async ({ canvasElement }) => {
+    const root = canvasElement
+    await waitForStoryText(root, '요금제를 알고 싶어요')
+
+    const deliveryConversation = await waitForStoryText(root, 'Alex Lee')
+    clickStoryElement(deliveryConversation)
+
+    await waitForStoryText(root, '배송 상태를 확인하고 싶어요')
+    await waitForStoryText(root, 'order-detail-opened')
   },
 }
 

@@ -7,5 +7,6 @@ describe('operator console stories', () => {
     expect(stories.AssignedQueue).toBeDefined()
     expect(stories.UnassignedQueue).toBeDefined()
     expect(stories.ClosedConversation).toBeDefined()
+    expect(stories.AssignedQueue.play).toBeTypeOf('function')
   })
 })
