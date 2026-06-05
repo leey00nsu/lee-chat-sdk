@@ -42,6 +42,130 @@ interface LeeChatResponse {
 }
 ```
 
+## Attachment Upload Endpoint
+
+The SDK does not upload files directly to your storage. The host app owns the upload endpoint and passes an `uploadAttachment(file)` function to React, Vanilla, or script-tag integrations. That function must upload the file, then return an `UploadedChatAttachment` object. The SDK converts that object into an `image` or `file` message part and includes it in the next `LeeChatRequest.message.parts` payload.
+
+A practical route shape is:
+
+- `POST /api/chat/attachments`
+- request body: `multipart/form-data` with a `file` field
+- response body: `UploadedChatAttachment`
+
+```ts
+type UploadedChatAttachment =
+  | {
+      kind: 'image'
+      url: string
+      alt?: string
+      mediaType?: string
+      width?: number
+      height?: number
+    }
+  | {
+      kind: 'file'
+      url: string
+      name: string
+      mediaType?: string
+      size?: number
+    }
+```
+
+Example client wiring:
+
+```tsx
+import { LeeChatWidget, type UploadedChatAttachment } from 'lee-chat-sdk'
+
+async function uploadAttachment(file: File): Promise<UploadedChatAttachment> {
+  const body = new FormData()
+  body.set('file', file)
+
+  const response = await fetch('/api/chat/attachments', {
+    method: 'POST',
+    body,
+  })
+
+  if (!response.ok) {
+    throw new Error('Attachment upload failed.')
+  }
+
+  return (await response.json()) as UploadedChatAttachment
+}
+
+export function ChatWidget() {
+  return <LeeChatWidget uploadAttachment={uploadAttachment} />
+}
+```
+
+Example Next.js route:
+
+```ts
+// app/api/chat/attachments/route.ts
+import type { UploadedChatAttachment } from 'lee-chat-sdk'
+
+const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024
+const ALLOWED_MEDIA_TYPES = new Set([
+  'image/png',
+  'image/jpeg',
+  'image/webp',
+  'application/pdf',
+])
+
+export async function POST(request: Request) {
+  const context = await requireChatRequestContext(request)
+  await assertRateLimit({
+    tenantId: context.tenantId,
+    subjectId: context.participantId ?? context.visitorId,
+    action: 'chat.attachment.upload',
+  })
+
+  const formData = await request.formData()
+  const file = formData.get('file')
+
+  if (!(file instanceof File)) {
+    return Response.json({ error: 'Missing file.' }, { status: 400 })
+  }
+
+  if (file.size > MAX_ATTACHMENT_BYTES) {
+    return Response.json({ error: 'Attachment is too large.' }, { status: 413 })
+  }
+
+  if (!ALLOWED_MEDIA_TYPES.has(file.type)) {
+    return Response.json({ error: 'Unsupported attachment type.' }, { status: 415 })
+  }
+
+  const storedFile = await storage.uploadChatAttachment({
+    tenantId: context.tenantId,
+    file,
+  })
+
+  const attachment: UploadedChatAttachment = file.type.startsWith('image/')
+    ? {
+        kind: 'image',
+        url: storedFile.publicUrl,
+        alt: file.name,
+        mediaType: file.type,
+      }
+    : {
+        kind: 'file',
+        url: storedFile.publicUrl,
+        name: file.name,
+        mediaType: file.type,
+        size: file.size,
+      }
+
+  await db.chatAttachment.create({
+    tenantId: context.tenantId,
+    uploadedBy: context.participantId ?? context.visitorId,
+    attachment,
+  })
+
+  return Response.json(attachment)
+}
+```
+
+Production attachment routes should validate auth, tenant, file size, MIME type, and storage destination. Use private object storage plus signed URLs when attachments should not be public.
+
 ## Next.js Route Example
 
 ```ts
