@@ -678,7 +678,7 @@ Use the headless controller and primitives when you need deeper customization.
 - `ConversationClient`: framework-agnostic core client for message sending, failure handling, retry, and persistence.
 - `ConversationClient.applyEvent`: applies presence, typing, and read events from transports or realtime adapters to core state.
 - `useChatController`: manages input state, submission state, messages, transport calls, and persistence.
-- `useChatOperatorConsole`: React adapter for selected conversation state, summary lists, and assignment/close event creation in operator consoles.
+- `useChatOperatorConsole`: experimental operator-console primitive for selected conversation state, summary lists, and assignment/close event creation. It is not a production-ready console.
 - `ChatTransport`: adapter interface for HTTP, mock, WebSocket, SSE, or any custom transport.
 - `HttpChatTransport`: default HTTP POST transport with `timeoutMs`, per-call `AbortSignal`, and 5xx/network retry policy support.
 - `SseChatEventTransport`: browser `EventSource`-based SSE adapter. It parses server events as `ConversationClientEvent`, connects them to the React Provider or Vanilla widget, and provides reconnect/backoff options.
@@ -690,7 +690,7 @@ Use the headless controller and primitives when you need deeper customization.
 
 ## Operator Console Model
 
-Use `ChatEvent` for operational tooling and internal consoles. It can model message creation, failed messages, assignment changes, closed conversations, internal notes, and participant events as a single event stream.
+The operator console APIs are experimental primitives. Use `ChatEvent` for operational tooling prototypes and internal console foundations. It can model message creation, failed messages, assignment changes, closed conversations, internal notes, and participant events as a single event stream. These APIs are not a production-ready console; production usage still needs host-provided agent reply persistence, assignment/close mutations, internal notes, operator permissions, routing policy, durable storage, and realtime backend integration.
 
 ```ts
 import {
@@ -764,7 +764,7 @@ function OperatorConsolePanel() {
 }
 ```
 
-For operator consoles backed by server storage and realtime events, start with `useSyncedChatOperatorConsole()`.
+For experimental operator-console prototypes backed by server storage and realtime events, start with `useSyncedChatOperatorConsole()`. This hook helps load conversations/messages and apply realtime events, but it does not provide production mutation APIs for persisting agent replies, assignment, or close actions.
 
 ```tsx
 import {
@@ -809,7 +809,7 @@ pnpm storybook
 ```
 
 - `apps/demo`: drop-in chat widget example
-- `apps/console`: operator console model example
+- `apps/console`: experimental operator-console primitive demo
 - `apps/storybook`: Storybook for reviewing SDK UI states and install/integration guides
 
 ## Development
@@ -857,9 +857,9 @@ pnpm publish --access public
 
 - SSE/WebSocket provide endpoint-factory based auth refresh instead of direct arbitrary auth-header injection because of browser API constraints.
 - Storybook interaction/play covers basic widget submission and operator conversation selection; more edge-case and visual regression coverage is still needed.
-- The operator console app is for SDK demo and validation; production deployment still needs team permissions, routing policy, durable storage, and realtime backend integration.
+- The operator console APIs and app are experimental primitives/demos, not a production-ready console. Production deployment still needs agent mutation APIs, team permissions, routing policy, durable storage, and realtime backend integration.
 
 ## Roadmap
 
 - Expand Storybook edge-case interactions and visual regression coverage.
-- Add production operator console adapters, permissions, and routing policy.
+- Decide whether to expand the experimental operator-console primitives into a production console contract.

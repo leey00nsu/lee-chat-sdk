@@ -9,7 +9,7 @@ Initial SDK productization release.
 - Added shadow DOM isolation for Vanilla/script-tag installs.
 - Added `initialMessage`, visitor persistence, read receipt sync, realtime event transports, and request auth/retry options.
 - Added text, image, and file message part rendering plus host-owned attachment upload contracts.
-- Added `ConversationSyncClient`, synced operator-console hook, and console demo workflows.
+- Added `ConversationSyncClient`, experimental synced operator-console primitives, and console demo workflows.
 - Added `lee-chat-sdk/testing` mock backend utilities.
 - Added `lee-chat-sdk/server` helpers for local in-memory routes, production storage-backed route handlers, and SSE event streams.
 - Added Playwright E2E checks for script-tag bundle loading, shadow DOM isolation, endpoint submission, and attachment parts.

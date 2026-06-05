@@ -202,14 +202,14 @@ function OperatorConsoleStory({
 }
 
 const meta = {
-  title: 'Lee Chat/OperatorConsole',
+  title: 'Lee Chat/Experimental Operator Console',
   component: OperatorConsoleStory,
   tags: ['autodocs'],
   parameters: {
     docs: {
       description: {
         component:
-          'Operator console states built with useChatOperatorConsole for queue, thread, and customer-context review.',
+          'Experimental operator-console primitive states built with useChatOperatorConsole for queue, thread, and customer-context review. These stories are not a production-ready console.',
       },
     },
     layout: 'fullscreen',

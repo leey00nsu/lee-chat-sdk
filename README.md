@@ -678,7 +678,7 @@ initLeeChat({
 - `ConversationClient`: React와 무관하게 메시지 전송, 실패 처리, retry, persistence 저장을 처리하는 core client입니다.
 - `ConversationClient.applyEvent`: transport나 realtime adapter에서 받은 presence, typing, read event를 core state에 적용합니다.
 - `useChatController`: 입력 상태, 제출 상태, 메시지 목록, transport 호출, persistence 저장을 관리합니다.
-- `useChatOperatorConsole`: 운영 콘솔의 선택 대화, summary 목록, 배정/종료 event 생성을 관리하는 React adapter입니다.
+- `useChatOperatorConsole`: 실험적 운영 콘솔 primitive입니다. 선택 대화, summary 목록, 배정/종료 event 생성을 관리하지만 production-ready 콘솔은 아닙니다.
 - `ChatTransport`: HTTP, mock, WebSocket, SSE 같은 전송 방식을 교체하기 위한 adapter interface입니다.
 - `HttpChatTransport`: 기본 HTTP POST transport입니다. `timeoutMs`, 호출별 `AbortSignal`, 5xx/network retry 정책을 제어할 수 있습니다.
 - `SseChatEventTransport`: browser `EventSource` 기반 SSE adapter입니다. 서버 event를 `ConversationClientEvent`로 파싱해 React Provider나 Vanilla widget에 연결하며, reconnect/backoff 옵션을 제공합니다.
@@ -690,7 +690,7 @@ initLeeChat({
 
 ## Operator Console Model
 
-운영 도구나 내부 콘솔에는 `ChatEvent` 모델을 사용할 수 있습니다. 메시지 생성, 실패, 배정 변경, 대화 종료, 내부 메모, 사용자 이벤트를 하나의 event stream으로 다룰 수 있습니다.
+운영자 콘솔 API는 experimental primitive입니다. 운영 도구나 내부 콘솔 prototype에서 `ChatEvent` 모델을 사용할 수 있고, 메시지 생성, 실패, 배정 변경, 대화 종료, 내부 메모, 사용자 이벤트를 하나의 event stream으로 다룰 수 있습니다. 이 API는 production-ready 콘솔이 아니며, 실제 운영에는 상담원 답변 저장, 배정/종료 mutation, 내부 메모, 상담원 권한, 라우팅 정책, 영구 저장소, realtime backend를 host app에서 구현해야 합니다.
 
 ```ts
 import {
@@ -764,7 +764,7 @@ function OperatorConsolePanel() {
 }
 ```
 
-서버 저장소와 realtime event를 함께 쓰는 운영 콘솔은 `useSyncedChatOperatorConsole()`로 시작할 수 있습니다.
+서버 저장소와 realtime event를 함께 쓰는 experimental 운영 콘솔 prototype은 `useSyncedChatOperatorConsole()`로 시작할 수 있습니다. 이 hook은 conversation/message 조회와 realtime event 반영을 돕지만, 상담원 답변/배정/종료를 서버에 저장하는 production mutation API는 제공하지 않습니다.
 
 ```tsx
 import {
@@ -809,7 +809,7 @@ pnpm storybook
 ```
 
 - `apps/demo`: drop-in chat widget 사용 예제
-- `apps/console`: 운영 콘솔 모델 예제
+- `apps/console`: experimental 운영 콘솔 primitive 데모
 - `apps/storybook`: SDK UI 상태와 설치/연동 guide 검수용 Storybook
 
 ## 개발
@@ -857,9 +857,9 @@ pnpm publish --access public
 
 - SSE/WebSocket은 브라우저 API 제약상 임의 auth header 직접 주입 대신 endpoint factory 기반 auth refresh를 제공합니다.
 - Storybook interaction/play는 기본 위젯 전송과 운영 콘솔 대화 선택을 다루며, 추가 edge case와 visual regression coverage는 아직 필요합니다.
-- 운영 콘솔 앱은 SDK 데모/검증용이며, 운영 배포에는 팀 권한, 라우팅 정책, 영구 저장소, realtime backend 연결이 필요합니다.
+- 운영 콘솔 API와 앱은 experimental primitive/demo이며 production-ready 콘솔이 아닙니다. 운영 배포에는 상담원 mutation API, 팀 권한, 라우팅 정책, 영구 저장소, realtime backend 연결이 필요합니다.
 
 ## Roadmap
 
 - Storybook edge case interaction과 visual regression coverage 확장
-- 운영 콘솔 production adapter와 권한/라우팅 정책 추가
+- experimental 운영 콘솔 primitive를 production 콘솔 contract로 확장할지 별도 결정

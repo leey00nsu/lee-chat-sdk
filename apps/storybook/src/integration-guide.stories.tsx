@@ -124,6 +124,22 @@ await syncClient.listConversations({
   visitorId: 'visitor-123',
 })`,
   },
+  {
+    title: 'Experimental operator console',
+    description:
+      'Operator-console primitives are useful for prototypes, but production consoles need host-provided mutation APIs, permissions, routing, durable storage, and realtime backend integration.',
+    code: `import { useSyncedChatOperatorConsole } from 'lee-chat-sdk'
+
+// Experimental primitive, not a production-ready console.
+const operatorConsole = useSyncedChatOperatorConsole({
+  syncClient,
+  eventTransport,
+  listConversationsParams: {
+    appId: 'commerce-web',
+  },
+  currentParticipantId: 'operator-1',
+})`,
+  },
 ]
 
 function IntegrationGuide() {

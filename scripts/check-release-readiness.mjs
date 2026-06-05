@@ -33,6 +33,41 @@ const REQUIRED_CHANGELOG_TERMS = [
   'lee-chat-sdk/server',
   'script-tag',
   'consumer smoke',
+  'experimental',
+  'operator-console',
+]
+
+const REQUIRED_OPERATOR_CONSOLE_DOCS = [
+  {
+    path: '../README.md',
+    terms: [
+      '운영자 콘솔 API는 experimental primitive입니다',
+      'production-ready 콘솔이 아닙니다',
+      'production mutation API는 제공하지 않습니다',
+    ],
+  },
+  {
+    path: '../README.en.md',
+    terms: [
+      'The operator console APIs are experimental primitives',
+      'not a production-ready console',
+      'does not provide production mutation APIs',
+    ],
+  },
+  {
+    path: '../packages/sdk/README.md',
+    terms: [
+      'experimental 운영 콘솔 primitive',
+      'production-ready 콘솔은 아니며',
+    ],
+  },
+  {
+    path: '../packages/sdk/README.en.md',
+    terms: [
+      'experimental operator-console primitives',
+      'not a production-ready console',
+    ],
+  },
 ]
 
 const packageJson = JSON.parse(
@@ -46,6 +81,14 @@ const packageChangelog = await readFile(
   new URL('../packages/sdk/CHANGELOG.md', import.meta.url),
   'utf8',
 ).catch(() => '')
+const operatorConsoleDocs = await Promise.all(
+  REQUIRED_OPERATOR_CONSOLE_DOCS.map(async (document) => ({
+    ...document,
+    content: await readFile(new URL(document.path, import.meta.url), 'utf8').catch(
+      () => '',
+    ),
+  })),
+)
 
 const errors = []
 
@@ -86,6 +129,19 @@ if (!packageJson.peerDependenciesMeta?.react?.optional) {
 if (!packageJson.peerDependenciesMeta?.['react-dom']?.optional) {
   errors.push('react-dom peer dependency must remain optional.')
 }
+
+operatorConsoleDocs.forEach((document) => {
+  if (!document.content) {
+    errors.push(`${document.path} is required before publishing.`)
+    return
+  }
+
+  document.terms.forEach((term) => {
+    if (!document.content.includes(term)) {
+      errors.push(`${document.path} must document operator console as ${term}.`)
+    }
+  })
+})
 
 if (!changelog) {
   errors.push('CHANGELOG.md is required before publishing.')
