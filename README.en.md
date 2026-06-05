@@ -15,7 +15,15 @@ import 'lee-chat-sdk/style.css'
 ### React
 
 ```tsx
-import { LeeChatProvider, LeeChatWidget } from 'lee-chat-sdk'
+import {
+  ConversationSyncClient,
+  LeeChatProvider,
+  LeeChatWidget,
+} from 'lee-chat-sdk'
+
+const syncClient = new ConversationSyncClient({
+  endpoint: '/api/chat',
+})
 
 export function App() {
   return (
@@ -24,6 +32,7 @@ export function App() {
         appId: 'my-service',
         endpoint: '/api/chat',
       }}
+      syncClient={syncClient}
     >
       <LeeChatWidget />
     </LeeChatProvider>
@@ -39,9 +48,28 @@ import { initLeeChat } from 'lee-chat-sdk/vanilla'
 const leeChat = initLeeChat({
   appId: 'my-service',
   endpoint: '/api/chat',
+  initialMessage: 'How can I help?',
+  isolation: 'shadowDom',
 })
 
 leeChat.open()
+```
+
+### Script Tag
+
+For sites without a bundler, upload `dist/lee-chat.global.js` to a CDN and use the global `LeeChat` API. The IIFE bundle injects the default widget CSS.
+The build also generates `dist/lee-chat.global.manifest.json` with the SRI `integrity` value.
+
+```html
+<script src="https://cdn.example.com/lee-chat.global.js"></script>
+<script>
+  LeeChat.initLeeChat({
+    appId: 'my-service',
+    endpoint: '/api/chat',
+    initialMessage: 'How can I help?',
+    isolation: 'shadowDom',
+  })
+</script>
 ```
 
 ## Installation
@@ -70,6 +98,8 @@ pnpm add lee-chat-sdk@file:../lee-chat-sdk/packages/sdk
 - Opens a chat panel, message list, composer, and send button.
 - Creates and stores `visitor.id` in localStorage when `participant.id` is not provided, so the same browser visitor can be identified again.
 - Derives the default `conversation.id` per visitor or participant.
+- Shows `initialMessage` as an assistant welcome message when there is no stored conversation, without creating an automatic POST request.
+- Syncs the latest unread message as a read receipt when the widget opens if `syncClient` is provided.
 - Sends user messages to `endpoint` with POST.
 - Adds the response as an assistant message.
 - Can attach static or dynamic auth headers with `requestHeaders`.
@@ -107,6 +137,7 @@ const config: LeeChatConfig = {
   },
   position: 'bottom-right',
   initialOpen: false,
+  initialMessage: 'How can I help?',
   requestTimeoutMs: 15000,
   requestRetry: {
     maxAttempts: 2,
@@ -170,6 +201,30 @@ initLeeChat({
 ## Backend Contract
 
 The SDK sends the following request body to `endpoint`.
+
+Server endpoint examples and the realtime/sync contract are documented in [docs/backend-contract.md](./docs/backend-contract.md).
+For tests and demos, use `createMockLeeChatServer()` from `lee-chat-sdk/testing` to simulate the same contract locally.
+For local development and contract validation routes, use `createInMemoryLeeChatBackend()` from `lee-chat-sdk/server`. It stores data in memory, so replace it with durable storage for production.
+For production routes, connect your database storage adapter to `createLeeChatRouteHandler()` from the same subpath to reuse the message storage, conversation sync, and read receipt route contract.
+For an SSE realtime backend, use `createLeeChatEventStream()` to create the `GET /api/chat/events` stream and publish events with `publish(event)`.
+
+```ts
+import { createInMemoryLeeChatBackend } from 'lee-chat-sdk/server'
+
+const backend = createInMemoryLeeChatBackend()
+
+export function POST(request: Request) {
+  return backend.handleRequest(request)
+}
+
+export function GET(request: Request) {
+  return backend.handleRequest(request)
+}
+
+export function PUT(request: Request) {
+  return backend.handleRequest(request)
+}
+```
 
 ```ts
 type ChatMessagePart =
@@ -267,6 +322,54 @@ export async function POST(request: Request) {
 ```
 
 Response `parts` can include image and file attachments as well as text. The default React and Vanilla UI renders `image` parts as images and `file` parts as links.
+The host app owns the actual file upload. Use `createChatMessagePartFromAttachment()` to convert an upload result into an SDK message part.
+
+```ts
+import { createChatMessagePartFromAttachment } from 'lee-chat-sdk'
+
+const imagePart = createChatMessagePartFromAttachment({
+  kind: 'image',
+  url: uploadedImage.url,
+  alt: uploadedImage.name,
+  mediaType: uploadedImage.mediaType,
+})
+```
+
+To use the default composer file picker, pass the host app upload function. React uses the `LeeChatWidget` prop, and Vanilla/script-tag uses the same contract through `initLeeChat()` config.
+
+```tsx
+<LeeChatWidget
+  uploadAttachment={async (file) => {
+    const uploadedFile = await uploadFileToStorage(file)
+
+    return {
+      kind: 'file',
+      url: uploadedFile.url,
+      name: file.name,
+      mediaType: file.type,
+      size: file.size,
+    }
+  }}
+/>
+```
+
+```ts
+initLeeChat({
+  appId: 'my-service',
+  endpoint: '/api/chat',
+  uploadAttachment: async (file) => {
+    const uploadedFile = await uploadFileToStorage(file)
+
+    return {
+      kind: 'file',
+      url: uploadedFile.url,
+      name: file.name,
+      mediaType: file.type,
+      size: file.size,
+    }
+  },
+})
+```
 
 ## Server Sync Contract
 
@@ -313,6 +416,8 @@ await syncClient.markMessageRead({
 ## Styling
 
 The default UI exposes CSS custom properties and class hooks.
+`theme.primaryColor` and `theme.radius` are applied to the `.lee-chat-root` widget root, not to the host page `:root`.
+In the Vanilla/script-tag path, use `isolation: 'shadowDom'` for stronger separation from host CSS and DOM.
 
 Import this subpath once from your app when using the default widget styles.
 
@@ -659,6 +764,42 @@ function OperatorConsolePanel() {
 }
 ```
 
+For operator consoles backed by server storage and realtime events, start with `useSyncedChatOperatorConsole()`.
+
+```tsx
+import {
+  ConversationSyncClient,
+  SseChatEventTransport,
+  useSyncedChatOperatorConsole,
+} from 'lee-chat-sdk'
+
+const syncClient = new ConversationSyncClient({
+  endpoint: '/api/chat',
+})
+const eventTransport = new SseChatEventTransport({
+  endpoint: '/api/chat/events',
+})
+
+function SyncedOperatorConsolePanel() {
+  const operatorConsole = useSyncedChatOperatorConsole({
+    syncClient,
+    eventTransport,
+    listConversationsParams: {
+      appId: 'support',
+    },
+    currentParticipantId: 'operator-1',
+  })
+
+  if (operatorConsole.isLoading) {
+    return <p>Loading conversations...</p>
+  }
+
+  return operatorConsole.state.conversationSummaries.map((summary) => {
+    return <button key={summary.id}>{summary.title}</button>
+  })
+}
+```
+
 ## Example Apps
 
 ```bash
@@ -677,6 +818,7 @@ pnpm storybook
 pnpm install
 pnpm typecheck
 pnpm test:run
+pnpm test:e2e
 pnpm build
 pnpm storybook:build
 ```
@@ -692,7 +834,13 @@ pnpm --filter lee-chat-sdk-console test:run
 ## npm Publishing Checklist
 
 - Run `pnpm release:ready` to check package metadata, export paths, files, public publishConfig, and optional React peer dependencies.
-- Run `pnpm release:check` to execute readiness, typecheck, tests, build, and npm pack dry-run.
+- Run `pnpm test:e2e` to verify the script tag IIFE bundle, shadow DOM isolation, and endpoint submission in real Chromium.
+- Run `pnpm release:smoke` to install the real tarball into a temporary consumer project and verify ESM, CJS, and TypeScript exports.
+- Run `pnpm release:check` to execute readiness, typecheck, tests, build, npm pack dry-run, consumer smoke, and E2E.
+- Confirm that both root `CHANGELOG.md` and `packages/sdk/CHANGELOG.md` include the current `packages/sdk` version.
+- See [docs/release.md](./docs/release.md) for the full release flow.
+- The GitHub Actions `Publish SDK` workflow defaults to dry-run and requires the `NPM_TOKEN` secret for actual publishing.
+- CDN files are available from the `lee-chat-sdk-cdn-bundle` artifact in the `Publish SDK` workflow.
 - Confirm that the package name is available on npm.
 - Publish from `packages/sdk`.
 
@@ -703,12 +851,15 @@ cd packages/sdk
 pnpm publish --access public
 ```
 
+`packages/sdk` defines `prepublishOnly`, so running `pnpm publish` directly runs the root `release:check` again.
+
 ## Current Limitations
 
 - SSE/WebSocket provide endpoint-factory based auth refresh instead of direct arbitrary auth-header injection because of browser API constraints.
-- Storybook interaction/play scenarios are still limited.
-- Package export paths are currently limited to the root export.
+- Storybook interaction/play covers basic widget submission and operator conversation selection; more edge-case and visual regression coverage is still needed.
+- The operator console app is for SDK demo and validation; production deployment still needs team permissions, routing policy, durable storage, and realtime backend integration.
 
 ## Roadmap
 
-- Add Storybook interaction/play scenarios.
+- Expand Storybook edge-case interactions and visual regression coverage.
+- Add production operator console adapters, permissions, and routing policy.

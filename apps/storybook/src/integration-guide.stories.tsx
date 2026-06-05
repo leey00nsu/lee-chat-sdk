@@ -17,7 +17,15 @@ import 'lee-chat-sdk/style.css'`,
   {
     title: 'React widget',
     description: 'Use the provider and widget when the host app is React.',
-    code: `import { LeeChatProvider, LeeChatWidget } from 'lee-chat-sdk'
+    code: `import {
+  ConversationSyncClient,
+  LeeChatProvider,
+  LeeChatWidget,
+} from 'lee-chat-sdk'
+
+const syncClient = new ConversationSyncClient({
+  endpoint: '/api/chat',
+})
 
 export function App() {
   return (
@@ -26,8 +34,21 @@ export function App() {
         appId: 'commerce-web',
         endpoint: '/api/chat',
       }}
+      syncClient={syncClient}
     >
-      <LeeChatWidget />
+      <LeeChatWidget
+        uploadAttachment={async (file) => {
+          const uploadedFile = await uploadFileToStorage(file)
+
+          return {
+            kind: 'file',
+            url: uploadedFile.url,
+            name: file.name,
+            mediaType: file.type,
+            size: file.size,
+          }
+        }}
+      />
     </LeeChatProvider>
   )
 }`,
@@ -40,9 +61,34 @@ export function App() {
 const leeChat = initLeeChat({
   appId: 'commerce-web',
   endpoint: '/api/chat',
+  uploadAttachment: async (file) => {
+    const uploadedFile = await uploadFileToStorage(file)
+
+    return {
+      kind: 'file',
+      url: uploadedFile.url,
+      name: file.name,
+      mediaType: file.type,
+      size: file.size,
+    }
+  },
 })
 
 leeChat.open()`,
+  },
+  {
+    title: 'Script tag',
+    description:
+      'Use the IIFE build for sites without a bundler. The script injects the default widget CSS.',
+    code: `<script src="https://cdn.example.com/lee-chat.global.js"></script>
+<script>
+  LeeChat.initLeeChat({
+    appId: 'commerce-web',
+    endpoint: '/api/chat',
+    initialMessage: 'How can I help?',
+    isolation: 'shadowDom',
+  })
+</script>`,
   },
   {
     title: 'Auth and realtime',

@@ -179,6 +179,70 @@ export default meta
 
 type Story = StoryObj<typeof meta>
 
+async function waitForStoryText(
+  root: HTMLElement,
+  text: string,
+): Promise<HTMLElement> {
+  const deadline = Date.now() + 3000
+
+  while (Date.now() < deadline) {
+    const element = Array.from(root.querySelectorAll<HTMLElement>('*')).find(
+      (candidate) => candidate.textContent?.includes(text),
+    )
+
+    if (element) {
+      return element
+    }
+
+    await new Promise((resolve) => {
+      setTimeout(resolve, 25)
+    })
+  }
+
+  throw new Error(`Story text not found: ${text}`)
+}
+
+async function waitForStorySelector<TElement extends HTMLElement>(
+  root: HTMLElement,
+  selector: string,
+): Promise<TElement> {
+  const deadline = Date.now() + 3000
+
+  while (Date.now() < deadline) {
+    const element = root.querySelector<TElement>(selector)
+
+    if (element) {
+      return element
+    }
+
+    await new Promise((resolve) => {
+      setTimeout(resolve, 25)
+    })
+  }
+
+  throw new Error(`Story selector not found: ${selector}`)
+}
+
+function clickStoryElement(element: HTMLElement): void {
+  element.dispatchEvent(
+    new MouseEvent('click', {
+      bubbles: true,
+      cancelable: true,
+    }),
+  )
+}
+
+function inputStoryText(element: HTMLTextAreaElement, value: string): void {
+  element.value = value
+  element.dispatchEvent(
+    new InputEvent('input', {
+      bubbles: true,
+      data: value,
+      inputType: 'insertText',
+    }),
+  )
+}
+
 export const Default: Story = {
   args: {
     config: {
@@ -190,6 +254,27 @@ export const Default: Story = {
         triggerLabel: 'Open support chat',
       },
     },
+  },
+  play: async ({ canvasElement }) => {
+    const root = canvasElement.ownerDocument.body
+    const trigger = await waitForStoryText(root, 'Open support chat')
+    clickStoryElement(trigger)
+
+    const textarea = await waitForStorySelector<HTMLTextAreaElement>(
+      root,
+      'textarea[placeholder="Type your message"]',
+    )
+
+    inputStoryText(textarea, 'Can I use this on a static website?')
+
+    const sendButton = await waitForStoryText(root, 'Send')
+    clickStoryElement(sendButton)
+
+    await waitForStoryText(root, 'Can I use this on a static website?')
+    await waitForStoryText(
+      root,
+      'Story response: Can I use this on a static website?',
+    )
   },
 }
 

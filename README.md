@@ -15,7 +15,15 @@ import 'lee-chat-sdk/style.css'
 ### React
 
 ```tsx
-import { LeeChatProvider, LeeChatWidget } from 'lee-chat-sdk'
+import {
+  ConversationSyncClient,
+  LeeChatProvider,
+  LeeChatWidget,
+} from 'lee-chat-sdk'
+
+const syncClient = new ConversationSyncClient({
+  endpoint: '/api/chat',
+})
 
 export function App() {
   return (
@@ -24,6 +32,7 @@ export function App() {
         appId: 'my-service',
         endpoint: '/api/chat',
       }}
+      syncClient={syncClient}
     >
       <LeeChatWidget />
     </LeeChatProvider>
@@ -39,9 +48,28 @@ import { initLeeChat } from 'lee-chat-sdk/vanilla'
 const leeChat = initLeeChat({
   appId: 'my-service',
   endpoint: '/api/chat',
+  initialMessage: '무엇을 도와드릴까요?',
+  isolation: 'shadowDom',
 })
 
 leeChat.open()
+```
+
+### Script Tag
+
+번들러가 없는 사이트에서는 빌드 산출물 `dist/lee-chat.global.js`를 CDN에 올려 전역 `LeeChat` API로 사용할 수 있습니다. 이 IIFE 번들은 기본 위젯 CSS를 스크립트 안에 포함합니다.
+빌드 시 생성되는 `dist/lee-chat.global.manifest.json`에서 SRI `integrity` 값을 확인할 수 있습니다.
+
+```html
+<script src="https://cdn.example.com/lee-chat.global.js"></script>
+<script>
+  LeeChat.initLeeChat({
+    appId: 'my-service',
+    endpoint: '/api/chat',
+    initialMessage: '무엇을 도와드릴까요?',
+    isolation: 'shadowDom',
+  })
+</script>
 ```
 
 ## 설치
@@ -70,6 +98,8 @@ pnpm add lee-chat-sdk@file:../lee-chat-sdk/packages/sdk
 - 버튼을 누르면 채팅 패널, 메시지 목록, 입력창, 전송 버튼이 표시됩니다.
 - `participant.id`를 직접 주지 않으면 `visitor.id`를 localStorage에 생성/저장해 같은 브라우저 방문자를 재식별합니다.
 - 기본 `conversation.id`는 visitor 또는 participant 단위로 분리됩니다.
+- `initialMessage`는 저장된 대화가 없을 때 assistant welcome message로 표시되며 자동 POST 요청은 만들지 않습니다.
+- `syncClient`를 넘기면 위젯을 열 때 마지막 unread 메시지를 read receipt로 동기화합니다.
 - 사용자가 보낸 메시지를 `endpoint`로 POST 전송합니다.
 - 응답 메시지를 assistant 메시지로 추가합니다.
 - `requestHeaders`로 정적/동적 인증 헤더를 붙일 수 있습니다.
@@ -107,6 +137,7 @@ const config: LeeChatConfig = {
   },
   position: 'bottom-right',
   initialOpen: false,
+  initialMessage: '무엇을 도와드릴까요?',
   requestTimeoutMs: 15000,
   requestRetry: {
     maxAttempts: 2,
@@ -170,6 +201,30 @@ initLeeChat({
 ## Backend Contract
 
 SDK는 `endpoint`로 다음 형태의 요청을 보냅니다.
+
+구체적인 서버 endpoint 예제와 realtime/sync 계약은 [docs/backend-contract.md](./docs/backend-contract.md)에 정리되어 있습니다.
+테스트와 데모에서는 `lee-chat-sdk/testing`의 `createMockLeeChatServer()`로 같은 contract를 로컬에서 시뮬레이션할 수 있습니다.
+로컬 개발과 contract 검증용 route handler가 필요하면 `lee-chat-sdk/server`의 `createInMemoryLeeChatBackend()`를 사용할 수 있습니다. 이 구현은 메모리에 저장하므로 운영 DB 대체용은 아닙니다.
+운영 route에서는 같은 subpath의 `createLeeChatRouteHandler()`에 DB storage adapter를 연결하면 message 저장, conversation sync, read receipt route contract를 재사용할 수 있습니다.
+SSE realtime backend가 필요하면 `createLeeChatEventStream()`으로 `GET /api/chat/events` stream과 `publish(event)`를 구성할 수 있습니다.
+
+```ts
+import { createInMemoryLeeChatBackend } from 'lee-chat-sdk/server'
+
+const backend = createInMemoryLeeChatBackend()
+
+export function POST(request: Request) {
+  return backend.handleRequest(request)
+}
+
+export function GET(request: Request) {
+  return backend.handleRequest(request)
+}
+
+export function PUT(request: Request) {
+  return backend.handleRequest(request)
+}
+```
 
 ```ts
 type ChatMessagePart =
@@ -267,6 +322,54 @@ export async function POST(request: Request) {
 ```
 
 응답 `parts`에는 텍스트뿐 아니라 이미지와 파일 attachment를 함께 넣을 수 있습니다. 기본 React/Vanilla UI는 `image` part를 이미지로, `file` part를 링크로 렌더링합니다.
+사용자 파일 업로드는 host app이 수행하고, 업로드 결과는 `createChatMessagePartFromAttachment()`로 SDK message part 형태로 변환할 수 있습니다.
+
+```ts
+import { createChatMessagePartFromAttachment } from 'lee-chat-sdk'
+
+const imagePart = createChatMessagePartFromAttachment({
+  kind: 'image',
+  url: uploadedImage.url,
+  alt: uploadedImage.name,
+  mediaType: uploadedImage.mediaType,
+})
+```
+
+기본 composer에서 파일 선택 UI를 쓰려면 host app의 업로드 함수를 넘깁니다. React는 `LeeChatWidget` prop, Vanilla/script tag는 `initLeeChat()` config로 같은 contract를 사용합니다.
+
+```tsx
+<LeeChatWidget
+  uploadAttachment={async (file) => {
+    const uploadedFile = await uploadFileToStorage(file)
+
+    return {
+      kind: 'file',
+      url: uploadedFile.url,
+      name: file.name,
+      mediaType: file.type,
+      size: file.size,
+    }
+  }}
+/>
+```
+
+```ts
+initLeeChat({
+  appId: 'my-service',
+  endpoint: '/api/chat',
+  uploadAttachment: async (file) => {
+    const uploadedFile = await uploadFileToStorage(file)
+
+    return {
+      kind: 'file',
+      url: uploadedFile.url,
+      name: file.name,
+      mediaType: file.type,
+      size: file.size,
+    }
+  },
+})
+```
 
 ## Server Sync Contract
 
@@ -313,6 +416,8 @@ await syncClient.markMessageRead({
 ## Styling
 
 기본 UI는 CSS custom properties와 class hook을 노출합니다.
+`theme.primaryColor`와 `theme.radius`는 host page의 `:root`가 아니라 `.lee-chat-root` 위젯 root에만 적용됩니다.
+Vanilla/script tag 경로에서는 `isolation: 'shadowDom'`으로 host CSS와 위젯 DOM을 더 강하게 분리할 수 있습니다.
 
 위젯 기본 스타일을 사용하려면 다음 subpath를 앱에서 한 번 import합니다.
 
@@ -659,6 +764,42 @@ function OperatorConsolePanel() {
 }
 ```
 
+서버 저장소와 realtime event를 함께 쓰는 운영 콘솔은 `useSyncedChatOperatorConsole()`로 시작할 수 있습니다.
+
+```tsx
+import {
+  ConversationSyncClient,
+  SseChatEventTransport,
+  useSyncedChatOperatorConsole,
+} from 'lee-chat-sdk'
+
+const syncClient = new ConversationSyncClient({
+  endpoint: '/api/chat',
+})
+const eventTransport = new SseChatEventTransport({
+  endpoint: '/api/chat/events',
+})
+
+function SyncedOperatorConsolePanel() {
+  const operatorConsole = useSyncedChatOperatorConsole({
+    syncClient,
+    eventTransport,
+    listConversationsParams: {
+      appId: 'support',
+    },
+    currentParticipantId: 'operator-1',
+  })
+
+  if (operatorConsole.isLoading) {
+    return <p>Loading conversations...</p>
+  }
+
+  return operatorConsole.state.conversationSummaries.map((summary) => {
+    return <button key={summary.id}>{summary.title}</button>
+  })
+}
+```
+
 ## 예제 앱
 
 ```bash
@@ -677,6 +818,7 @@ pnpm storybook
 pnpm install
 pnpm typecheck
 pnpm test:run
+pnpm test:e2e
 pnpm build
 pnpm storybook:build
 ```
@@ -692,7 +834,13 @@ pnpm --filter lee-chat-sdk-console test:run
 ## npm 배포 체크리스트
 
 - `pnpm release:ready`로 package metadata, export path, files, public publishConfig, React optional peer dependency 확인
-- `pnpm release:check`로 readiness, typecheck, test, build, npm pack dry-run 실행
+- `pnpm test:e2e`로 script tag IIFE bundle, shadow DOM isolation, endpoint 전송을 실제 Chromium에서 확인
+- `pnpm release:smoke`로 실제 tarball을 임시 소비자 프로젝트에 설치해 ESM/CJS/TypeScript export 확인
+- `pnpm release:check`로 readiness, typecheck, test, build, npm pack dry-run, consumer smoke, E2E 실행
+- root `CHANGELOG.md`와 `packages/sdk/CHANGELOG.md`에 현재 `packages/sdk` version 섹션이 있는지 확인
+- 자세한 절차는 [docs/release.md](./docs/release.md) 참고
+- GitHub Actions `Publish SDK` workflow는 기본 dry-run이며, 실제 publish에는 `NPM_TOKEN` secret이 필요합니다.
+- CDN 파일은 `Publish SDK` workflow의 `lee-chat-sdk-cdn-bundle` artifact로 받을 수 있습니다.
 - npm 패키지 이름 사용 가능 여부 확인
 - `packages/sdk`에서 publish
 
@@ -703,12 +851,15 @@ cd packages/sdk
 pnpm publish --access public
 ```
 
+`packages/sdk`에는 `prepublishOnly`가 설정되어 있어 `pnpm publish`를 직접 실행해도 root `release:check`가 다시 실행됩니다.
+
 ## 현재 한계
 
 - SSE/WebSocket은 브라우저 API 제약상 임의 auth header 직접 주입 대신 endpoint factory 기반 auth refresh를 제공합니다.
-- Storybook interaction/play 시나리오는 아직 부족합니다.
-- package export path는 현재 root export로 제한되어 있습니다.
+- Storybook interaction/play는 기본 위젯 전송과 운영 콘솔 대화 선택을 다루며, 추가 edge case와 visual regression coverage는 아직 필요합니다.
+- 운영 콘솔 앱은 SDK 데모/검증용이며, 운영 배포에는 팀 권한, 라우팅 정책, 영구 저장소, realtime backend 연결이 필요합니다.
 
 ## Roadmap
 
-- Storybook interaction/play 시나리오 추가
+- Storybook edge case interaction과 visual regression coverage 확장
+- 운영 콘솔 production adapter와 권한/라우팅 정책 추가
