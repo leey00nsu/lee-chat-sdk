@@ -10,6 +10,19 @@ const PRESENCE_EVENT: ConversationClientEvent = {
     updatedAt: '2026-06-01T00:00:00.000Z',
   },
 }
+const MESSAGE_CREATED_EVENT: ConversationClientEvent = {
+  type: 'message.created',
+  message: {
+    id: 'message-1',
+    conversationId: 'conversation-1',
+    senderId: 'participant-user',
+    role: 'user',
+    content: 'Hello realtime',
+    parts: [{ type: 'text', text: 'Hello realtime' }],
+    status: 'sent',
+    createdAt: '2026-06-01T00:00:00.000Z',
+  },
+}
 
 describe('createLeeChatEventStream', () => {
   it('구독자에게 realtime event를 publish하고 unsubscribe한다', () => {
@@ -60,6 +73,30 @@ describe('createLeeChatEventStream', () => {
 
     await reader?.cancel()
     expect(eventStream.getSubscriberCount()).toBe(0)
+  })
+
+  it('message.created event를 SSE response로 전송한다', async () => {
+    const eventStream = createLeeChatEventStream({
+      eventName: 'lee-chat',
+      keepAliveMs: 0,
+    })
+    const response = eventStream.createSseResponse()
+    const reader = response.body?.getReader()
+
+    eventStream.publish(MESSAGE_CREATED_EVENT)
+    const chunk = await reader?.read()
+    const payload = new TextDecoder().decode(chunk?.value)
+
+    expect(payload).toBe(
+      [
+        'event: lee-chat',
+        `data: ${JSON.stringify(MESSAGE_CREATED_EVENT)}`,
+        '',
+        '',
+      ].join('\n'),
+    )
+
+    await reader?.cancel()
   })
 
   it('request abort 시 SSE 구독을 정리한다', async () => {

@@ -105,14 +105,39 @@ describe('useSyncedChatOperatorConsole', () => {
           updatedAt: '2026-06-01T00:03:00.000Z',
         },
       })
+      listener?.({
+        type: 'message.created',
+        message: createMessage({
+          id: 'message-realtime',
+          conversationId: 'conversation-pricing',
+          senderId: 'participant-yujin',
+          role: 'user',
+          content: '실시간 문의입니다',
+          createdAt: '2026-06-01T00:04:00.000Z',
+        }),
+      })
       result.current.assignConversation('conversation-pricing', 'Mina')
     })
 
+    expect(result.current.state.messages).toEqual([
+      expect.objectContaining({
+        id: 'message-pricing',
+      }),
+      expect.objectContaining({
+        id: 'message-realtime',
+        content: '실시간 문의입니다',
+      }),
+    ])
     expect(result.current.state.events).toEqual([
       expect.objectContaining({
         id: 'participant.presence_changed:participant-yujin',
         conversationId: 'conversation-pricing',
         type: 'customer_event.recorded',
+      }),
+      expect.objectContaining({
+        id: 'message.created:message-realtime',
+        conversationId: 'conversation-pricing',
+        type: 'message.created',
       }),
       expect.objectContaining({
         id: 'event-assigned',

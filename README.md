@@ -676,7 +676,7 @@ initLeeChat({
 기본 UI보다 더 깊게 커스터마이징해야 한다면 headless controller와 primitive를 사용할 수 있습니다.
 
 - `ConversationClient`: React와 무관하게 메시지 전송, 실패 처리, retry, persistence 저장을 처리하는 core client입니다.
-- `ConversationClient.applyEvent`: transport나 realtime adapter에서 받은 presence, typing, read event를 core state에 적용합니다.
+- `ConversationClient.applyEvent`: transport나 realtime adapter에서 받은 `message.created`, presence, typing, read event를 core state에 적용합니다.
 - `useChatController`: 입력 상태, 제출 상태, 메시지 목록, transport 호출, persistence 저장을 관리합니다.
 - `useChatOperatorConsole`: 실험적 운영 콘솔 primitive입니다. 선택 대화, summary 목록, 배정/종료 event 생성을 관리하지만 production-ready 콘솔은 아닙니다.
 - `ChatTransport`: HTTP, mock, WebSocket, SSE 같은 전송 방식을 교체하기 위한 adapter interface입니다.
@@ -685,7 +685,7 @@ initLeeChat({
 - `WebSocketChatEventTransport`: browser `WebSocket` 기반 realtime adapter입니다. 서버 message payload를 `ConversationClientEvent`로 파싱해 React Provider나 Vanilla widget에 연결하며, reconnect/backoff 옵션을 제공합니다.
 - `MemoryChatPersistence`: 메모리 기반 대화 저장소입니다.
 - `LocalStorageChatPersistence`: 브라우저 localStorage 기반 대화 저장소입니다.
-- `ChatParticipantPresence`, `ChatTypingIndicator`, `ChatReadReceipt`: presence, typing, 읽음 상태를 참여자 기준으로 표현하는 core 모델입니다.
+- `ChatParticipantPresence`, `ChatTypingIndicator`, `ChatReadReceipt`: presence, typing, 읽음 상태를 참여자 기준으로 표현하는 core 모델입니다. 새 메시지는 `message.created` event로 active conversation에 upsert할 수 있습니다.
 - `ChatComposer`, `ChatMessageList`, `ChatWidgetShell`, `FloatingChatTrigger`: 직접 조합 가능한 UI primitive입니다.
 
 ## Operator Console Model

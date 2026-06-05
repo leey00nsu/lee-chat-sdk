@@ -247,4 +247,59 @@ describe('ConversationClient', () => {
     })
     expect(stateChanges).toHaveLength(3)
   })
+
+  it('message.created event를 같은 conversation 메시지 목록에 반영한다', () => {
+    const messageChanges: Array<ChatMessage[]> = []
+    const client = new ConversationClient<TestRequest, TestResponse>({
+      conversationId: 'conversation',
+      senderId: 'participant-user',
+      assistantSenderId: 'participant-assistant',
+      transport: createSuccessfulTransport(),
+      buildRequest: ({ content, conversationId }) => ({
+        content,
+        conversationId,
+      }),
+      buildAssistantMessage: ({ response }) => ({
+        content: response.content,
+      }),
+      onMessagesChange: (messages) => {
+        messageChanges.push(messages)
+      },
+    })
+
+    client.applyEvent({
+      type: 'message.created',
+      message: {
+        id: 'message-realtime',
+        conversationId: 'conversation',
+        senderId: 'participant-assistant',
+        role: 'assistant',
+        content: 'Realtime response',
+        parts: [{ type: 'text', text: 'Realtime response' }],
+        status: 'sent',
+        createdAt: '2026-06-01T00:00:00.000Z',
+      },
+    })
+    client.applyEvent({
+      type: 'message.created',
+      message: {
+        id: 'message-other',
+        conversationId: 'conversation-other',
+        senderId: 'participant-assistant',
+        role: 'assistant',
+        content: 'Other response',
+        parts: [{ type: 'text', text: 'Other response' }],
+        status: 'sent',
+        createdAt: '2026-06-01T00:01:00.000Z',
+      },
+    })
+
+    expect(client.getMessages()).toEqual([
+      expect.objectContaining({
+        id: 'message-realtime',
+        content: 'Realtime response',
+      }),
+    ])
+    expect(messageChanges).toHaveLength(1)
+  })
 })

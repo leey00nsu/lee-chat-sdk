@@ -205,7 +205,9 @@ export function useSyncedChatOperatorConsole<
 
     return eventTransport.subscribe((event) => {
       const conversationId =
-        'presence' in event
+        'message' in event
+          ? event.message.conversationId
+          : 'presence' in event
           ? conversations[0]?.id
           : 'typingIndicator' in event
             ? event.typingIndicator.conversationId
@@ -215,11 +217,28 @@ export function useSyncedChatOperatorConsole<
         return
       }
 
+      if ('message' in event) {
+        setMessages((previousMessages) => {
+          if (previousMessages.some((message) => message.id === event.message.id)) {
+            return previousMessages.map((message) => {
+              return message.id === event.message.id
+                ? event.message as ChatMessage<TMessageMetadata>
+                : message
+            })
+          }
+
+          return [
+            ...previousMessages,
+            event.message as ChatMessage<TMessageMetadata>,
+          ]
+        })
+      }
+
       appendEvent(
         buildChatEvent({
           id: createOperatorEventIdFromRealtimeEvent(event),
           conversationId,
-          type: 'customer_event.recorded',
+          type: 'message' in event ? 'message.created' : 'customer_event.recorded',
           createdAt: resolveOperatorEventCreatedAt(event),
           payload: event,
         }),
@@ -264,6 +283,10 @@ function createOperatorEventIdFromRealtimeEvent(
     return `${event.type}:${event.presence.participantId}`
   }
 
+  if ('message' in event) {
+    return `${event.type}:${event.message.id}`
+  }
+
   if ('typingIndicator' in event) {
     return `${event.type}:${event.typingIndicator.participantId}`
   }
@@ -274,6 +297,10 @@ function createOperatorEventIdFromRealtimeEvent(
 function resolveOperatorEventCreatedAt(event: RealtimeOperatorEvent): string {
   if ('presence' in event) {
     return event.presence.updatedAt
+  }
+
+  if ('message' in event) {
+    return event.message.createdAt
   }
 
   if ('typingIndicator' in event) {

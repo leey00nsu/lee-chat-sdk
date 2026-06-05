@@ -78,6 +78,10 @@ export interface ConversationParticipantState {
 
 export type ConversationClientEvent =
   | {
+      type: 'message.created'
+      message: ChatMessage
+    }
+  | {
       type: 'participant.presence_changed'
       presence: ChatParticipantPresence
     }
@@ -101,6 +105,17 @@ function replaceMessage<TMessageMetadata>(
 
     return nextMessage
   })
+}
+
+function upsertMessage<TMessageMetadata>(
+  messages: Array<ChatMessage<TMessageMetadata>>,
+  nextMessage: ChatMessage<TMessageMetadata>,
+): Array<ChatMessage<TMessageMetadata>> {
+  if (messages.some((message) => message.id === nextMessage.id)) {
+    return replaceMessage(messages, nextMessage)
+  }
+
+  return [...messages, nextMessage]
 }
 
 export class ConversationClient<
@@ -177,6 +192,21 @@ export class ConversationClient<
   }
 
   applyEvent(event: ConversationClientEvent): ConversationParticipantState {
+    if (event.type === 'message.created') {
+      if (event.message.conversationId !== this.conversationId) {
+        return this.participantState
+      }
+
+      this.updateMessages(
+        upsertMessage(
+          this.messages,
+          event.message as ChatMessage<TMessageMetadata>,
+        ),
+      )
+
+      return this.participantState
+    }
+
     if (event.type === 'participant.presence_changed') {
       this.updateParticipantState({
         ...this.participantState,

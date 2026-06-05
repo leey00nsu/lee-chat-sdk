@@ -7,7 +7,7 @@ Initial SDK productization release.
 - Added React `LeeChatProvider` and `LeeChatWidget` drop-in widget APIs.
 - Added no-React Vanilla and script-tag entrypoints, including `dist/lee-chat.global.js`.
 - Added shadow DOM isolation for Vanilla/script-tag installs.
-- Added `initialMessage`, visitor persistence, read receipt sync, realtime event transports, and request auth/retry options.
+- Added `initialMessage`, visitor persistence, read receipt sync, `message.created` realtime fan-out, realtime event transports, and request auth/retry options.
 - Added text, image, and file message part rendering plus host-owned attachment upload contracts.
 - Added `ConversationSyncClient`, experimental synced operator-console primitives, and console demo workflows.
 - Added `lee-chat-sdk/testing` mock backend utilities.

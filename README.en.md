@@ -676,7 +676,7 @@ initLeeChat({
 Use the headless controller and primitives when you need deeper customization.
 
 - `ConversationClient`: framework-agnostic core client for message sending, failure handling, retry, and persistence.
-- `ConversationClient.applyEvent`: applies presence, typing, and read events from transports or realtime adapters to core state.
+- `ConversationClient.applyEvent`: applies `message.created`, presence, typing, and read events from transports or realtime adapters to core state.
 - `useChatController`: manages input state, submission state, messages, transport calls, and persistence.
 - `useChatOperatorConsole`: experimental operator-console primitive for selected conversation state, summary lists, and assignment/close event creation. It is not a production-ready console.
 - `ChatTransport`: adapter interface for HTTP, mock, WebSocket, SSE, or any custom transport.
@@ -685,7 +685,7 @@ Use the headless controller and primitives when you need deeper customization.
 - `WebSocketChatEventTransport`: browser `WebSocket`-based realtime adapter. It parses server message payloads as `ConversationClientEvent`, connects them to the React Provider or Vanilla widget, and provides reconnect/backoff options.
 - `MemoryChatPersistence`: in-memory conversation storage.
 - `LocalStorageChatPersistence`: browser localStorage conversation storage.
-- `ChatParticipantPresence`, `ChatTypingIndicator`, `ChatReadReceipt`: core participant-state models for presence, typing, and read state.
+- `ChatParticipantPresence`, `ChatTypingIndicator`, `ChatReadReceipt`: core participant-state models for presence, typing, and read state. New messages can be upserted into the active conversation with `message.created` events.
 - `ChatComposer`, `ChatMessageList`, `ChatWidgetShell`, `FloatingChatTrigger`: composable UI primitives.
 
 ## Operator Console Model

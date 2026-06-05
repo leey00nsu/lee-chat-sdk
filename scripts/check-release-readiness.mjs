@@ -34,6 +34,7 @@ const REQUIRED_CHANGELOG_TERMS = [
   'script-tag',
   'consumer smoke',
   'experimental',
+  'message.created',
   'operator-console',
 ]
 
@@ -69,6 +70,16 @@ const REQUIRED_OPERATOR_CONSOLE_DOCS = [
     ],
   },
 ]
+const REQUIRED_BACKEND_CONTRACT_TERMS = [
+  '## Attachment Upload Endpoint',
+  'POST /api/chat/attachments',
+  '## Production Next.js Route With Auth, Rate Limit, And Tenant Context',
+  'assertRateLimit',
+  'tenantId',
+  '## Realtime Publish From Storage Writes',
+  'message.created',
+  'createLeeChatEventStream',
+]
 
 const packageJson = JSON.parse(
   await readFile(new URL('../packages/sdk/package.json', import.meta.url), 'utf8'),
@@ -79,6 +90,10 @@ const changelog = await readFile(
 ).catch(() => '')
 const packageChangelog = await readFile(
   new URL('../packages/sdk/CHANGELOG.md', import.meta.url),
+  'utf8',
+).catch(() => '')
+const backendContract = await readFile(
+  new URL('../docs/backend-contract.md', import.meta.url),
   'utf8',
 ).catch(() => '')
 const operatorConsoleDocs = await Promise.all(
@@ -128,6 +143,16 @@ if (!packageJson.peerDependenciesMeta?.react?.optional) {
 
 if (!packageJson.peerDependenciesMeta?.['react-dom']?.optional) {
   errors.push('react-dom peer dependency must remain optional.')
+}
+
+if (!backendContract) {
+  errors.push('docs/backend-contract.md is required before publishing.')
+} else {
+  REQUIRED_BACKEND_CONTRACT_TERMS.forEach((term) => {
+    if (!backendContract.includes(term)) {
+      errors.push(`docs/backend-contract.md must mention ${term}.`)
+    }
+  })
 }
 
 operatorConsoleDocs.forEach((document) => {

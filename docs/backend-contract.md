@@ -581,6 +581,10 @@ type MarkMessageReadResponse = {
 ```ts
 type ConversationClientEvent =
   | {
+      type: 'message.created'
+      message: ChatMessage
+    }
+  | {
       type: 'participant.presence_changed'
       presence: ChatParticipantPresence
     }
@@ -634,6 +638,138 @@ chatEvents.publish({
   },
 })
 ```
+
+## Realtime Publish From Storage Writes
+
+For a single-process Next.js deployment, keep the event stream in a shared module and publish after durable writes complete. This keeps HTTP sync and realtime subscribers consistent: the database remains the source of truth, and SSE/WebSocket events are notifications that a new state exists.
+
+```ts
+// app/api/chat/chat-events.ts
+import { createLeeChatEventStream } from 'lee-chat-sdk/server'
+
+export const chatEvents = createLeeChatEventStream()
+```
+
+```ts
+// app/api/chat/events/route.ts
+import { chatEvents } from '../chat-events'
+
+export function GET(request: Request) {
+  return chatEvents.createSseResponse({ request })
+}
+```
+
+```ts
+// app/api/chat/route.ts
+import {
+  createLeeChatRouteHandler,
+  type LeeChatRouteHandlerStorage,
+} from 'lee-chat-sdk/server'
+import { chatEvents } from './chat-events'
+
+const storage: LeeChatRouteHandlerStorage<ChatRequestContext> = {
+  createContext: requireChatRequestContext,
+  upsertConversation: async (conversation, context) => {
+    await db.chatConversation.upsert({
+      where: {
+        tenantId_id: {
+          tenantId: context.tenantId,
+          id: conversation.id,
+        },
+      },
+      create: {
+        tenantId: context.tenantId,
+        ...conversation,
+      },
+      update: {
+        status: conversation.status,
+        metadata: conversation.metadata,
+      },
+    })
+  },
+  appendMessages: async (messages, context) => {
+    await db.chatMessage.createMany({
+      data: messages.map((message) => ({
+        tenantId: context.tenantId,
+        ...message,
+      })),
+      skipDuplicates: true,
+    })
+
+    messages.forEach((message) => {
+      chatEvents.publish({
+        type: 'message.created',
+        message,
+      })
+    })
+  },
+  listConversations: async (params, context) => {
+    return {
+      conversations: await db.chatConversation.findMany({
+        where: {
+          tenantId: context.tenantId,
+          appId: params.appId,
+        },
+      }),
+    }
+  },
+  listMessages: async (params, context) => {
+    await assertCanReadConversation(context, params.conversationId)
+
+    return {
+      messages: await db.chatMessage.findMany({
+        where: {
+          tenantId: context.tenantId,
+          conversationId: params.conversationId,
+        },
+        orderBy: {
+          createdAt: 'asc',
+        },
+      }),
+    }
+  },
+  upsertReadReceipt: async (readReceipt, context) => {
+    await db.chatReadReceipt.upsert({
+      where: {
+        tenantId_conversationId_messageId_participantId: {
+          tenantId: context.tenantId,
+          conversationId: readReceipt.conversationId,
+          messageId: readReceipt.messageId,
+          participantId: readReceipt.participantId,
+        },
+      },
+      create: {
+        tenantId: context.tenantId,
+        ...readReceipt,
+      },
+      update: {
+        readAt: readReceipt.readAt,
+      },
+    })
+
+    chatEvents.publish({
+      type: 'message.read',
+      readReceipt,
+    })
+  },
+}
+
+export const chatRoute = createLeeChatRouteHandler({
+  storage,
+  getResponse: async ({ request, storageContext }) => ({
+    message: {
+      content: await generateAssistantReply({
+        tenantId: storageContext.tenantId,
+        request,
+      }),
+    },
+  }),
+})
+```
+
+`message.created` is useful for visitor widgets, operator consoles, and custom clients that need message fan-out after a durable write. The default React and Vanilla widgets upsert `message.created` into the active conversation when the event `message.conversationId` matches the current conversation.
+
+For multi-instance deployments, do not rely on a module-scoped stream alone. Publish the same events through Redis pub/sub, NATS, Postgres listen/notify, or your platform broadcast layer, then fan them out to each process-local `createLeeChatEventStream()` subscriber set.
 
 ## Mock Server For Tests And Demos
 

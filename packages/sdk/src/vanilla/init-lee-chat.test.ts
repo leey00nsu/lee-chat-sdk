@@ -1065,6 +1065,36 @@ describe('vanilla initLeeChat', () => {
     expect(document.body.textContent).toContain('Read')
   })
 
+  it('message.created event를 메시지 목록에 반영한다', async () => {
+    const instance = initLeeChat({
+      appId: 'vanilla-app',
+      endpoint: '/api/chat',
+      fetchImplementation: fetchMock,
+      initialOpen: true,
+      visitor: {
+        id: 'visitor-vanilla',
+      },
+    })
+
+    instance.applyEvent({
+      type: 'message.created',
+      message: {
+        id: 'message-realtime',
+        conversationId: 'vanilla-app:conversation:visitor-vanilla',
+        senderId: 'vanilla-app-assistant',
+        role: 'assistant',
+        content: 'Realtime vanilla response',
+        parts: [{ type: 'text', text: 'Realtime vanilla response' }],
+        status: 'sent',
+        createdAt: '2026-06-01T00:00:00.000Z',
+      },
+    })
+
+    await waitFor(() => {
+      expect(document.body.textContent).toContain('Realtime vanilla response')
+    })
+  })
+
   it('eventTransport를 구독하고 destroy 시 해제한다', () => {
     const unsubscribe = vi.fn()
     let listener: Parameters<ChatEventTransport['subscribe']>[0] | undefined

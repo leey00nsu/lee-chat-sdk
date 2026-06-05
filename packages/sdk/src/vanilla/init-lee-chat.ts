@@ -91,6 +91,10 @@ export interface LeeChatVanillaParticipantState {
 
 export type LeeChatVanillaEvent =
   | {
+      type: 'message.created'
+      message: ChatMessage
+    }
+  | {
       type: 'participant.presence_changed'
       presence: ChatParticipantPresence
     }
@@ -1169,6 +1173,27 @@ function syncLatestUnreadMessage(): void {
 }
 
 function applyLeeChatEvent(event: LeeChatVanillaEvent): void {
+  if (event.type === 'message.created') {
+    if (!activeConfig) {
+      return
+    }
+
+    if (
+      event.message.conversationId !==
+      resolveLeeChatConfig(activeConfig).conversation.id
+    ) {
+      return
+    }
+
+    activeMessages = upsertMessage(
+      activeMessages,
+      event.message as ChatMessage<Record<string, unknown>>,
+    )
+    persistMessages(activeConfig)
+    renderActiveWidget()
+    return
+  }
+
   if (event.type === 'participant.presence_changed') {
     activeParticipantState = {
       ...activeParticipantState,
@@ -1272,6 +1297,17 @@ function replaceMessage(
 
     return nextMessage
   })
+}
+
+function upsertMessage(
+  messages: ChatMessage<Record<string, unknown>>[],
+  nextMessage: ChatMessage<Record<string, unknown>>,
+): ChatMessage<Record<string, unknown>>[] {
+  if (messages.some((message) => message.id === nextMessage.id)) {
+    return replaceMessage(messages, nextMessage)
+  }
+
+  return [...messages, nextMessage]
 }
 
 function replaceParticipantPresence(
