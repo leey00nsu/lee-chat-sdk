@@ -487,6 +487,9 @@ describe('LeeChatWidget', () => {
       expect(screen.getByText('Pending question')).toBeTruthy()
       expect(screen.getByText('Sending...')).toBeTruthy()
       expect(screen.getByText('Assistant is typing...')).toBeTruthy()
+      expect(screen.getByRole('status').parentElement?.className).toContain(
+        'lee-chat-message-list-status',
+      )
       expect(
         screen.getByRole<HTMLButtonElement>('button', { name: 'Sending' })
           .disabled,

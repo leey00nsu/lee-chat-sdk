@@ -93,6 +93,13 @@
   list-style: none;
 }
 
+.lee-chat-message-list-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-top: 12px;
+}
+
 .lee-chat-message {
   display: flex;
   flex-direction: column;

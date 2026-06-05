@@ -367,11 +367,13 @@ export function LeeChatWidget({
                   </>
                 )}
               />
-              {chat.isSubmitting
-                ? renderAssistantLoading
-                  ? renderAssistantLoading()
-                  : renderDefaultAssistantLoading()
-                : null}
+              {chat.isSubmitting ? (
+                <div className="lee-chat-message-list-status">
+                  {renderAssistantLoading
+                    ? renderAssistantLoading()
+                    : renderDefaultAssistantLoading()}
+                </div>
+              ) : null}
               {hasTypingParticipant ? (
                 <p
                   className={mergeClassNames(
