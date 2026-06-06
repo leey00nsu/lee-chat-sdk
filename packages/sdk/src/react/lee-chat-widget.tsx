@@ -9,9 +9,24 @@ import { ChatMessageList } from '../ui/chat-message-list'
 import { useLeeChat } from './use-lee-chat'
 import '../style/lee-chat-widget.css'
 
-export interface LeeChatWidgetMessageRenderParams {
-  message: ChatMessage<Record<string, unknown>>
+export interface LeeChatWidgetMessageRenderParams<
+  TMessageMetadata = Record<string, unknown>,
+> {
+  message: ChatMessage<TMessageMetadata>
   retryMessage: (messageId: string) => void
+}
+
+export interface LeeChatWidgetAssistantContentRenderParams<
+  TMessageMetadata = Record<string, unknown>,
+> {
+  message: ChatMessage<TMessageMetadata>
+  defaultContent: ReactNode
+}
+
+export interface LeeChatWidgetMessageFooterRenderParams<
+  TMessageMetadata = Record<string, unknown>,
+> {
+  message: ChatMessage<TMessageMetadata>
 }
 
 export interface LeeChatWidgetHeaderRenderParams {
@@ -36,10 +51,20 @@ export interface LeeChatWidgetComposerFooterRenderParams {
   inputValue: string
 }
 
-export interface LeeChatWidgetProps {
+export interface LeeChatWidgetProps<
+  TMessageMetadata = Record<string, unknown>,
+> {
   uploadAttachment?: (file: File) => Promise<UploadedChatAttachment>
   renderHeader?: (params: LeeChatWidgetHeaderRenderParams) => ReactNode
-  renderMessage?: (params: LeeChatWidgetMessageRenderParams) => ReactNode
+  renderMessage?: (
+    params: LeeChatWidgetMessageRenderParams<TMessageMetadata>,
+  ) => ReactNode
+  renderAssistantContent?: (
+    params: LeeChatWidgetAssistantContentRenderParams<TMessageMetadata>,
+  ) => ReactNode
+  renderMessageFooter?: (
+    params: LeeChatWidgetMessageFooterRenderParams<TMessageMetadata>,
+  ) => ReactNode
   renderAssistantLoading?: () => ReactNode
   renderComposerFooter?: (
     params: LeeChatWidgetComposerFooterRenderParams,
@@ -61,15 +86,19 @@ function resolvePopoverAlign(position: string): 'start' | 'end' {
   return position === 'bottom-left' ? 'start' : 'end'
 }
 
-export function LeeChatWidget({
+export function LeeChatWidget<
+  TMessageMetadata = Record<string, unknown>,
+>({
   uploadAttachment,
   renderHeader,
   renderMessage,
+  renderAssistantContent,
+  renderMessageFooter,
   renderAssistantLoading,
   renderComposerFooter,
   renderTrigger,
-}: LeeChatWidgetProps = {}) {
-  const leeChat = useLeeChat()
+}: LeeChatWidgetProps<TMessageMetadata> = {}) {
+  const leeChat = useLeeChat<TMessageMetadata>()
   const { config, chat } = leeChat
   const latestMessageAnchorRef = useRef<HTMLDivElement>(null)
   const hasOnlineParticipant = leeChat.participantState.presences.some(
@@ -131,7 +160,7 @@ export function LeeChatWidget({
   }
 
   function isMessageReadByAnotherParticipant(
-    message: ChatMessage<Record<string, unknown>>,
+    message: ChatMessage<TMessageMetadata>,
   ): boolean {
     if (message.senderId !== config.participant.id) {
       return false
@@ -147,8 +176,10 @@ export function LeeChatWidget({
   }
 
   function renderDefaultMessage(
-    message: ChatMessage<Record<string, unknown>>,
+    message: ChatMessage<TMessageMetadata>,
   ): ReactNode {
+    const defaultContent = renderDefaultMessageContent(message)
+
     return (
       <article
         className={mergeClassNames(
@@ -159,9 +190,13 @@ export function LeeChatWidget({
         )}
         data-status={message.status}
       >
-        {message.parts.map((part, index) => {
-          return renderMessagePart(part, index)
-        })}
+        {(message.role === 'assistant' || message.role === 'agent') &&
+        renderAssistantContent
+          ? renderAssistantContent({
+              message,
+              defaultContent,
+            })
+          : defaultContent}
         {message.status === 'sending' ? (
           <small
             className={mergeClassNames(
@@ -202,8 +237,19 @@ export function LeeChatWidget({
             {config.texts.messageRead}
           </small>
         ) : null}
+        {renderMessageFooter?.({
+          message,
+        })}
       </article>
     )
+  }
+
+  function renderDefaultMessageContent(
+    message: ChatMessage<TMessageMetadata>,
+  ): ReactNode {
+    return message.parts.map((part, index) => {
+      return renderMessagePart(part, index)
+    })
   }
 
   function renderMessagePart(part: ChatMessagePart, index: number): ReactNode {

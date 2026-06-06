@@ -1,14 +1,19 @@
 'use client'
 
 import { useContext } from 'react'
-import { LeeChatContext } from './lee-chat-context'
+import {
+  LeeChatContext,
+  type LeeChatContextValue,
+} from './lee-chat-context'
 
-export function useLeeChat() {
+export function useLeeChat<
+  TMessageMetadata = Record<string, unknown>,
+>(): LeeChatContextValue<TMessageMetadata> {
   const context = useContext(LeeChatContext)
 
   if (!context) {
     throw new Error('useLeeChat must be used within LeeChatProvider')
   }
 
-  return context
+  return context as LeeChatContextValue<TMessageMetadata>
 }

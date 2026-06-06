@@ -9,18 +9,21 @@ import type {
   ConversationParticipantState,
 } from '../client/conversation-client'
 
-export interface LeeChatContextValue {
+export interface LeeChatContextValue<
+  TMessageMetadata = Record<string, unknown>,
+> {
   config: ResolvedLeeChatConfig
   isOpen: boolean
   open: () => void
   close: () => void
   toggle: () => void
   unreadCount: number
-  chat: UseChatControllerResult<Record<string, unknown>>
-  messages: Array<ChatMessage<Record<string, unknown>>>
+  chat: UseChatControllerResult<TMessageMetadata>
+  messages: Array<ChatMessage<TMessageMetadata>>
   participantState: ConversationParticipantState
-  submitMessage: (contentOverride?: string) => Promise<void>
+  submitMessage: UseChatControllerResult<TMessageMetadata>['submitMessage']
   applyEvent: (event: ConversationClientEvent) => void
 }
 
-export const LeeChatContext = createContext<LeeChatContextValue | null>(null)
+export const LeeChatContext =
+  createContext<LeeChatContextValue<unknown> | null>(null)

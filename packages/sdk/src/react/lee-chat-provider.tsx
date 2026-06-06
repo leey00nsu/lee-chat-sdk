@@ -24,7 +24,9 @@ import type {
 } from '../client/conversation-client'
 import { LeeChatContext } from './lee-chat-context'
 
-export interface LeeChatProviderProps {
+export interface LeeChatProviderProps<
+  TMessageMetadata = Record<string, unknown>,
+> {
   config: LeeChatConfig
   children?: ReactNode
   fetchImplementation?: typeof fetch
@@ -41,27 +43,32 @@ const LEE_CHAT_STORAGE = {
   KEY_PREFIX: 'lee-chat',
 } as const
 
-function validatePersistedMessages(
+function validatePersistedMessages<TMessageMetadata>(
   messages: unknown,
-): Array<ChatMessage<Record<string, unknown>>> {
+): Array<ChatMessage<TMessageMetadata>> {
   return Array.isArray(messages)
-    ? (messages as Array<ChatMessage<Record<string, unknown>>>)
+    ? (messages as Array<ChatMessage<TMessageMetadata>>)
     : []
 }
 
-export function LeeChatProvider({
+export function LeeChatProvider<
+  TMessageMetadata = Record<string, unknown>,
+>({
   config,
   children,
   fetchImplementation,
   eventTransport,
   syncClient,
-}: LeeChatProviderProps) {
+}: LeeChatProviderProps<TMessageMetadata>) {
   const resolvedConfig = useMemo(() => resolveLeeChatConfig(config), [config])
   const [isOpen, setIsOpen] = useState(resolvedConfig.initialOpen)
   const syncedReadMessageIdsRef = useRef<Set<string>>(new Set())
   const conversationId = resolvedConfig.conversation.id
   const transport = useMemo(() => {
-    return new HttpChatTransport<LeeChatRequest, LeeChatResponse>({
+    return new HttpChatTransport<
+      LeeChatRequest,
+      LeeChatResponse<TMessageMetadata>
+    >({
       endpoint: resolvedConfig.endpoint,
       fetchImplementation,
       headers: resolvedConfig.requestHeaders,
@@ -79,14 +86,14 @@ export function LeeChatProvider({
   ])
   const persistence = useMemo(() => {
     if (resolvedConfig.persistence === 'localStorage') {
-      return new LocalStorageChatPersistence<ChatMessage<Record<string, unknown>>>({
+      return new LocalStorageChatPersistence<ChatMessage<TMessageMetadata>>({
         storageKey: `${LEE_CHAT_STORAGE.KEY_PREFIX}:${resolvedConfig.appId}:${resolvedConfig.conversation.id}`,
         storageVersion: LEE_CHAT_STORAGE.VERSION,
-        validateMessages: validatePersistedMessages,
+        validateMessages: validatePersistedMessages<TMessageMetadata>,
       })
     }
 
-    return new MemoryChatPersistence<ChatMessage<Record<string, unknown>>>()
+    return new MemoryChatPersistence<ChatMessage<TMessageMetadata>>()
   }, [
     resolvedConfig.appId,
     resolvedConfig.conversation.id,
@@ -108,7 +115,7 @@ export function LeeChatProvider({
         status: 'sent' as const,
         createdAt: new Date().toISOString(),
       },
-    ] satisfies Array<ChatMessage<Record<string, unknown>>>
+    ] satisfies Array<ChatMessage<TMessageMetadata>>
   }, [
     resolvedConfig.appId,
     resolvedConfig.conversation.id,
@@ -120,7 +127,7 @@ export function LeeChatProvider({
       parts,
       conversationId: requestConversationId,
       messages,
-    }: BuildConversationRequestParams<Record<string, unknown>>) => {
+    }: BuildConversationRequestParams<TMessageMetadata>) => {
       const userMessage: ChatMessage = {
         id: `${requestConversationId}:request`,
         conversationId: requestConversationId,
@@ -154,8 +161,8 @@ export function LeeChatProvider({
     ({
       response,
     }: BuildConversationAssistantMessageParams<
-      LeeChatResponse,
-      Record<string, unknown>
+      LeeChatResponse<TMessageMetadata>,
+      TMessageMetadata
     >) => {
       const parsedResponse = parseLeeChatResponse(response)
 
@@ -188,8 +195,8 @@ export function LeeChatProvider({
   ])
   const chat = useChatController<
     LeeChatRequest,
-    LeeChatResponse,
-    Record<string, unknown>
+    LeeChatResponse<TMessageMetadata>,
+    TMessageMetadata
   >({
     conversationId,
     transport,
@@ -275,7 +282,7 @@ function isUnreadMessage({
   participantId,
   readReceipts,
 }: {
-  message: ChatMessage<Record<string, unknown>>
+  message: ChatMessage<unknown>
   participantId: string
   readReceipts: ChatReadReceipt[]
 }): boolean {

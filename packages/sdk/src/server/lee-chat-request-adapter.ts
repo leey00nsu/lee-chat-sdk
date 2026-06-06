@@ -111,14 +111,14 @@ export function createLeeChatTextResponse<TMetadata = Record<string, unknown>>({
   id,
   idSuffix = LEE_CHAT_REQUEST_ADAPTER.DEFAULT_RESPONSE_ID_SUFFIX,
   createdAt = new Date().toISOString(),
-}: CreateLeeChatTextResponseParams<TMetadata>): LeeChatResponse {
+}: CreateLeeChatTextResponseParams<TMetadata>): LeeChatResponse<TMetadata> {
   return {
     message: {
       id: id ?? `${request.message.id}:${idSuffix}`,
       content,
       parts: createTextMessageParts(content),
       createdAt,
-      metadata: metadata as Record<string, unknown> | undefined,
+      metadata,
     },
   }
 }

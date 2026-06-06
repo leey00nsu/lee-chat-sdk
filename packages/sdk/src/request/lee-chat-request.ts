@@ -38,23 +38,27 @@ export interface LeeChatRequest {
   history: LeeChatHistoryItem[]
 }
 
-export interface LeeChatResponse {
+export interface LeeChatResponse<
+  TMessageMetadata = Record<string, unknown>,
+> {
   message: {
     id?: string
     content: string
     parts?: ChatMessagePart[]
     createdAt?: string
-    metadata?: Record<string, unknown>
+    metadata?: TMessageMetadata
   }
 }
 
-export interface ResolvedLeeChatResponse {
+export interface ResolvedLeeChatResponse<
+  TMessageMetadata = Record<string, unknown>,
+> {
   message: {
     id: string
     content: string
     parts: ChatMessagePart[]
     createdAt: string
-    metadata?: Record<string, unknown>
+    metadata?: TMessageMetadata
   }
 }
 
@@ -104,9 +108,9 @@ export function buildLeeChatRequest({
   }
 }
 
-export function parseLeeChatResponse(
-  response: LeeChatResponse,
-): ResolvedLeeChatResponse {
+export function parseLeeChatResponse<TMessageMetadata = Record<string, unknown>>(
+  response: LeeChatResponse<TMessageMetadata>,
+): ResolvedLeeChatResponse<TMessageMetadata> {
   return {
     message: {
       id: response.message.id ?? createChatMessageId(),

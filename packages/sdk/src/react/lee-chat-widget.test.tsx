@@ -592,6 +592,55 @@ describe('LeeChatWidget', () => {
     })
   })
 
+  it('기본 말풍선을 유지하며 assistant content와 footer를 확장한다', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        message: {
+          content: 'Structured response',
+          metadata: {
+            sources: ['SDK guide'],
+          },
+        },
+      }),
+    })
+
+    render(
+      <LeeChatProvider<{ sources?: string[] }>
+        config={{
+          appId: 'app',
+          endpoint: '/api/chat',
+          initialOpen: true,
+        }}
+        fetchImplementation={fetchMock}
+      >
+        <LeeChatWidget<{ sources?: string[] }>
+          renderAssistantContent={({ message, defaultContent }) => (
+            <>
+              {defaultContent}
+              <strong>{message.metadata?.sources?.[0]}</strong>
+            </>
+          )}
+          renderMessageFooter={({ message }) =>
+            message.role === 'assistant' ? <small>Assistant footer</small> : null
+          }
+        />
+      </LeeChatProvider>,
+    )
+
+    fireEvent.change(screen.getByLabelText('Message'), {
+      target: { value: 'Show structured response' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+
+    expect(await screen.findByText('Structured response')).toBeTruthy()
+    expect(screen.getByText('SDK guide')).toBeTruthy()
+    expect(screen.getByText('Assistant footer')).toBeTruthy()
+    expect(
+      screen.getByText('Structured response').closest('.lee-chat-message'),
+    ).toBeTruthy()
+  })
+
   it('renderHeader slot으로 header를 교체하고 close 액션을 사용할 수 있다', () => {
     render(
       <LeeChatProvider
