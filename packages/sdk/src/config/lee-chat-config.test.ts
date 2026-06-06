@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { resolveLeeChatConfig } from './lee-chat-config'
+import {
+  LEE_CHAT_TEXT_PRESETS,
+  resolveLeeChatConfig,
+} from './lee-chat-config'
 
 describe('resolveLeeChatConfig', () => {
   beforeEach(() => {
@@ -30,6 +33,11 @@ describe('resolveLeeChatConfig', () => {
         position: 'bottom-right',
         initialOpen: false,
         persistence: 'memory',
+        features: {
+          attachments: true,
+          realtime: true,
+          operatorConsole: false,
+        },
         texts: expect.objectContaining({
           title: 'Chat',
           subtitle: 'Send us a message.',
@@ -52,6 +60,41 @@ describe('resolveLeeChatConfig', () => {
         }),
       }),
     )
+  })
+
+  it('ko/en text preset을 제공하고 partial override를 병합한다', () => {
+    const config = resolveLeeChatConfig({
+      appId: 'app',
+      endpoint: '/api/chat',
+      texts: {
+        ...LEE_CHAT_TEXT_PRESETS.ko,
+        title: '블로그 Q&A',
+      },
+    })
+
+    expect(LEE_CHAT_TEXT_PRESETS.en.title).toBe('Chat')
+    expect(config.texts.title).toBe('블로그 Q&A')
+    expect(config.texts.send).toBe('보내기')
+    expect(config.texts.retry).toBe('다시 시도')
+  })
+
+  it('feature flag override와 resetKey를 보존한다', () => {
+    const config = resolveLeeChatConfig({
+      appId: 'app',
+      endpoint: '/api/chat',
+      resetKey: 'post:hello-sdk',
+      features: {
+        attachments: false,
+        realtime: false,
+      },
+    })
+
+    expect(config.resetKey).toBe('post:hello-sdk')
+    expect(config.features).toEqual({
+      attachments: false,
+      realtime: false,
+      operatorConsole: false,
+    })
   })
 
   it('사용자 texts, theme, className 설정을 보존한다', () => {

@@ -355,6 +355,25 @@ describe('LeeChatWidget', () => {
     )
   })
 
+  it('features.attachments가 false이면 attachment UI를 숨긴다', () => {
+    render(
+      <LeeChatProvider
+        config={{
+          appId: 'app',
+          endpoint: '/api/chat',
+          initialOpen: true,
+          features: {
+            attachments: false,
+          },
+        }}
+      >
+        <LeeChatWidget uploadAttachment={vi.fn()} />
+      </LeeChatProvider>,
+    )
+
+    expect(screen.queryByLabelText('Attach file')).toBeNull()
+  })
+
   it('메시지를 보내면 최신 메시지로 스크롤한다', async () => {
     fetchMock.mockResolvedValue({
       ok: true,

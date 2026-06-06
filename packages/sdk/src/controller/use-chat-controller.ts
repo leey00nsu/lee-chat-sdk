@@ -94,6 +94,10 @@ export function useChatController<
       typingIndicators: [],
       readReceipts: [],
     }))
+  const buildRequestRef = useRef(buildRequest)
+  const buildAssistantMessageRef = useRef(buildAssistantMessage)
+  buildRequestRef.current = buildRequest
+  buildAssistantMessageRef.current = buildAssistantMessage
   const clientRef = useRef<
     ConversationClient<TRequest, TResponse, TMessageMetadata> | undefined
   >(undefined)
@@ -129,8 +133,9 @@ export function useChatController<
       senderId,
       assistantSenderId,
       transport,
-      buildRequest,
-      buildAssistantMessage,
+      buildRequest: (params) => buildRequestRef.current(params),
+      buildAssistantMessage: (params) =>
+        buildAssistantMessageRef.current(params),
       initialMessages,
       persistence,
       onMessagesChange: setMessages,

@@ -452,7 +452,9 @@ export function LeeChatWidget<
                   chat.isSubmitting ? config.texts.sending : config.texts.send
                 }
                 isLoading={chat.isSubmitting}
-                uploadAttachment={uploadAttachment}
+                uploadAttachment={
+                  config.features.attachments ? uploadAttachment : undefined
+                }
                 onChange={chat.setInputValue}
                 onSubmit={(parts) => {
                   void chat.submitMessage(undefined, parts)

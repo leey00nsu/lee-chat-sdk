@@ -10,6 +10,12 @@ export type LeeChatPosition = 'bottom-right' | 'bottom-left'
 export type LeeChatPersistenceType = 'memory' | 'localStorage'
 export type LeeChatColorScheme = 'light' | 'dark' | 'system'
 
+export interface LeeChatFeatures {
+  attachments: boolean
+  realtime: boolean
+  operatorConsole: boolean
+}
+
 export interface LeeChatVisitor {
   id?: string
   metadata?: Record<string, unknown>
@@ -77,11 +83,13 @@ export interface LeeChatConfig {
   position?: LeeChatPosition
   initialOpen?: boolean
   initialMessage?: string
+  resetKey?: string
   requestHeaders?: HttpChatTransportHeaders
   requestAuth?: HttpChatTransportAuthOptions
   requestTimeoutMs?: number
   requestRetry?: HttpChatTransportRetryOptions
   persistence?: LeeChatPersistenceType
+  features?: Partial<LeeChatFeatures>
   texts?: Partial<LeeChatWidgetText>
   theme?: Partial<LeeChatTheme>
   className?: LeeChatClassName
@@ -90,7 +98,7 @@ export interface LeeChatConfig {
 export interface ResolvedLeeChatConfig
   extends Omit<
     LeeChatConfig,
-    'texts' | 'theme' | 'position' | 'initialOpen' | 'persistence' | 'conversation' | 'participant'
+    'texts' | 'theme' | 'features' | 'position' | 'initialOpen' | 'persistence' | 'conversation' | 'participant'
   > {
   visitor: Required<Pick<LeeChatVisitor, 'id'>> & Pick<LeeChatVisitor, 'metadata'>
   conversation: Required<Pick<LeeChatConversationConfig, 'id' | 'kind'>> &
@@ -99,24 +107,48 @@ export interface ResolvedLeeChatConfig
   position: LeeChatPosition
   initialOpen: boolean
   persistence: LeeChatPersistenceType
+  features: LeeChatFeatures
   texts: LeeChatWidgetText
   theme: LeeChatTheme
 }
 
-const DEFAULT_LEE_CHAT_TEXTS: LeeChatWidgetText = {
-  title: 'Chat',
-  subtitle: 'Send us a message.',
-  triggerLabel: 'Open chat',
-  placeholder: 'Type your message',
-  send: 'Send',
-  sending: 'Sending',
-  messageSending: 'Sending...',
-  assistantLoading: 'Assistant is typing...',
-  participantOnline: 'Online',
-  participantTyping: 'Participant is typing...',
-  messageRead: 'Read',
-  error: 'Message failed. Please try again.',
-  retry: 'Retry',
+export const LEE_CHAT_TEXT_PRESETS = {
+  en: {
+    title: 'Chat',
+    subtitle: 'Send us a message.',
+    triggerLabel: 'Open chat',
+    placeholder: 'Type your message',
+    send: 'Send',
+    sending: 'Sending',
+    messageSending: 'Sending...',
+    assistantLoading: 'Assistant is typing...',
+    participantOnline: 'Online',
+    participantTyping: 'Participant is typing...',
+    messageRead: 'Read',
+    error: 'Message failed. Please try again.',
+    retry: 'Retry',
+  },
+  ko: {
+    title: '채팅',
+    subtitle: '메시지를 보내주세요.',
+    triggerLabel: '채팅 열기',
+    placeholder: '메시지를 입력하세요',
+    send: '보내기',
+    sending: '전송 중',
+    messageSending: '전송 중...',
+    assistantLoading: '답변을 준비하고 있어요...',
+    participantOnline: '온라인',
+    participantTyping: '상대방이 입력 중이에요...',
+    messageRead: '읽음',
+    error: '메시지를 보내지 못했습니다. 다시 시도해주세요.',
+    retry: '다시 시도',
+  },
+} as const satisfies Record<'en' | 'ko', LeeChatWidgetText>
+
+const DEFAULT_LEE_CHAT_FEATURES: LeeChatFeatures = {
+  attachments: true,
+  realtime: true,
+  operatorConsole: false,
 }
 
 const DEFAULT_LEE_CHAT_THEME: LeeChatTheme = {
@@ -159,8 +191,12 @@ export function resolveLeeChatConfig(
     position: config.position ?? 'bottom-right',
     initialOpen: config.initialOpen ?? false,
     persistence: config.persistence ?? 'memory',
+    features: {
+      ...DEFAULT_LEE_CHAT_FEATURES,
+      ...config.features,
+    },
     texts: {
-      ...DEFAULT_LEE_CHAT_TEXTS,
+      ...LEE_CHAT_TEXT_PRESETS.en,
       ...config.texts,
     },
     theme: {

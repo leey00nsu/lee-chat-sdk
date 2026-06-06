@@ -23,12 +23,16 @@ export type {
   UseChatControllerParams,
   UseChatControllerResult,
 } from './controller/use-chat-controller'
-export { resolveLeeChatConfig } from './config/lee-chat-config'
+export {
+  LEE_CHAT_TEXT_PRESETS,
+  resolveLeeChatConfig,
+} from './config/lee-chat-config'
 export type {
   LeeChatClassName,
   LeeChatColorScheme,
   LeeChatConfig,
   LeeChatConversationConfig,
+  LeeChatFeatures,
   LeeChatParticipant,
   LeeChatPersistenceType,
   LeeChatPosition,

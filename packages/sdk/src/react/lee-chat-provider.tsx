@@ -85,9 +85,13 @@ export function LeeChatProvider<
     resolvedConfig.requestTimeoutMs,
   ])
   const persistence = useMemo(() => {
+    const resetKeySuffix = resolvedConfig.resetKey
+      ? `:${resolvedConfig.resetKey}`
+      : ''
+
     if (resolvedConfig.persistence === 'localStorage') {
       return new LocalStorageChatPersistence<ChatMessage<TMessageMetadata>>({
-        storageKey: `${LEE_CHAT_STORAGE.KEY_PREFIX}:${resolvedConfig.appId}:${resolvedConfig.conversation.id}`,
+        storageKey: `${LEE_CHAT_STORAGE.KEY_PREFIX}:${resolvedConfig.appId}:${resolvedConfig.conversation.id}${resetKeySuffix}`,
         storageVersion: LEE_CHAT_STORAGE.VERSION,
         validateMessages: validatePersistedMessages<TMessageMetadata>,
       })
@@ -98,6 +102,7 @@ export function LeeChatProvider<
     resolvedConfig.appId,
     resolvedConfig.conversation.id,
     resolvedConfig.persistence,
+    resolvedConfig.resetKey,
   ])
   const initialMessages = useMemo(() => {
     if (!resolvedConfig.initialMessage) {
@@ -183,6 +188,7 @@ export function LeeChatProvider<
       resolvedConfig.visitor.id,
       resolvedConfig.persistence,
       resolvedConfig.initialMessage ?? '',
+      resolvedConfig.resetKey ?? '',
     ].join('|')
   }, [
     resolvedConfig.appId,
@@ -191,6 +197,7 @@ export function LeeChatProvider<
     resolvedConfig.initialMessage,
     resolvedConfig.participant.id,
     resolvedConfig.persistence,
+    resolvedConfig.resetKey,
     resolvedConfig.visitor.id,
   ])
   const chat = useChatController<
@@ -218,12 +225,12 @@ export function LeeChatProvider<
   const unreadCount = isOpen ? 0 : unreadMessages.length
 
   useEffect(() => {
-    if (!eventTransport) {
+    if (!eventTransport || !resolvedConfig.features.realtime) {
       return undefined
     }
 
     return eventTransport.subscribe(chat.applyEvent)
-  }, [chat.applyEvent, eventTransport])
+  }, [chat.applyEvent, eventTransport, resolvedConfig.features.realtime])
 
   useEffect(() => {
     if (!isOpen || !syncClient) {

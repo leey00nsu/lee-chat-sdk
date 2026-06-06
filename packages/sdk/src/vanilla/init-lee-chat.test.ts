@@ -381,6 +381,20 @@ describe('vanilla initLeeChat', () => {
     )
   })
 
+  it('features.attachments가 false이면 attachment input을 렌더링하지 않는다', () => {
+    initLeeChat({
+      appId: 'vanilla-app',
+      endpoint: '/api/chat',
+      initialOpen: true,
+      uploadAttachment: vi.fn(),
+      features: {
+        attachments: false,
+      },
+    })
+
+    expect(document.querySelector('input[type="file"]')).toBeNull()
+  })
+
   it('assistant 응답의 image와 file part를 기본 UI로 렌더링한다', async () => {
     fetchMock.mockResolvedValue(
       new Response(
@@ -1127,5 +1141,22 @@ describe('vanilla initLeeChat', () => {
     instance.destroy()
 
     expect(unsubscribe).toHaveBeenCalledTimes(1)
+  })
+
+  it('features.realtime이 false이면 eventTransport를 구독하지 않는다', () => {
+    const subscribe = vi.fn(() => () => {})
+
+    initLeeChat({
+      appId: 'vanilla-app',
+      endpoint: '/api/chat',
+      eventTransport: {
+        subscribe,
+      },
+      features: {
+        realtime: false,
+      },
+    })
+
+    expect(subscribe).not.toHaveBeenCalled()
   })
 })

@@ -693,7 +693,10 @@ function renderComposer(config: LeeChatConfig): HTMLElement {
 
   form.append(label, textarea)
 
-  if (activeConfig?.uploadAttachment) {
+  if (
+    activeConfig?.features?.attachments !== false &&
+    activeConfig?.uploadAttachment
+  ) {
     const attachmentInputId = `${inputId}-attachment`
     const attachmentLabel = document.createElement('label')
     const attachmentInput = document.createElement('input')
@@ -740,7 +743,10 @@ function updateSubmitButtonState(
 }
 
 async function handleAttachmentChange(event: Event): Promise<void> {
-  const uploadAttachment = activeConfig?.uploadAttachment
+  const uploadAttachment =
+    activeConfig?.features?.attachments === false
+      ? undefined
+      : activeConfig?.uploadAttachment
 
   if (!uploadAttachment) {
     return
@@ -1240,7 +1246,10 @@ export function initLeeChat(config: InitLeeChatConfig): LeeChatInstance {
   activeRenderRoot = resolveRenderRoot(config)
   activeIsOpen = Boolean(config.initialOpen)
   activeMessages = loadMessages(config)
-  activeEventUnsubscribe = config.eventTransport?.subscribe(applyLeeChatEvent) ?? null
+  activeEventUnsubscribe =
+    activeConfig.features?.realtime === false
+      ? null
+      : config.eventTransport?.subscribe(applyLeeChatEvent) ?? null
 
   renderActiveWidget()
 

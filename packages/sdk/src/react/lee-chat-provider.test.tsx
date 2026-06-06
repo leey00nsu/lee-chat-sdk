@@ -111,6 +111,31 @@ describe('LeeChatProvider', () => {
     expect(subscribe).toHaveBeenCalledTimes(1)
   })
 
+  it('features.realtime이 false이면 eventTransport를 구독하지 않는다', () => {
+    const subscribe = vi.fn(() => () => {})
+
+    renderHook(() => useLeeChat(), {
+      wrapper: ({ children }: { children?: ReactNode }) => (
+        <LeeChatProvider
+          config={{
+            appId: 'app',
+            endpoint: '/api/chat',
+            features: {
+              realtime: false,
+            },
+          }}
+          eventTransport={{
+            subscribe,
+          }}
+        >
+          {children}
+        </LeeChatProvider>
+      ),
+    })
+
+    expect(subscribe).not.toHaveBeenCalled()
+  })
+
   it('initialMessage를 초기 assistant 메시지로 제공하고 자동 요청하지 않는다', () => {
     const fetchImplementation = vi.fn() as unknown as typeof fetch
     const { result } = renderHook(() => useLeeChat(), {
@@ -466,5 +491,133 @@ describe('LeeChatProvider', () => {
         },
       }),
     )
+  })
+
+  it('metadata 변경은 메시지를 유지하고 다음 요청부터 반영한다', async () => {
+    const fetchMock = vi.fn(
+      async (_input: RequestInfo | URL, _init?: RequestInit) =>
+        new Response(
+          JSON.stringify({
+            message: {
+              content: 'response',
+            },
+          }),
+          {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          },
+        ),
+    )
+    let latestLeeChat: ReturnType<typeof useLeeChat> | undefined
+
+    function Probe() {
+      latestLeeChat = useLeeChat()
+
+      return null
+    }
+
+    function TestProvider({ locale }: { locale: string }) {
+      return (
+        <LeeChatProvider
+          config={{
+            appId: 'app',
+            endpoint: '/api/chat',
+            visitor: {
+              id: 'visitor-metadata',
+            },
+            metadata: {
+              locale,
+            },
+            conversation: {
+              metadata: {
+                currentPostSlug: `post-${locale}`,
+              },
+            },
+          }}
+          fetchImplementation={fetchMock as unknown as typeof fetch}
+        >
+          <Probe />
+        </LeeChatProvider>
+      )
+    }
+
+    const { rerender } = render(<TestProvider locale="ko" />)
+
+    await act(async () => {
+      await latestLeeChat?.submitMessage('first')
+    })
+
+    rerender(<TestProvider locale="en" />)
+
+    expect(latestLeeChat?.messages).toHaveLength(2)
+
+    await act(async () => {
+      await latestLeeChat?.submitMessage('second')
+    })
+
+    const secondRequest = JSON.parse(
+      String(fetchMock.mock.calls[1]?.[1]?.body),
+    )
+
+    expect(secondRequest.metadata).toEqual({
+      locale: 'en',
+    })
+    expect(secondRequest.conversation.metadata).toEqual({
+      currentPostSlug: 'post-en',
+    })
+    expect(latestLeeChat?.messages).toHaveLength(4)
+  })
+
+  it('resetKey 변경은 같은 conversation의 메시지를 초기화한다', async () => {
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ message: { content: 'response' } }), {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }),
+    )
+    let latestLeeChat: ReturnType<typeof useLeeChat> | undefined
+
+    function Probe() {
+      latestLeeChat = useLeeChat()
+
+      return null
+    }
+
+    function TestProvider({ resetKey }: { resetKey: string }) {
+      return (
+        <LeeChatProvider
+          config={{
+            appId: 'app',
+            endpoint: '/api/chat',
+            visitor: {
+              id: 'visitor-reset',
+            },
+            resetKey,
+          }}
+          fetchImplementation={fetchMock as unknown as typeof fetch}
+        >
+          <Probe />
+        </LeeChatProvider>
+      )
+    }
+
+    const { rerender } = render(<TestProvider resetKey="first" />)
+
+    await act(async () => {
+      await latestLeeChat?.submitMessage('before reset')
+    })
+
+    expect(latestLeeChat?.messages).toHaveLength(2)
+
+    rerender(<TestProvider resetKey="second" />)
+
+    await waitFor(() => {
+      expect(latestLeeChat?.messages).toHaveLength(0)
+    })
   })
 })
