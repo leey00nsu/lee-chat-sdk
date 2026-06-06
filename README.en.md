@@ -97,12 +97,15 @@ leeChat.open()
 - Syncs server conversations/messages/read receipts with `ConversationSyncClient`.
 - Applies `message.created`, presence, typing, and read events through SSE/WebSocket transports.
 - Supports auth headers, auth refresh, request timeout, and retry through config.
+- Renders typed structured metadata through content/footer slots while preserving default bubbles.
+- Makes host integration intent explicit with `LEE_CHAT_TEXT_PRESETS`, `features`, and `resetKey`.
 
 ## Docs
 
 - [Integration Guide](./docs/integration.en.md): React, Vanilla, script tag, attachments, realtime, styling
 - [Configuration](./docs/configuration.en.md): `LeeChatConfig`, identity, auth, persistence
 - [API Reference](./docs/api.en.md): public API summary
+- [Testing](./docs/testing.en.md): host integration factories and mock server
 - [Backend Contract](./docs/backend-contract.md): detailed server contract and Next.js examples
 - [Operator Console](./docs/operator-console.en.md): experimental operator-console primitives
 - [Release Guide](./docs/release.md): maintainer release flow
@@ -148,4 +151,3 @@ pnpm storybook:build
 ```
 
 Release steps are documented in the [Release Guide](./docs/release.md).
-

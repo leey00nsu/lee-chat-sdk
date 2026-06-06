@@ -97,12 +97,15 @@ leeChat.open()
 - `ConversationSyncClient`로 conversation/message/read receipt를 서버와 동기화할 수 있습니다.
 - SSE/WebSocket transport로 `message.created`, presence, typing, read event를 반영할 수 있습니다.
 - `requestHeaders`, `requestAuth`, `requestTimeoutMs`, `requestRetry`로 인증/timeout/retry를 설정할 수 있습니다.
+- typed metadata와 content/footer slot으로 기본 말풍선을 유지한 구조화 응답을 렌더링할 수 있습니다.
+- `LEE_CHAT_TEXT_PRESETS`, `features`, `resetKey`로 host 통합 의도를 명시할 수 있습니다.
 
 ## 문서
 
 - [Integration Guide](./docs/integration.md): React, Vanilla, script tag, attachment, realtime, styling
 - [Configuration](./docs/configuration.md): `LeeChatConfig`, identity, auth, persistence
 - [API Reference](./docs/api.md): public API 요약
+- [Testing](./docs/testing.md): host 통합 factory와 mock server
 - [Backend Contract](./docs/backend-contract.ko.md): host backend가 구현해야 하는 endpoint 요약
 - [Backend Contract EN](./docs/backend-contract.md): 상세 server contract와 Next.js 예제
 - [Operator Console](./docs/operator-console.md): experimental 운영 콘솔 primitive
@@ -149,4 +152,3 @@ pnpm storybook:build
 ```
 
 배포 절차는 [Release Guide](./docs/release.ko.md)에 있습니다.
-

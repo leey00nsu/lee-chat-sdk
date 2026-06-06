@@ -6,8 +6,11 @@ This document summarizes the main public APIs.
 
 - `LeeChatProvider`: provider that wires SDK config, transport, syncClient, and eventTransport.
 - `LeeChatWidget`: default chat UI.
-- `useLeeChat`: hook for open/close state and controller access.
+- `useLeeChat<TMessageMetadata>`: hook for open/close state and typed messages/controller access.
 - `useChatController`: headless message controller.
+- `renderAssistantContent`: slot that extends default assistant content.
+- `renderMessageFooter`: slot that extends the bottom of the default bubble.
+- `LEE_CHAT_TEXT_PRESETS`: built-in `ko` and `en` text presets.
 
 ```tsx
 <LeeChatProvider config={{ appId: 'support', endpoint: '/api/chat' }}>
@@ -46,10 +49,18 @@ leeChat.applyEvent({
 - `createLeeChatRouteHandler`: route helper for production storage adapters.
 - `createInMemoryLeeChatBackend`: local development/reference backend.
 - `createLeeChatEventStream`: creates an SSE stream and `publish(event)` API.
+- `isLeeChatRequest`: narrows an unknown request body to `LeeChatRequest`.
+- `getLeeChatRequestText`, `getLeeChatRequestMetadata`: host backend input adapters.
+- `collectLeeChatTextHistory`, `collectLeeChatTurnHistory`: converts history into text items or user/assistant turns.
+- `createLeeChatTextResponse`: creates a typed `LeeChatResponse` from a host result.
 
 ## Testing
 
 - `createMockLeeChatServer`: mock backend for tests and demos.
+- `createMockLeeChatRequest`, `createMockLeeChatResponse`
+- `createMockChatMessage`, `createMockLeeChatProviderConfig`
+
+See [Testing](./testing.en.md) for examples.
 
 ## Models And Helpers
 
@@ -60,4 +71,3 @@ leeChat.applyEvent({
 - `buildChatOperatorConsoleState`
 
 Operator console APIs are experimental. See [Operator Console](./operator-console.en.md) for details.
-

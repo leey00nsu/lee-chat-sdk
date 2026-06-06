@@ -32,6 +32,89 @@ export function App() {
 }
 ```
 
+### Structured responses and typed metadata
+
+Use the same metadata type on the provider, widget, and hook to render structured responses without casts. `renderAssistantContent` and `renderMessageFooter` extend the default bubble without replacing the entire `renderMessage`.
+
+```tsx
+interface BlogChatMessageMetadata {
+  blogChatResponse?: {
+    citations: Array<{ title: string; url: string }>
+    followUpSuggestions: string[]
+  }
+}
+
+<LeeChatProvider<BlogChatMessageMetadata> config={config}>
+  <LeeChatWidget<BlogChatMessageMetadata>
+    renderAssistantContent={({ message, defaultContent }) => (
+      <>
+        {defaultContent}
+        {message.metadata?.blogChatResponse?.citations.map((citation) => (
+          <a key={citation.url} href={citation.url}>
+            {citation.title}
+          </a>
+        ))}
+      </>
+    )}
+    renderMessageFooter={({ message }) => (
+      <div>
+        {message.metadata?.blogChatResponse?.followUpSuggestions.map(
+          (suggestion) => <button key={suggestion}>{suggestion}</button>,
+        )}
+      </div>
+    )}
+  />
+</LeeChatProvider>
+```
+
+When `renderMessage` is also provided, full message rendering takes precedence and the content/footer slots are not called.
+
+### Reusing an existing backend or LLM
+
+Keep an existing `{ question, conversationHistory }` LLM/RAG function and adapt only the SDK request and response.
+
+```ts
+import {
+  collectLeeChatTurnHistory,
+  createLeeChatTextResponse,
+  getLeeChatRequestMetadata,
+  getLeeChatRequestText,
+  isLeeChatRequest,
+} from 'lee-chat-sdk/server'
+
+export async function POST(request: Request) {
+  const body: unknown = await request.json()
+
+  if (!isLeeChatRequest(body)) {
+    return legacyHandler(body)
+  }
+
+  const metadata = getLeeChatRequestMetadata<{
+    locale?: 'ko' | 'en'
+    currentPostSlug?: string
+  }>(body)
+  const result = await answerBlogChatQuestion({
+    question: getLeeChatRequestText(body),
+    locale: metadata?.locale ?? 'en',
+    currentPostSlug: metadata?.currentPostSlug,
+    conversationHistory: collectLeeChatTurnHistory(body).map((turn) => ({
+      question: turn.user.content,
+      answer: turn.assistant?.content,
+    })),
+  })
+
+  return Response.json(
+    createLeeChatTextResponse({
+      request: body,
+      content: result.answer,
+      metadata: {
+        blogChatResponse: result,
+      },
+    }),
+  )
+}
+```
+
 ## Vanilla JS
 
 ```ts
@@ -127,4 +210,3 @@ initLeeChat({
   },
 })
 ```
-

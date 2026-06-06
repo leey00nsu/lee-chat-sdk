@@ -104,6 +104,7 @@ import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
 
 import {
+  LEE_CHAT_TEXT_PRESETS,
   LeeChatWidget,
   createChatMessagePartFromAttachment,
 } from 'lee-chat-sdk'
@@ -113,8 +114,13 @@ import {
   createLeeChatEventStream,
   createInMemoryLeeChatBackend,
   createLeeChatRouteHandler,
+  createLeeChatTextResponse,
+  isLeeChatRequest,
 } from 'lee-chat-sdk/server'
-import { createMockLeeChatServer } from 'lee-chat-sdk/testing'
+import {
+  createMockLeeChatRequest,
+  createMockLeeChatServer,
+} from 'lee-chat-sdk/testing'
 
 const require = createRequire(import.meta.url)
 const packageJson = require('lee-chat-sdk/package.json')
@@ -136,6 +142,9 @@ assert.equal(typeof createMockLeeChatServer, 'function')
 assert.equal(typeof createInMemoryLeeChatBackend, 'function')
 assert.equal(typeof createLeeChatEventStream, 'function')
 assert.equal(typeof createLeeChatRouteHandler, 'function')
+assert.equal(typeof createLeeChatTextResponse, 'function')
+assert.equal(typeof isLeeChatRequest, 'function')
+assert.equal(LEE_CHAT_TEXT_PRESETS.ko.send, '보내기')
 
 const attachmentPart = createChatMessagePartFromAttachment({
   id: 'att_1',
@@ -150,6 +159,8 @@ assert.equal(attachmentPart.name, 'screenshot.png')
 
 const mockServer = createMockLeeChatServer()
 assert.equal(typeof mockServer.fetch, 'function')
+const mockRequest = createMockLeeChatRequest()
+assert.equal(isLeeChatRequest(mockRequest), true)
 
 const backend = createInMemoryLeeChatBackend()
 assert.equal(typeof backend.handleRequest, 'function')
@@ -204,6 +215,10 @@ assert.equal(typeof testing.createMockLeeChatServer, 'function')
 assert.equal(typeof server.createInMemoryLeeChatBackend, 'function')
 assert.equal(typeof server.createLeeChatEventStream, 'function')
 assert.equal(typeof server.createLeeChatRouteHandler, 'function')
+assert.equal(typeof server.createLeeChatTextResponse, 'function')
+assert.equal(typeof server.isLeeChatRequest, 'function')
+assert.equal(typeof testing.createMockLeeChatRequest, 'function')
+assert.equal(root.LEE_CHAT_TEXT_PRESETS.en.send, 'Send')
 
 const attachmentPart = root.createChatMessagePartFromAttachment({
   kind: 'file',

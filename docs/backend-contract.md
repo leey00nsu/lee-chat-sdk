@@ -42,6 +42,54 @@ interface LeeChatResponse {
 }
 ```
 
+## Existing Backend/LLM Adapter
+
+Use helpers from `lee-chat-sdk/server` to keep an existing question/answer API while adapting the SDK contract.
+
+```ts
+import {
+  collectLeeChatTurnHistory,
+  createLeeChatTextResponse,
+  getLeeChatRequestMetadata,
+  getLeeChatRequestText,
+  isLeeChatRequest,
+} from 'lee-chat-sdk/server'
+
+export async function POST(request: Request) {
+  const body: unknown = await request.json()
+
+  if (!isLeeChatRequest(body)) {
+    return legacyHandler(body)
+  }
+
+  const metadata = getLeeChatRequestMetadata<{
+    locale?: string
+    currentPostSlug?: string
+  }>(body)
+  const result = await answerQuestion({
+    question: getLeeChatRequestText(body),
+    locale: metadata?.locale ?? 'en',
+    currentPostSlug: metadata?.currentPostSlug,
+    conversationHistory: collectLeeChatTurnHistory(body).map((turn) => ({
+      question: turn.user.content,
+      answer: turn.assistant?.content,
+    })),
+  })
+
+  return Response.json(
+    createLeeChatTextResponse({
+      request: body,
+      content: result.answer,
+      metadata: {
+        legacyResponse: result,
+      },
+    }),
+  )
+}
+```
+
+`isLeeChatRequest()` checks the required SDK contract structure. The generic on `getLeeChatRequestMetadata<T>()` is a TypeScript convenience and does not validate host metadata at runtime. Validate untrusted metadata with the host app's schema validator.
+
 ## Attachment Upload Endpoint
 
 The SDK does not upload files directly to your storage. The host app owns the upload endpoint and passes an `uploadAttachment(file)` function to React, Vanilla, or script-tag integrations. That function must upload the file, then return an `UploadedChatAttachment` object. The SDK converts that object into an `image` or `file` message part and includes it in the next `LeeChatRequest.message.parts` payload.

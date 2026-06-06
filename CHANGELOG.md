@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.0
+
+Host integration release.
+
+- Added `lee-chat-sdk/server` request guards, text/history adapters, turn collection, and response factories for reusing existing LLM/RAG backends.
+- Added typed React message metadata across `LeeChatProvider`, `LeeChatWidget`, and `useLeeChat`, plus assistant content and message footer slots.
+- Added Korean/English text presets, explicit feature controls, dynamic metadata updates, and `resetKey` conversation resets.
+- Expanded `lee-chat-sdk/testing` with deterministic request, response, message, and provider config factories.
+- Preserved existing script-tag and `message.created` behavior while keeping operator-console APIs experimental.
+- Expanded bilingual integration/testing docs and packed-package consumer smoke coverage.
+
 ## 0.1.0
 
 Initial SDK productization release.

@@ -1,9 +1,9 @@
 # Configuration
 
-`LeeChatConfig`는 widget의 identity, endpoint, persistence, auth, copy, theme을 제어합니다.
+`LeeChatConfig`는 widget의 identity, endpoint, persistence, auth, feature, copy, theme을 제어합니다.
 
 ```ts
-import type { LeeChatConfig } from 'lee-chat-sdk'
+import { LEE_CHAT_TEXT_PRESETS, type LeeChatConfig } from 'lee-chat-sdk'
 
 const config: LeeChatConfig = {
   appId: 'commerce-web',
@@ -29,7 +29,13 @@ const config: LeeChatConfig = {
   position: 'bottom-right',
   initialOpen: false,
   initialMessage: '무엇을 도와드릴까요?',
+  resetKey: 'pricing-page',
   persistence: 'localStorage',
+  features: {
+    attachments: false,
+    realtime: false,
+    operatorConsole: false,
+  },
   requestTimeoutMs: 15000,
   requestRetry: {
     maxAttempts: 2,
@@ -44,6 +50,7 @@ const config: LeeChatConfig = {
     },
   },
   texts: {
+    ...LEE_CHAT_TEXT_PRESETS.ko,
     title: '상담',
     subtitle: '궁금한 점을 남겨주세요.',
     triggerLabel: '상담 열기',
@@ -103,3 +110,42 @@ initLeeChat({
 
 서버 저장/조회는 `ConversationSyncClient`와 host backend contract를 사용하세요.
 
+## 동적 갱신
+
+- `conversation.id` 변경: 다른 conversation으로 전환하고 해당 persistence namespace의 메시지를 불러옵니다.
+- `conversation.metadata` 변경: 메시지는 유지하며 다음 request의 `conversation.metadata`부터 새 값을 사용합니다.
+- 최상위 `metadata` 변경: 메시지는 유지하며 다음 request의 `metadata`부터 새 값을 사용합니다.
+- `resetKey` 변경: 같은 conversation ID라도 controller와 persistence namespace를 초기화합니다. 게시물별 새 대화를 강제하려면 route slug를 `resetKey`로 사용할 수 있습니다.
+
+```tsx
+<LeeChatProvider
+  config={{
+    appId: 'blog',
+    endpoint: '/api/chat',
+    metadata: {
+      locale,
+      currentPostSlug: post.slug,
+    },
+    conversation: {
+      metadata: {
+        currentPostSlug: post.slug,
+      },
+    },
+    resetKey: post.slug,
+  }}
+>
+  <LeeChatWidget />
+</LeeChatProvider>
+```
+
+route가 바뀌어도 같은 대화를 이어가려면 `resetKey`를 생략하고 metadata만 갱신하세요.
+
+## Text Preset
+
+`LEE_CHAT_TEXT_PRESETS.ko`와 `LEE_CHAT_TEXT_PRESETS.en`을 제공하며 `texts`는 partial override를 허용합니다.
+
+## Feature Flags
+
+- `attachments`: `false`이면 upload callback이 있어도 첨부 UI를 숨깁니다.
+- `realtime`: `false`이면 전달된 event transport를 구독하지 않습니다.
+- `operatorConsole`: 기본값은 `false`입니다. 운영자 콘솔은 Widget에 포함되지 않는 별도 experimental API이며 이 값으로 Widget에 콘솔 UI가 추가되지는 않습니다.

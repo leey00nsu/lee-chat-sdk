@@ -1,6 +1,6 @@
 {
   "name": "lee-chat-sdk",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Drop-in chat widget kit for React and vanilla JavaScript websites.",
   "license": "MIT",
   "author": "leeyoonsu",

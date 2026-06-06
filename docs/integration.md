@@ -32,6 +32,89 @@ export function App() {
 }
 ```
 
+### 구조화 응답과 metadata 타입
+
+Provider, Widget, hook에 같은 metadata 타입을 지정하면 캐스팅 없이 구조화 응답을 렌더링할 수 있습니다. `renderMessage` 전체를 교체하지 않고 `renderAssistantContent`와 `renderMessageFooter`로 기본 말풍선을 확장할 수 있습니다.
+
+```tsx
+interface BlogChatMessageMetadata {
+  blogChatResponse?: {
+    citations: Array<{ title: string; url: string }>
+    followUpSuggestions: string[]
+  }
+}
+
+<LeeChatProvider<BlogChatMessageMetadata> config={config}>
+  <LeeChatWidget<BlogChatMessageMetadata>
+    renderAssistantContent={({ message, defaultContent }) => (
+      <>
+        {defaultContent}
+        {message.metadata?.blogChatResponse?.citations.map((citation) => (
+          <a key={citation.url} href={citation.url}>
+            {citation.title}
+          </a>
+        ))}
+      </>
+    )}
+    renderMessageFooter={({ message }) => (
+      <div>
+        {message.metadata?.blogChatResponse?.followUpSuggestions.map(
+          (suggestion) => <button key={suggestion}>{suggestion}</button>,
+        )}
+      </div>
+    )}
+  />
+</LeeChatProvider>
+```
+
+`renderMessage`를 함께 지정하면 전체 메시지 렌더링이 우선하며 content/footer 슬롯은 호출되지 않습니다.
+
+### 기존 backend/LLM 재사용
+
+기존 `{ question, conversationHistory }` 형태의 LLM/RAG 함수를 유지하면서 SDK request/response만 변환할 수 있습니다.
+
+```ts
+import {
+  collectLeeChatTurnHistory,
+  createLeeChatTextResponse,
+  getLeeChatRequestMetadata,
+  getLeeChatRequestText,
+  isLeeChatRequest,
+} from 'lee-chat-sdk/server'
+
+export async function POST(request: Request) {
+  const body: unknown = await request.json()
+
+  if (!isLeeChatRequest(body)) {
+    return legacyHandler(body)
+  }
+
+  const metadata = getLeeChatRequestMetadata<{
+    locale?: 'ko' | 'en'
+    currentPostSlug?: string
+  }>(body)
+  const result = await answerBlogChatQuestion({
+    question: getLeeChatRequestText(body),
+    locale: metadata?.locale ?? 'ko',
+    currentPostSlug: metadata?.currentPostSlug,
+    conversationHistory: collectLeeChatTurnHistory(body).map((turn) => ({
+      question: turn.user.content,
+      answer: turn.assistant?.content,
+    })),
+  })
+
+  return Response.json(
+    createLeeChatTextResponse({
+      request: body,
+      content: result.answer,
+      metadata: {
+        blogChatResponse: result,
+      },
+    }),
+  )
+}
+```
+
 ## Vanilla JS
 
 ```ts
@@ -127,4 +210,3 @@ initLeeChat({
   },
 })
 ```
-

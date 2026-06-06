@@ -90,8 +90,8 @@ See the repository root for full docs.
 - Integration Guide: `docs/integration.en.md`
 - Configuration: `docs/configuration.en.md`
 - API Reference: `docs/api.en.md`
+- Testing: `docs/testing.en.md`
 - Backend Contract: `docs/backend-contract.md`
 - Operator Console: `docs/operator-console.en.md`
 
 Operator console APIs are experimental primitives. They are not a production-ready console; production usage still needs host-provided agent mutation APIs, permissions, routing policy, durable storage, and realtime backend integration.
-

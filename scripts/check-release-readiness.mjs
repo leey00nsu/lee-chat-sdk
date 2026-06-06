@@ -77,6 +77,8 @@ const REQUIRED_DOC_FILES = [
   '../docs/configuration.en.md',
   '../docs/api.md',
   '../docs/api.en.md',
+  '../docs/testing.md',
+  '../docs/testing.en.md',
   '../docs/operator-console.md',
   '../docs/operator-console.en.md',
   '../docs/backend-contract.ko.md',
