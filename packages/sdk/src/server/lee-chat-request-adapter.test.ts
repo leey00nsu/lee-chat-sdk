@@ -73,6 +73,15 @@ function createRequest(): LeeChatRequest {
 describe('lee chat request adapter', () => {
   it('LeeChatRequest의 필수 구조를 판별한다', () => {
     expect(isLeeChatRequest(createRequest())).toBe(true)
+    expect(
+      isLeeChatRequest({
+        ...createRequest(),
+        conversation: {
+          ...createRequest().conversation,
+          kind: 'assistant',
+        },
+      }),
+    ).toBe(true)
     expect(isLeeChatRequest(null)).toBe(false)
     expect(isLeeChatRequest({ appId: 'blog' })).toBe(false)
     expect(

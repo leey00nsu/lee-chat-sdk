@@ -142,6 +142,7 @@ function isConversation(value: unknown): boolean {
     typeof value.id === 'string' &&
     (value.kind === 'support' ||
       value.kind === 'direct' ||
+      value.kind === 'assistant' ||
       value.kind === 'group') &&
     (value.metadata === undefined || isRecord(value.metadata))
   )
