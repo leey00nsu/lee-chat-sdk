@@ -19,3 +19,16 @@ export type {
   LeeChatRouteHandlerParams,
   LeeChatRouteHandlerStorage,
 } from './server/lee-chat-route-handler'
+export {
+  collectLeeChatTextHistory,
+  collectLeeChatTurnHistory,
+  createLeeChatTextResponse,
+  getLeeChatRequestMetadata,
+  getLeeChatRequestText,
+  isLeeChatRequest,
+} from './server/lee-chat-request-adapter'
+export type {
+  CreateLeeChatTextResponseParams,
+  LeeChatTextHistoryItem,
+  LeeChatTurnHistoryItem,
+} from './server/lee-chat-request-adapter'

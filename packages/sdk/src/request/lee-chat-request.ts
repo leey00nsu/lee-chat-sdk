@@ -23,6 +23,7 @@ export interface LeeChatRequest {
   conversation: {
     id: string
     kind: ChatConversationKind
+    metadata?: Record<string, unknown>
   }
   participant: ChatParticipant
   visitor: Required<Pick<LeeChatVisitor, 'id'>> & Pick<LeeChatVisitor, 'metadata'>
@@ -62,6 +63,7 @@ interface BuildLeeChatRequestParams {
   conversation: {
     id: string
     kind: ChatConversationKind
+    metadata?: Record<string, unknown>
   }
   participant: ChatParticipant
   visitor: Required<Pick<LeeChatVisitor, 'id'>> & Pick<LeeChatVisitor, 'metadata'>
