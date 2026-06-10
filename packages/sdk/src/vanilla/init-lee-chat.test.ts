@@ -878,6 +878,59 @@ describe('vanilla initLeeChat', () => {
     )
   })
 
+  it('messageStatus.showSending이 false이면 사용자 sending 문구만 숨긴다', async () => {
+    let resolveResponse: (response: Response) => void = () => {}
+    fetchMock.mockReturnValue(
+      new Promise((resolve) => {
+        resolveResponse = resolve
+      }),
+    )
+
+    initLeeChat({
+      appId: 'vanilla-app',
+      endpoint: '/api/chat',
+      fetchImplementation: fetchMock,
+      initialOpen: true,
+      messageStatus: {
+        showSending: false,
+      },
+    })
+
+    const input = document.querySelector('textarea')
+
+    if (!(input instanceof HTMLTextAreaElement)) {
+      throw new Error('textarea not found')
+    }
+
+    fireEvent.change(input, {
+      target: {
+        value: 'Hidden pending vanilla',
+      },
+    })
+    fireEvent.submit(input.form as HTMLFormElement)
+
+    await waitFor(() => {
+      expect(document.body.textContent).toContain('Hidden pending vanilla')
+      expect(document.body.textContent).not.toContain('Sending...')
+      expect(document.body.textContent).toContain('Assistant is typing...')
+    })
+
+    resolveResponse(
+      new Response(
+        JSON.stringify({
+          message: {
+            content: 'Hidden pending response',
+          },
+        }),
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        },
+      ),
+    )
+  })
+
   it('실패 메시지에 retry 버튼을 표시하고 다시 전송한다', async () => {
     fetchMock
       .mockRejectedValueOnce(new Error('network error'))

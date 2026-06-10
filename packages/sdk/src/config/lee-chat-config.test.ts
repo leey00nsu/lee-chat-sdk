@@ -38,6 +38,9 @@ describe('resolveLeeChatConfig', () => {
           realtime: true,
           operatorConsole: false,
         },
+        messageStatus: {
+          showSending: true,
+        },
         texts: expect.objectContaining({
           title: 'Chat',
           subtitle: 'Send us a message.',
@@ -94,6 +97,20 @@ describe('resolveLeeChatConfig', () => {
       attachments: false,
       realtime: false,
       operatorConsole: false,
+    })
+  })
+
+  it('messageStatus.showSending override를 병합한다', () => {
+    const config = resolveLeeChatConfig({
+      appId: 'app',
+      endpoint: '/api/chat',
+      messageStatus: {
+        showSending: false,
+      },
+    })
+
+    expect(config.messageStatus).toEqual({
+      showSending: false,
     })
   })
 

@@ -16,6 +16,10 @@ export interface LeeChatFeatures {
   operatorConsole: boolean
 }
 
+export interface LeeChatMessageStatusConfig {
+  showSending: boolean
+}
+
 export interface LeeChatVisitor {
   id?: string
   metadata?: Record<string, unknown>
@@ -90,6 +94,7 @@ export interface LeeChatConfig {
   requestRetry?: HttpChatTransportRetryOptions
   persistence?: LeeChatPersistenceType
   features?: Partial<LeeChatFeatures>
+  messageStatus?: Partial<LeeChatMessageStatusConfig>
   texts?: Partial<LeeChatWidgetText>
   theme?: Partial<LeeChatTheme>
   className?: LeeChatClassName
@@ -98,7 +103,7 @@ export interface LeeChatConfig {
 export interface ResolvedLeeChatConfig
   extends Omit<
     LeeChatConfig,
-    'texts' | 'theme' | 'features' | 'position' | 'initialOpen' | 'persistence' | 'conversation' | 'participant'
+    'texts' | 'theme' | 'features' | 'messageStatus' | 'position' | 'initialOpen' | 'persistence' | 'conversation' | 'participant'
   > {
   visitor: Required<Pick<LeeChatVisitor, 'id'>> & Pick<LeeChatVisitor, 'metadata'>
   conversation: Required<Pick<LeeChatConversationConfig, 'id' | 'kind'>> &
@@ -108,6 +113,7 @@ export interface ResolvedLeeChatConfig
   initialOpen: boolean
   persistence: LeeChatPersistenceType
   features: LeeChatFeatures
+  messageStatus: LeeChatMessageStatusConfig
   texts: LeeChatWidgetText
   theme: LeeChatTheme
 }
@@ -149,6 +155,10 @@ const DEFAULT_LEE_CHAT_FEATURES: LeeChatFeatures = {
   attachments: true,
   realtime: true,
   operatorConsole: false,
+}
+
+const DEFAULT_LEE_CHAT_MESSAGE_STATUS: LeeChatMessageStatusConfig = {
+  showSending: true,
 }
 
 const DEFAULT_LEE_CHAT_THEME: LeeChatTheme = {
@@ -194,6 +204,10 @@ export function resolveLeeChatConfig(
     features: {
       ...DEFAULT_LEE_CHAT_FEATURES,
       ...config.features,
+    },
+    messageStatus: {
+      ...DEFAULT_LEE_CHAT_MESSAGE_STATUS,
+      ...config.messageStatus,
     },
     texts: {
       ...LEE_CHAT_TEXT_PRESETS.en,

@@ -33,6 +33,7 @@ export type {
   LeeChatConfig,
   LeeChatConversationConfig,
   LeeChatFeatures,
+  LeeChatMessageStatusConfig,
   LeeChatParticipant,
   LeeChatPersistenceType,
   LeeChatPosition,
@@ -163,6 +164,7 @@ export type {
   LeeChatWidgetHeaderRenderParams,
   LeeChatWidgetMessageFooterRenderParams,
   LeeChatWidgetMessageRenderParams,
+  LeeChatWidgetMessageStatusRenderParams,
   LeeChatWidgetProps,
   LeeChatWidgetTriggerRenderParams,
 } from './react/lee-chat-widget'

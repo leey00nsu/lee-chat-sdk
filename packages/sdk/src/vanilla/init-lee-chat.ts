@@ -492,7 +492,10 @@ function renderMessage(
     article.append(renderMessagePart(part))
   })
 
-  if (message.status === 'sending') {
+  if (
+    message.status === 'sending' &&
+    resolveLeeChatConfig(config).messageStatus.showSending
+  ) {
     const status = createElementWithClassName(
       'small',
       mergeClassNames(

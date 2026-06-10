@@ -29,6 +29,14 @@ export interface LeeChatWidgetMessageFooterRenderParams<
   message: ChatMessage<TMessageMetadata>
 }
 
+export interface LeeChatWidgetMessageStatusRenderParams<
+  TMessageMetadata = Record<string, unknown>,
+> {
+  message: ChatMessage<TMessageMetadata>
+  defaultContent: ReactNode
+  retryMessage: (messageId: string) => void
+}
+
 export interface LeeChatWidgetHeaderRenderParams {
   title: string
   subtitle: string
@@ -65,6 +73,9 @@ export interface LeeChatWidgetProps<
   renderMessageFooter?: (
     params: LeeChatWidgetMessageFooterRenderParams<TMessageMetadata>,
   ) => ReactNode
+  renderMessageStatus?: (
+    params: LeeChatWidgetMessageStatusRenderParams<TMessageMetadata>,
+  ) => ReactNode
   renderAssistantLoading?: () => ReactNode
   renderComposerFooter?: (
     params: LeeChatWidgetComposerFooterRenderParams,
@@ -94,6 +105,7 @@ export function LeeChatWidget<
   renderMessage,
   renderAssistantContent,
   renderMessageFooter,
+  renderMessageStatus,
   renderAssistantLoading,
   renderComposerFooter,
   renderTrigger,
@@ -179,6 +191,7 @@ export function LeeChatWidget<
     message: ChatMessage<TMessageMetadata>,
   ): ReactNode {
     const defaultContent = renderDefaultMessageContent(message)
+    const defaultStatusContent = renderDefaultMessageStatus(message)
 
     return (
       <article
@@ -197,7 +210,34 @@ export function LeeChatWidget<
               defaultContent,
             })
           : defaultContent}
-        {message.status === 'sending' ? (
+        {renderMessageStatus
+          ? renderMessageStatus({
+              message,
+              defaultContent: defaultStatusContent,
+              retryMessage: handleRetryMessage,
+            })
+          : defaultStatusContent}
+        {renderMessageFooter?.({
+          message,
+        })}
+      </article>
+    )
+  }
+
+  function renderDefaultMessageContent(
+    message: ChatMessage<TMessageMetadata>,
+  ): ReactNode {
+    return message.parts.map((part, index) => {
+      return renderMessagePart(part, index)
+    })
+  }
+
+  function renderDefaultMessageStatus(
+    message: ChatMessage<TMessageMetadata>,
+  ): ReactNode {
+    return (
+      <>
+        {message.status === 'sending' && config.messageStatus.showSending ? (
           <small
             className={mergeClassNames(
               'lee-chat-message-status',
@@ -237,19 +277,8 @@ export function LeeChatWidget<
             {config.texts.messageRead}
           </small>
         ) : null}
-        {renderMessageFooter?.({
-          message,
-        })}
-      </article>
+      </>
     )
-  }
-
-  function renderDefaultMessageContent(
-    message: ChatMessage<TMessageMetadata>,
-  ): ReactNode {
-    return message.parts.map((part, index) => {
-      return renderMessagePart(part, index)
-    })
   }
 
   function renderMessagePart(part: ChatMessagePart, index: number): ReactNode {
@@ -283,7 +312,7 @@ export function LeeChatWidget<
     return <p key={`${part.type}-${index}`}>{part.text}</p>
   }
 
-  function renderDefaultAssistantLoading(): ReactNode {
+  function renderAssistantLoadingMessage(): ReactNode {
     return (
       <article
         className={mergeClassNames(
@@ -295,7 +324,9 @@ export function LeeChatWidget<
         )}
         role="status"
       >
-        <p>{config.texts.assistantLoading}</p>
+        {renderAssistantLoading
+          ? renderAssistantLoading()
+          : <p>{config.texts.assistantLoading}</p>}
       </article>
     )
   }
@@ -415,9 +446,7 @@ export function LeeChatWidget<
               />
               {chat.isSubmitting ? (
                 <div className="lee-chat-message-list-status">
-                  {renderAssistantLoading
-                    ? renderAssistantLoading()
-                    : renderDefaultAssistantLoading()}
+                  {renderAssistantLoadingMessage()}
                 </div>
               ) : null}
               {hasTypingParticipant ? (

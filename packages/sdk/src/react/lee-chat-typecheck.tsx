@@ -26,6 +26,15 @@ export function BlogChatTypeFixture(): ReactNode {
       }}
     >
       <LeeChatWidget<BlogChatMessageMetadata>
+        renderMessageStatus={({ message, defaultContent, retryMessage }) => {
+          const grounded = message.metadata?.blogChatResponse?.grounded
+
+          if (message.status === 'failed' && grounded) {
+            retryMessage(message.id)
+          }
+
+          return defaultContent
+        }}
         renderAssistantContent={({ message, defaultContent }) => {
           const grounded = message.metadata?.blogChatResponse?.grounded
 

@@ -88,6 +88,52 @@ function MarkFirstMessageRead() {
   )
 }
 
+function ApplyStatusMessages() {
+  const leeChat = useLeeChat<{ source: string }>()
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        leeChat.applyEvent({
+          type: 'message.created',
+          message: {
+            id: 'message-delivered',
+            conversationId: leeChat.config.conversation.id,
+            senderId: 'app-assistant',
+            role: 'assistant',
+            content: 'Delivered message',
+            parts: [{ type: 'text', text: 'Delivered message' }],
+            status: 'delivered',
+            createdAt: '2026-06-10T00:00:00.000Z',
+            metadata: {
+              source: 'delivered',
+            },
+          },
+        })
+        leeChat.applyEvent({
+          type: 'message.created',
+          message: {
+            id: 'message-read',
+            conversationId: leeChat.config.conversation.id,
+            senderId: 'app-assistant',
+            role: 'assistant',
+            content: 'Read message',
+            parts: [{ type: 'text', text: 'Read message' }],
+            status: 'read',
+            createdAt: '2026-06-10T00:00:01.000Z',
+            metadata: {
+              source: 'read',
+            },
+          },
+        })
+      }}
+    >
+      Apply message statuses
+    </button>
+  )
+}
+
 afterEach(() => {
   cleanup()
   localStorage.clear()
@@ -525,6 +571,142 @@ describe('LeeChatWidget', () => {
     })
   })
 
+  it('renderMessageStatus에서 null을 반환하면 sending 상태만 숨긴다', async () => {
+    const pendingResponse = createPendingResponse()
+    fetchMock.mockReturnValue(pendingResponse.responsePromise)
+
+    render(
+      <LeeChatProvider
+        config={{
+          appId: 'app',
+          endpoint: '/api/chat',
+          initialOpen: true,
+        }}
+        fetchImplementation={fetchMock}
+      >
+        <LeeChatWidget
+          renderMessageStatus={({ message, defaultContent }) => {
+            return message.role === 'user' && message.status === 'sending'
+              ? null
+              : defaultContent
+          }}
+        />
+      </LeeChatProvider>,
+    )
+
+    fireEvent.change(screen.getByLabelText('Message'), {
+      target: { value: 'Status hidden question' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Status hidden question')).toBeTruthy()
+      expect(screen.queryByText('Sending...')).toBeNull()
+      expect(screen.getByText('Assistant is typing...')).toBeTruthy()
+      expect(
+        screen
+          .getByText('Status hidden question')
+          .closest('.lee-chat-message')
+          ?.querySelector('.lee-chat-message-status'),
+      ).toBeNull()
+    })
+
+    pendingResponse.resolveResponse({
+      ok: true,
+      json: async () => ({
+        message: {
+          content: 'Status hidden response',
+        },
+      }),
+    })
+  })
+
+  it('messageStatus.showSending이 false이면 기본 sending 상태를 숨긴다', async () => {
+    const pendingResponse = createPendingResponse()
+    fetchMock.mockReturnValue(pendingResponse.responsePromise)
+
+    render(
+      <LeeChatProvider
+        config={{
+          appId: 'app',
+          endpoint: '/api/chat',
+          initialOpen: true,
+          messageStatus: {
+            showSending: false,
+          },
+        }}
+        fetchImplementation={fetchMock}
+      >
+        <LeeChatWidget />
+      </LeeChatProvider>,
+    )
+
+    fireEvent.change(screen.getByLabelText('Message'), {
+      target: { value: 'Configured hidden status' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Configured hidden status')).toBeTruthy()
+      expect(screen.queryByText('Sending...')).toBeNull()
+      expect(screen.getByText('Assistant is typing...')).toBeTruthy()
+    })
+
+    pendingResponse.resolveResponse({
+      ok: true,
+      json: async () => ({
+        message: {
+          content: 'Configured hidden response',
+        },
+      }),
+    })
+  })
+
+  it('custom assistant loading을 기본 status 버블 내부에 렌더링한다', async () => {
+    const pendingResponse = createPendingResponse()
+    fetchMock.mockReturnValue(pendingResponse.responsePromise)
+
+    render(
+      <LeeChatProvider
+        config={{
+          appId: 'app',
+          endpoint: '/api/chat',
+          initialOpen: true,
+        }}
+        fetchImplementation={fetchMock}
+      >
+        <LeeChatWidget
+          renderAssistantLoading={() => (
+            <span>Custom generation loading</span>
+          )}
+        />
+      </LeeChatProvider>,
+    )
+
+    fireEvent.change(screen.getByLabelText('Message'), {
+      target: { value: 'Custom loading question' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+
+    await waitFor(() => {
+      const loading = screen.getByText('Custom generation loading')
+      const bubble = loading.closest('.lee-chat-assistant-loading')
+
+      expect(bubble).toBeTruthy()
+      expect(bubble?.getAttribute('role')).toBe('status')
+      expect(bubble?.className).toContain('lee-chat-message--assistant')
+    })
+
+    pendingResponse.resolveResponse({
+      ok: true,
+      json: async () => ({
+        message: {
+          content: 'Custom loading response',
+        },
+      }),
+    })
+  })
+
   it('실패 메시지에 retry 버튼을 표시하고 다시 전송한다', async () => {
     fetchMock
       .mockRejectedValueOnce(new Error('network error'))
@@ -565,6 +747,99 @@ describe('LeeChatWidget', () => {
       expect(screen.getByText('Retry response')).toBeTruthy()
     })
     expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('renderMessageStatus defaultContent에 failed UI와 retry 동작을 제공한다', async () => {
+    fetchMock
+      .mockRejectedValueOnce(new Error('network error'))
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          message: {
+            content: 'Custom retry response',
+          },
+        }),
+      })
+
+    render(
+      <LeeChatProvider
+        config={{
+          appId: 'app',
+          endpoint: '/api/chat',
+          initialOpen: true,
+        }}
+        fetchImplementation={fetchMock}
+      >
+        <LeeChatWidget
+          renderMessageStatus={({
+            message,
+            defaultContent,
+            retryMessage,
+          }) => (
+            <div data-testid={`status-${message.status}`}>
+              {defaultContent}
+              {message.status === 'failed' ? (
+                <button
+                  type="button"
+                  onClick={() => retryMessage(message.id)}
+                >
+                  Custom retry
+                </button>
+              ) : null}
+            </div>
+          )}
+        />
+      </LeeChatProvider>,
+    )
+
+    fireEvent.change(screen.getByLabelText('Message'), {
+      target: { value: 'Custom retry question' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('status-failed')).toBeTruthy()
+      expect(screen.getByText('Message failed. Please try again.')).toBeTruthy()
+      expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Custom retry' }))
+
+    expect(await screen.findByText('Custom retry response')).toBeTruthy()
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('renderMessageStatus에서 delivered/read 상태와 metadata를 구분한다', () => {
+    render(
+      <LeeChatProvider<{ source: string }>
+        config={{
+          appId: 'app',
+          endpoint: '/api/chat',
+          initialOpen: true,
+        }}
+      >
+        <ApplyStatusMessages />
+        <LeeChatWidget<{ source: string }>
+          renderMessageStatus={({ message, defaultContent }) => (
+            <>
+              {defaultContent}
+              <small data-testid={`custom-status-${message.status}`}>
+                {message.metadata?.source}
+              </small>
+            </>
+          )}
+        />
+      </LeeChatProvider>,
+    )
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Apply message statuses' }),
+    )
+
+    expect(screen.getByTestId('custom-status-delivered').textContent).toBe(
+      'delivered',
+    )
+    expect(screen.getByTestId('custom-status-read').textContent).toBe('read')
   })
 
   it('renderMessage로 메시지 렌더링을 커스텀한다', async () => {
@@ -643,6 +918,7 @@ describe('LeeChatWidget', () => {
           renderMessageFooter={({ message }) =>
             message.role === 'assistant' ? <small>Assistant footer</small> : null
           }
+          renderMessageStatus={({ defaultContent }) => defaultContent}
         />
       </LeeChatProvider>,
     )
