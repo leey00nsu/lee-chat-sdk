@@ -1034,6 +1034,61 @@ describe('LeeChatWidget', () => {
     expect(screen.getByText('Custom footer')).toBeTruthy()
   })
 
+  it('renderSubmitContent slot으로 보내기 버튼 콘텐츠를 교체한다', async () => {
+    const pendingResponse = createPendingResponse()
+    fetchMock.mockReturnValue(pendingResponse.responsePromise)
+
+    render(
+      <LeeChatProvider
+        config={{
+          appId: 'app',
+          endpoint: '/api/chat',
+          initialOpen: true,
+        }}
+        fetchImplementation={fetchMock}
+      >
+        <LeeChatWidget
+          renderSubmitContent={({ isSubmitting, defaultContent }) => (
+            <>
+              <span data-testid="widget-send-icon" aria-hidden="true">
+                icon
+              </span>
+              <span>{isSubmitting ? 'Generating' : defaultContent}</span>
+            </>
+          )}
+        />
+      </LeeChatProvider>,
+    )
+
+    expect(screen.getByTestId('widget-send-icon')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Send' }).textContent).toContain(
+      'Send',
+    )
+
+    fireEvent.change(screen.getByLabelText('Message'), {
+      target: { value: 'Custom submit content' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+
+    await waitFor(() => {
+      const button = screen.getByRole<HTMLButtonElement>('button', {
+        name: 'Sending',
+      })
+
+      expect(button.textContent).toContain('Generating')
+      expect(button.disabled).toBe(true)
+    })
+
+    pendingResponse.resolveResponse({
+      ok: true,
+      json: async () => ({
+        message: {
+          content: 'Custom submit response',
+        },
+      }),
+    })
+  })
+
   it('localStorage persistence를 visitor별 conversation으로 분리한다', async () => {
     fetchMock.mockResolvedValue({
       ok: true,

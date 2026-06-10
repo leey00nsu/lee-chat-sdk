@@ -1,11 +1,23 @@
 'use client'
 
-import { useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from 'react'
+import {
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+  type KeyboardEvent,
+  type ReactNode,
+} from 'react'
 import {
   createChatMessagePartFromAttachment,
   type UploadedChatAttachment,
 } from '../model/chat-attachment'
 import type { ChatMessagePart } from '../model/chat-message'
+
+export interface ChatComposerSubmitContentRenderParams {
+  isSubmitting: boolean
+  isUploading: boolean
+  defaultContent: ReactNode
+}
 
 export interface ChatComposerProps {
   inputId: string
@@ -16,6 +28,9 @@ export interface ChatComposerProps {
   isLoading?: boolean
   maximumLength?: number
   uploadAttachment?: (file: File) => Promise<UploadedChatAttachment>
+  renderSubmitContent?: (
+    params: ChatComposerSubmitContentRenderParams,
+  ) => ReactNode
   onChange: (nextValue: string) => void
   onSubmit: (parts?: ChatMessagePart[]) => void
 }
@@ -33,6 +48,7 @@ export function ChatComposer({
   isLoading = false,
   maximumLength,
   uploadAttachment,
+  renderSubmitContent,
   onChange,
   onSubmit,
 }: ChatComposerProps) {
@@ -149,9 +165,16 @@ export function ChatComposer({
       ) : null}
       <button
         type="submit"
+        aria-label={submitLabel}
         disabled={isLoading || isUploading || (!value.trim() && pendingParts.length === 0)}
       >
-        {submitLabel}
+        {renderSubmitContent
+          ? renderSubmitContent({
+              isSubmitting: isLoading,
+              isUploading,
+              defaultContent: submitLabel,
+            })
+          : submitLabel}
       </button>
     </form>
   )

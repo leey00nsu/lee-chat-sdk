@@ -166,6 +166,7 @@ export type {
   LeeChatWidgetMessageRenderParams,
   LeeChatWidgetMessageStatusRenderParams,
   LeeChatWidgetProps,
+  LeeChatWidgetSubmitContentRenderParams,
   LeeChatWidgetTriggerRenderParams,
 } from './react/lee-chat-widget'
 export { useLeeChat } from './react/use-lee-chat'
@@ -192,7 +193,10 @@ export type {
   LeeChatInstance,
 } from './widget/init-lee-chat'
 export { ChatComposer } from './ui/chat-composer'
-export type { ChatComposerProps } from './ui/chat-composer'
+export type {
+  ChatComposerProps,
+  ChatComposerSubmitContentRenderParams,
+} from './ui/chat-composer'
 export { ChatMessageList } from './ui/chat-message-list'
 export type { ChatMessageListProps } from './ui/chat-message-list'
 export { ChatWidgetShell } from './ui/chat-widget-shell'

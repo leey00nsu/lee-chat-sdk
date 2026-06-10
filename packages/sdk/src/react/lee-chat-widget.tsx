@@ -5,6 +5,7 @@ import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
 import type { ChatMessage, ChatMessagePart } from '../model/chat-message'
 import type { UploadedChatAttachment } from '../model/chat-attachment'
 import { ChatComposer } from '../ui/chat-composer'
+import type { ChatComposerSubmitContentRenderParams } from '../ui/chat-composer'
 import { ChatMessageList } from '../ui/chat-message-list'
 import { useLeeChat } from './use-lee-chat'
 import '../style/lee-chat-widget.css'
@@ -59,6 +60,9 @@ export interface LeeChatWidgetComposerFooterRenderParams {
   inputValue: string
 }
 
+export type LeeChatWidgetSubmitContentRenderParams =
+  ChatComposerSubmitContentRenderParams
+
 export interface LeeChatWidgetProps<
   TMessageMetadata = Record<string, unknown>,
 > {
@@ -79,6 +83,9 @@ export interface LeeChatWidgetProps<
   renderAssistantLoading?: () => ReactNode
   renderComposerFooter?: (
     params: LeeChatWidgetComposerFooterRenderParams,
+  ) => ReactNode
+  renderSubmitContent?: (
+    params: LeeChatWidgetSubmitContentRenderParams,
   ) => ReactNode
   renderTrigger?: (params: LeeChatWidgetTriggerRenderParams) => ReactNode
 }
@@ -108,6 +115,7 @@ export function LeeChatWidget<
   renderMessageStatus,
   renderAssistantLoading,
   renderComposerFooter,
+  renderSubmitContent,
   renderTrigger,
 }: LeeChatWidgetProps<TMessageMetadata> = {}) {
   const leeChat = useLeeChat<TMessageMetadata>()
@@ -484,6 +492,7 @@ export function LeeChatWidget<
                 uploadAttachment={
                   config.features.attachments ? uploadAttachment : undefined
                 }
+                renderSubmitContent={renderSubmitContent}
                 onChange={chat.setInputValue}
                 onSubmit={(parts) => {
                   void chat.submitMessage(undefined, parts)

@@ -26,6 +26,13 @@ export function BlogChatTypeFixture(): ReactNode {
       }}
     >
       <LeeChatWidget<BlogChatMessageMetadata>
+        renderSubmitContent={({
+          isSubmitting,
+          isUploading,
+          defaultContent,
+        }) => {
+          return isSubmitting || isUploading ? 'Loading' : defaultContent
+        }}
         renderMessageStatus={({ message, defaultContent, retryMessage }) => {
           const grounded = message.metadata?.blogChatResponse?.grounded
 
