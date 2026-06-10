@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.1
+
+Submit button content customization release.
+
+- Added typed `renderSubmitContent` support for icons, spinners, and custom React content while preserving form submission and disabled behavior.
+- Exposed submitting and attachment-uploading state with accessible default button content.
+- Kept script-tag, `message.created`, `lee-chat-sdk/server`, and `lee-chat-sdk/testing` behavior unchanged.
+- Kept experimental operator-console APIs unchanged.
+- Expanded bilingual docs, type fixtures, release checks, and packed-package consumer smoke coverage.
+
 ## 0.3.0
 
 Message status customization release.

@@ -12,6 +12,7 @@
 - `renderMessageFooter`: 기본 말풍선 하단을 확장하는 slot입니다.
 - `renderMessageStatus`: 개별 메시지 상태 UI를 `message`, `defaultContent`, `retryMessage`로 확장하거나 숨기는 slot입니다.
 - `renderAssistantLoading`: 기본 assistant loading 버블 내부 콘텐츠를 교체하는 slot입니다.
+- `renderSubmitContent`: 기본 submit 버튼 내부를 `isSubmitting`, `isUploading`, `defaultContent`를 사용해 확장하는 slot입니다.
 - `LEE_CHAT_TEXT_PRESETS`: `ko`, `en` 기본 문구 preset입니다.
 
 ```tsx

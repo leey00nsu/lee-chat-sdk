@@ -98,6 +98,7 @@ leeChat.open()
 - Applies `message.created`, presence, typing, and read events through SSE/WebSocket transports.
 - Supports auth headers, auth refresh, request timeout, and retry through config.
 - Renders typed structured metadata through content/footer slots while preserving default bubbles.
+- Supports icons and spinners inside the default submit button through `renderSubmitContent`.
 - Makes host integration intent explicit with `LEE_CHAT_TEXT_PRESETS`, `features`, and `resetKey`.
 
 ## Docs

@@ -12,6 +12,7 @@ This document summarizes the main public APIs.
 - `renderMessageFooter`: slot that extends the bottom of the default bubble.
 - `renderMessageStatus`: slot that customizes or hides an individual message status with `message`, `defaultContent`, and `retryMessage`.
 - `renderAssistantLoading`: slot that replaces content inside the default assistant loading bubble.
+- `renderSubmitContent`: slot that extends the default submit button with `isSubmitting`, `isUploading`, and `defaultContent`.
 - `LEE_CHAT_TEXT_PRESETS`: built-in `ko` and `en` text presets.
 
 ```tsx

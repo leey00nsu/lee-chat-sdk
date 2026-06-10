@@ -98,6 +98,7 @@ leeChat.open()
 - SSE/WebSocket transport로 `message.created`, presence, typing, read event를 반영할 수 있습니다.
 - `requestHeaders`, `requestAuth`, `requestTimeoutMs`, `requestRetry`로 인증/timeout/retry를 설정할 수 있습니다.
 - typed metadata와 content/footer slot으로 기본 말풍선을 유지한 구조화 응답을 렌더링할 수 있습니다.
+- `renderSubmitContent`로 기본 전송 동작을 유지하며 아이콘이나 spinner를 넣을 수 있습니다.
 - `LEE_CHAT_TEXT_PRESETS`, `features`, `resetKey`로 host 통합 의도를 명시할 수 있습니다.
 
 ## 문서

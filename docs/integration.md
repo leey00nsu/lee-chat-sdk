@@ -97,6 +97,29 @@ interface BlogChatMessageMetadata {
 
 `renderMessageStatus`가 `null`을 반환하면 빈 상태 요소를 남기지 않습니다. 커스텀 loading 애니메이션은 host CSS에서 `prefers-reduced-motion`을 처리하세요.
 
+### 보내기 버튼 콘텐츠
+
+`renderSubmitContent`로 기본 submit 버튼 안에 아이콘, spinner, 텍스트 같은 ReactNode를 렌더링할 수 있습니다.
+
+```tsx
+<LeeChatWidget
+  renderSubmitContent={({
+    isSubmitting,
+    isUploading,
+    defaultContent,
+  }) => (
+    <>
+      {isSubmitting || isUploading
+        ? <LoaderCircle aria-hidden="true" />
+        : <Send aria-hidden="true" />}
+      <span>{defaultContent}</span>
+    </>
+  )}
+/>
+```
+
+`defaultContent`는 현재 상태에 따라 `texts.send` 또는 `texts.sending`입니다. SDK는 버튼의 접근 가능한 이름, `type="submit"`, disabled 상태, Enter 전송, 첨부파일 업로드 상태를 계속 관리합니다. 버튼 전체를 교체할 필요가 없습니다.
+
 ### 기존 backend/LLM 재사용
 
 기존 `{ question, conversationHistory }` 형태의 LLM/RAG 함수를 유지하면서 SDK request/response만 변환할 수 있습니다.

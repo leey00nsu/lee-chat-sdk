@@ -41,6 +41,8 @@ export function App() {
 }
 ```
 
+`LeeChatWidget.renderSubmitContent`로 기본 submit/disabled/Enter 동작을 유지하면서 아이콘이나 spinner를 버튼 안에 렌더링할 수 있습니다.
+
 ## Vanilla JS
 
 ```ts

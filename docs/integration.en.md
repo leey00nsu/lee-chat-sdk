@@ -97,6 +97,29 @@ Show the user message immediately while hiding only its sending label and preser
 
 Returning `null` from `renderMessageStatus` leaves no empty status element. Handle `prefers-reduced-motion` in host CSS for custom loading animations.
 
+### Submit button content
+
+Use `renderSubmitContent` to render icons, spinners, text, or other ReactNode content inside the default submit button.
+
+```tsx
+<LeeChatWidget
+  renderSubmitContent={({
+    isSubmitting,
+    isUploading,
+    defaultContent,
+  }) => (
+    <>
+      {isSubmitting || isUploading
+        ? <LoaderCircle aria-hidden="true" />
+        : <Send aria-hidden="true" />}
+      <span>{defaultContent}</span>
+    </>
+  )}
+/>
+```
+
+`defaultContent` is `texts.send` or `texts.sending` for the current state. The SDK continues to manage the accessible button name, `type="submit"`, disabled state, Enter submission, and attachment upload state.
+
 ### Reusing an existing backend or LLM
 
 Keep an existing `{ question, conversationHistory }` LLM/RAG function and adapt only the SDK request and response.

@@ -41,6 +41,8 @@ export function App() {
 }
 ```
 
+Use `LeeChatWidget.renderSubmitContent` to render icons or spinners while preserving the default submit, disabled, and Enter-key behavior.
+
 ## Vanilla JS
 
 ```ts
