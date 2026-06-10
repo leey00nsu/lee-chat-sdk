@@ -107,6 +107,7 @@ import {
   LEE_CHAT_TEXT_PRESETS,
   LeeChatWidget,
   createChatMessagePartFromAttachment,
+  resolveLeeChatConfig,
 } from 'lee-chat-sdk'
 import { initLeeChat as initVanillaLeeChat } from 'lee-chat-sdk/vanilla'
 import { initLeeChat as initGlobalLeeChat } from 'lee-chat-sdk/global'
@@ -145,6 +146,14 @@ assert.equal(typeof createLeeChatRouteHandler, 'function')
 assert.equal(typeof createLeeChatTextResponse, 'function')
 assert.equal(typeof isLeeChatRequest, 'function')
 assert.equal(LEE_CHAT_TEXT_PRESETS.ko.send, '보내기')
+assert.equal(
+  resolveLeeChatConfig({
+    appId: 'smoke',
+    endpoint: '/api/chat',
+    messageStatus: { showSending: false },
+  }).messageStatus.showSending,
+  false,
+)
 
 const attachmentPart = createChatMessagePartFromAttachment({
   id: 'att_1',
@@ -219,6 +228,13 @@ assert.equal(typeof server.createLeeChatTextResponse, 'function')
 assert.equal(typeof server.isLeeChatRequest, 'function')
 assert.equal(typeof testing.createMockLeeChatRequest, 'function')
 assert.equal(root.LEE_CHAT_TEXT_PRESETS.en.send, 'Send')
+assert.equal(
+  root.resolveLeeChatConfig({
+    appId: 'smoke',
+    endpoint: '/api/chat',
+  }).messageStatus.showSending,
+  true,
+)
 
 const attachmentPart = root.createChatMessagePartFromAttachment({
   kind: 'file',

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.0
+
+Message status customization release.
+
+- Added typed `renderMessageStatus` support while preserving default failed, retry, read receipt, assistant content, and footer UI.
+- Added `messageStatus.showSending` for React, Vanilla, and script-tag integrations.
+- Preserved the assistant loading bubble, spacing, and `role="status"` when `renderAssistantLoading` supplies custom content.
+- Kept `lee-chat-sdk/server`, `lee-chat-sdk/testing`, and `message.created` behavior unchanged.
+- Kept experimental operator-console APIs unchanged.
+- Expanded bilingual docs, type fixtures, release checks, and packed-package consumer smoke coverage.
+
 ## 0.2.0
 
 Host integration release.

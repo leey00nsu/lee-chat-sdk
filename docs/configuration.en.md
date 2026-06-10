@@ -36,6 +36,9 @@ const config: LeeChatConfig = {
     realtime: false,
     operatorConsole: false,
   },
+  messageStatus: {
+    showSending: false,
+  },
   requestTimeoutMs: 15000,
   requestRetry: {
     maxAttempts: 2,
@@ -149,3 +152,9 @@ Omit `resetKey` and update only metadata when navigation should continue the sam
 - `attachments`: hides attachment UI even when an upload callback exists.
 - `realtime`: prevents subscription to a supplied event transport.
 - `operatorConsole`: defaults to `false`. Operator console APIs remain separate experimental APIs; this flag does not inject console UI into the widget.
+
+## Message Status
+
+`messageStatus.showSending` controls the default user-message sending label in React, Vanilla, and script-tag widgets. It defaults to `true`.
+
+For role- or metadata-aware status rendering in React, use `LeeChatWidget.renderMessageStatus`. `showSending: false` only disables the default sending UI and does not affect failed/retry/read receipt UI.

@@ -69,6 +69,34 @@ interface BlogChatMessageMetadata {
 
 `renderMessage`를 함께 지정하면 전체 메시지 렌더링이 우선하며 content/footer 슬롯은 호출되지 않습니다.
 
+### 메시지 전송 상태와 assistant loading
+
+사용자 메시지는 즉시 표시하면서 사용자 버블의 sending 문구만 숨기고, 별도 assistant loading 버블은 유지할 수 있습니다.
+
+```tsx
+<LeeChatWidget
+  renderMessageStatus={({ message, defaultContent }) => {
+    if (message.role === 'user' && message.status === 'sending') {
+      return null
+    }
+
+    return defaultContent
+  }}
+  renderAssistantLoading={() => (
+    <span className="assistant-generation-loading">
+      답변을 준비하고 있어요...
+    </span>
+  )}
+/>
+```
+
+- `texts.messageSending`: 개별 사용자 메시지의 전송 상태 문구입니다.
+- `texts.assistantLoading`: 서버 응답을 기다리는 별도 assistant loading 문구입니다.
+- `renderMessageStatus`: `sending`, `failed`, `delivered`, `read` 등 개별 메시지 상태 영역을 바꿉니다. `defaultContent`에는 기본 오류/retry/read receipt UI가 포함됩니다.
+- `renderAssistantLoading`: 별도 assistant loading 버블의 콘텐츠를 바꿉니다. 기본 버블 스타일, 간격, `role="status"`는 SDK가 유지합니다.
+
+`renderMessageStatus`가 `null`을 반환하면 빈 상태 요소를 남기지 않습니다. 커스텀 loading 애니메이션은 host CSS에서 `prefers-reduced-motion`을 처리하세요.
+
 ### 기존 backend/LLM 재사용
 
 기존 `{ question, conversationHistory }` 형태의 LLM/RAG 함수를 유지하면서 SDK request/response만 변환할 수 있습니다.

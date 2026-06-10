@@ -69,6 +69,34 @@ interface BlogChatMessageMetadata {
 
 When `renderMessage` is also provided, full message rendering takes precedence and the content/footer slots are not called.
 
+### Message sending status and assistant loading
+
+Show the user message immediately while hiding only its sending label and preserving the separate assistant loading bubble.
+
+```tsx
+<LeeChatWidget
+  renderMessageStatus={({ message, defaultContent }) => {
+    if (message.role === 'user' && message.status === 'sending') {
+      return null
+    }
+
+    return defaultContent
+  }}
+  renderAssistantLoading={() => (
+    <span className="assistant-generation-loading">
+      Preparing an answer...
+    </span>
+  )}
+/>
+```
+
+- `texts.messageSending`: sending label for an individual user message.
+- `texts.assistantLoading`: text in the separate assistant loading bubble while waiting for the server.
+- `renderMessageStatus`: customizes each message status area, including `sending`, `failed`, `delivered`, and `read`. `defaultContent` includes the built-in error, retry, and read receipt UI.
+- `renderAssistantLoading`: customizes the content of the separate assistant loading bubble. The SDK preserves its bubble styles, spacing, and `role="status"`.
+
+Returning `null` from `renderMessageStatus` leaves no empty status element. Handle `prefers-reduced-motion` in host CSS for custom loading animations.
+
 ### Reusing an existing backend or LLM
 
 Keep an existing `{ question, conversationHistory }` LLM/RAG function and adapt only the SDK request and response.
